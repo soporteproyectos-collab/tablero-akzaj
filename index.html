@@ -165,7 +165,8 @@ select,input{padding:6px 10px;border:1px solid #d0cec8;border-radius:7px;font-si
     <div style="display:flex;align-items:center;gap:14px">    <div style="font-size:11px;color:rgba(255,255,255,0.4)" id="header-fecha"></div>    <div id="header-usuario" style="display:none;font-size:11px;color:rgba(255,255,255,0.5)">      <span id="header-user-nombre"></span>      <button onclick="abrirConfigAPI()" style="margin-left:10px;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:10px;font-family:Helvetica,Arial,sans-serif">🔑 API</button><button onclick="guardarDatos();mostrarToast('💾 Datos guardados')" style="margin-left:6px;background:rgba(29,158,117,0.3);border:none;color:#4DD9A8;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-family:Helvetica,Arial,sans-serif;font-weight:700">💾 Guardar</button><button onclick="cerrarSesion()" style="margin-left:6px;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.5);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:10px;font-family:Helvetica,Arial,sans-serif">Salir</button>    </div>  </div>
     <div id="header-usuario" style="font-size:11px;color:rgba(255,255,255,0.5);display:none">
       <span id="header-user-nombre"></span>
-      <button onclick="abrirConfigAPI()" style="margin-left:10px;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:10px;font-family:Helvetica,Arial,sans-serif">🔑 API</button><button onclick="guardarDatos();mostrarToast('💾 Datos guardados')" style="margin-left:6px;background:rgba(29,158,117,0.3);border:none;color:#4DD9A8;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-family:Helvetica,Arial,sans-serif;font-weight:700">💾 Guardar</button><button onclick="cerrarSesion()" style="margin-left:6px;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.5);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:10px;font-family:Helvetica,Arial,sans-serif">Salir</button>
+      <span id="gs-sync-icon" style="margin-left:10px;font-size:10px;color:rgba(255,255,255,0.4);transition:color .3s">☁️ Listo</span>
+      <button onclick="abrirConfigAPI()" style="margin-left:10px;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:10px;font-family:Helvetica,Arial,sans-serif">🔑 API</button><button onclick="guardarDatos();mostrarToast('💾 Guardando en Google Sheets...')" style="margin-left:6px;background:rgba(29,158,117,0.3);border:none;color:#4DD9A8;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-family:Helvetica,Arial,sans-serif;font-weight:700">💾 Guardar</button><button onclick="cerrarSesion()" style="margin-left:6px;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.5);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:10px;font-family:Helvetica,Arial,sans-serif">Salir</button>
     </div>
   </div>
 </div>
@@ -236,6 +237,140 @@ select,input{padding:6px 10px;border:1px solid #d0cec8;border-radius:7px;font-si
 </div>
 </div>
 <div id="h-datos">
+
+<!-- ══════════════════════════════════════════════════════════
+     MÓDULO EQUIPO BASE OPS
+     ══════════════════════════════════════════════════════════ -->
+<div class="card" id="bloque-equipo-base" style="margin-bottom:12px;border:1.5px solid #2E7D32">
+
+  <!-- Encabezado -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+    <div>
+      <div style="font-size:11px;font-weight:700;color:#2E7D32;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">👥 Equipo Base</div>
+      <div style="font-size:15px;font-weight:700;color:#54504F">Presupuesto de Honorarios — Contratistas OPS</div>
+      <div style="font-size:11px;color:#888;margin-top:2px">Haz clic en cada celda para marcar como <b style="color:#2E7D32">pagado</b> (verde) o <b style="color:#A32D2D">adeudado</b> (rojo) · 2026</div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <button class="btn" onclick="equipoBaseReset()" style="font-size:11px;color:#A32D2D;border-color:#f0ccc8">↺ Reiniciar</button>
+      <button onclick="equipoBaseToggle()" id="btn-eb-toggle"
+        style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:700;color:#54504F;font-family:Helvetica,Arial,sans-serif;display:flex;align-items:center;gap:5px">
+        <span id="ico-eb">▼</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- KPIs resumen -->
+  <div id="eb-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
+    <div style="background:#f1faf1;border-radius:10px;padding:11px 13px;border:1px solid #c8e6c9">
+      <div style="font-size:10px;font-weight:700;color:#2E7D32;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">✅ Total pagado</div>
+      <div id="eb-kpi-pagado" style="font-size:17px;font-weight:700;color:#2E7D32">$0</div>
+    </div>
+    <div style="background:#fff5f5;border-radius:10px;padding:11px 13px;border:1px solid #ffcdd2">
+      <div style="font-size:10px;font-weight:700;color:#A32D2D;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">⚠️ Total adeudado</div>
+      <div id="eb-kpi-adeudado" style="font-size:17px;font-weight:700;color:#A32D2D">$0</div>
+    </div>
+    <div style="background:#f9f8f5;border-radius:10px;padding:11px 13px;border:1px solid #e0ddd8">
+      <div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">📋 Presupuesto total</div>
+      <div id="eb-kpi-total" style="font-size:17px;font-weight:700;color:#54504F">$0</div>
+    </div>
+  </div>
+
+  <!-- Tabla colapsable -->
+  <div id="panel-equipo-base" style="overflow-x:auto">
+    <table id="eb-tabla" style="width:100%;border-collapse:collapse;font-size:11px;min-width:900px">
+      <thead>
+        <tr style="background:#f1faf1">
+          <th style="text-align:left;padding:7px 10px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-transform:uppercase;letter-spacing:.05em;min-width:180px;position:sticky;left:0;background:#f1faf1;z-index:1">Contratista</th>
+          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">ENE</th>
+          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">FEB</th>
+          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">MAR</th>
+          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">ABR</th>
+          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">MAY</th>
+          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">JUN</th>
+          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">JUL</th>
+          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">AGO</th>
+          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">SEP</th>
+          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">OCT</th>
+          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">NOV</th>
+          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">DIC</th>
+          <th style="padding:7px 10px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#A32D2D;text-align:right;min-width:100px">TOTAL ADEUDADO</th>
+        </tr>
+      </thead>
+      <tbody id="eb-tbody"></tbody>
+      <tfoot id="eb-tfoot"></tfoot>
+    </table>
+  </div>
+  <div style="margin-top:8px;font-size:10px;color:#aaa">💡 Clic en celda verde = marcar como adeudado · Clic en celda roja = marcar como pagado · Celda gris = sin honorarios ese mes</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     MÓDULO PROYECTO MSD VSR
+     ══════════════════════════════════════════════════════════ -->
+<div class="card" id="bloque-msd-vsr" style="margin-bottom:12px;border:1.5px solid #7B1FA2">
+
+  <!-- Encabezado -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+    <div>
+      <div style="font-size:11px;font-weight:700;color:#7B1FA2;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">🔬 Proyecto MSD VSR</div>
+      <div style="font-size:15px;font-weight:700;color:#54504F">Presupuesto de Costos — Proyecto MSD VSR 2026</div>
+      <div style="font-size:11px;color:#888;margin-top:2px">
+        Se marca <b style="color:#2E7D32">verde (pagado)</b> automáticamente si el proveedor aparece en Egresos ·
+        También puedes hacer clic manual · Celda gris = sin costo ese mes
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <button class="btn" onclick="msdReset()" style="font-size:11px;color:#A32D2D;border-color:#f0ccc8">↺ Reiniciar</button>
+      <button onclick="msdToggle()" style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:700;color:#54504F;font-family:Helvetica,Arial,sans-serif;display:flex;align-items:center;gap:5px">
+        <span id="ico-msd">▼</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div id="msd-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
+    <div style="background:#f3e5f5;border-radius:10px;padding:11px 13px;border:1px solid #ce93d8">
+      <div style="font-size:10px;font-weight:700;color:#7B1FA2;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">✅ Total pagado</div>
+      <div id="msd-kpi-pagado" style="font-size:17px;font-weight:700;color:#7B1FA2">$0</div>
+    </div>
+    <div style="background:#fff5f5;border-radius:10px;padding:11px 13px;border:1px solid #ffcdd2">
+      <div style="font-size:10px;font-weight:700;color:#A32D2D;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">⚠️ Total adeudado</div>
+      <div id="msd-kpi-adeudado" style="font-size:17px;font-weight:700;color:#A32D2D">$0</div>
+    </div>
+    <div style="background:#f9f8f5;border-radius:10px;padding:11px 13px;border:1px solid #e0ddd8">
+      <div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">📋 Presupuesto total</div>
+      <div id="msd-kpi-total" style="font-size:17px;font-weight:700;color:#54504F">$0</div>
+    </div>
+  </div>
+
+  <!-- Tabla -->
+  <div id="panel-msd-vsr" style="overflow-x:auto">
+    <table id="msd-tabla" style="width:100%;border-collapse:collapse;font-size:11px;min-width:900px">
+      <thead>
+        <tr style="background:#f3e5f5">
+          <th style="text-align:left;padding:7px 10px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-transform:uppercase;letter-spacing:.05em;min-width:220px;position:sticky;left:0;background:#f3e5f5;z-index:1">Ítem / Proveedor</th>
+          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">ENE</th>
+          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">FEB</th>
+          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">MAR</th>
+          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">ABR</th>
+          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">MAY</th>
+          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">JUN</th>
+          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">JUL</th>
+          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">AGO</th>
+          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">SEP</th>
+          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">OCT</th>
+          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">NOV</th>
+          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">DIC</th>
+          <th style="padding:7px 10px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#A32D2D;text-align:right;min-width:110px">TOTAL ADEUDADO</th>
+        </tr>
+      </thead>
+      <tbody id="msd-tbody"></tbody>
+      <tfoot id="msd-tfoot"></tfoot>
+    </table>
+  </div>
+  <div style="margin-top:8px;font-size:10px;color:#aaa">
+    🟢 Verde automático = detectado en Egresos como pagado · 🔴 Rojo = pendiente · Clic para cambiar manualmente
+  </div>
+</div>
 
 <div class="card" style="margin-bottom:12px;border:1.5px solid #5DC3DA">
 <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
@@ -761,20 +896,170 @@ function verificarSesion() {
   return false;
 }
 
+// ══════════════════════════════════════════════════════════════
+// SINCRONIZACIÓN GOOGLE SHEETS — ALZAK TABLERO DB
+// ══════════════════════════════════════════════════════════════
+var GS_API_URL = 'https://script.google.com/a/macros/alzak.com.co/s/AKfycbwUzwQuxZBHI6Wn4rbv-TM6qG7sFT3i7m-_maicGyiv-7NqdcJtoKb2YQ3x1in1uedj/exec';
+var GS_SYNC_ACTIVO = true;   // set false para forzar solo localStorage
+var GS_SYNC_PENDING = false;
+
+// ── Indicador visual de sync en el header ────────────────────
+function gsSetSyncIcon(estado) {
+  // estado: 'guardando' | 'ok' | 'error' | 'cargando'
+  var el = document.getElementById('gs-sync-icon');
+  if (!el) return;
+  var map = {
+    guardando: {txt:'☁️ Guardando...', col:'#5DC3DA'},
+    ok:        {txt:'☁️ Guardado',     col:'#4DD9A8'},
+    error:     {txt:'⚠️ Sin sync',     col:'#f5a623'},
+    cargando:  {txt:'☁️ Cargando...', col:'#5DC3DA'}
+  };
+  var s = map[estado] || map.ok;
+  el.textContent = s.txt;
+  el.style.color = s.col;
+}
+
+// ── POST a Google Sheets ──────────────────────────────────────
+function gsPost(tab, action, rows, cb) {
+  if (!GS_SYNC_ACTIVO) { if(cb) cb(false); return; }
+  gsSetSyncIcon('guardando');
+  var body = JSON.stringify({tab:tab, action:action, rows:rows});
+  fetch(GS_API_URL, {
+    method: 'POST',
+    body: body,
+    headers: {'Content-Type': 'text/plain'}
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(j){
+    gsSetSyncIcon(j.ok ? 'ok' : 'error');
+    if (cb) cb(j.ok);
+  })
+  .catch(function(){
+    gsSetSyncIcon('error');
+    if (cb) cb(false);
+  });
+}
+
+// ── GET desde Google Sheets ───────────────────────────────────
+function gsGet(tab, cb) {
+  if (!GS_SYNC_ACTIVO) { if(cb) cb(null); return; }
+  gsSetSyncIcon('cargando');
+  fetch(GS_API_URL + '?tab=' + encodeURIComponent(tab))
+  .then(function(r){ return r.json(); })
+  .then(function(j){
+    gsSetSyncIcon('ok');
+    if (cb) cb(j.ok ? j.data : null);
+  })
+  .catch(function(){
+    gsSetSyncIcon('error');
+    if (cb) cb(null);
+  });
+}
+
+// ── Convertir array de objetos → filas [header, ...data] ─────
+function objsToRows(arr) {
+  if (!arr || !arr.length) return [['_vacio']];
+  var keys = Object.keys(arr[0]);
+  var rows = [keys];
+  arr.forEach(function(obj) {
+    rows.push(keys.map(function(k){ return obj[k] !== undefined ? obj[k] : ''; }));
+  });
+  return rows;
+}
+
+// ── Convertir filas → array de objetos ───────────────────────
+function rowsToObjs(rows) {
+  if (!rows || rows.length < 2) return [];
+  var keys = rows[0];
+  if (keys[0] === '_vacio') return [];
+  return rows.slice(1).map(function(row) {
+    var obj = {};
+    keys.forEach(function(k, i){ obj[k] = row[i] !== undefined ? row[i] : ''; });
+    return obj;
+  });
+}
+
+// ── guardarDatos: localStorage + Google Sheets ────────────────
 function guardarDatos() {
+  // 1. localStorage siempre (fallback instantáneo)
   try {
     localStorage.setItem(LS_FACTURAS, JSON.stringify(FACTURAS));
     localStorage.setItem(LS_GASTOS,   JSON.stringify(GASTOS_DATA));
+    localStorage.setItem('eb_estado_2026',  localStorage.getItem('eb_estado_2026')  || '{}');
+    localStorage.setItem('msd_estado_2026', localStorage.getItem('msd_estado_2026') || '{}');
+  } catch(e){}
+
+  // 2. Google Sheets (async)
+  gsPost('facturas', 'set', objsToRows(FACTURAS));
+  gsPost('gastos',   'set', objsToRows(GASTOS_DATA));
+
+  // Estados Equipo Base y MSD VSR
+  try {
+    var ebEst  = JSON.parse(localStorage.getItem('eb_estado_2026')  || '{}');
+    var msdEst = JSON.parse(localStorage.getItem('msd_estado_2026') || '{}');
+    gsPost('eb_estado',  'set', [['clave','valor']].concat(Object.keys(ebEst).map(function(k){ return [k, ebEst[k]]; })));
+    gsPost('msd_estado', 'set', [['clave','valor']].concat(Object.keys(msdEst).map(function(k){ return [k, msdEst[k]]; })));
   } catch(e){}
 }
 
+// ── cargarDatos: primero localStorage, luego Google Sheets ───
 function cargarDatos() {
+  // 1. localStorage (inmediato — para que el UI cargue rápido)
   try {
-    var f = localStorage.getItem(LS_FACTURAS);
-    var g = localStorage.getItem(LS_GASTOS);
-    if (f) { var pf=JSON.parse(f); if (pf&&pf.length) FACTURAS=pf; }
-    if (g) { var pg=JSON.parse(g); if (pg&&pg.length) GASTOS_DATA=pg; }
+    var f  = localStorage.getItem(LS_FACTURAS);
+    var g2 = localStorage.getItem(LS_GASTOS);
+    if (f)  { var pf=JSON.parse(f);  if(pf&&pf.length)  FACTURAS=pf;    }
+    if (g2) { var pg=JSON.parse(g2); if(pg&&pg.length)  GASTOS_DATA=pg; }
   } catch(e){}
+
+  // 2. Google Sheets (async — sobreescribe si hay datos más recientes)
+  gsCargarDesdeSheets();
+}
+
+function gsCargarDesdeSheets() {
+  // Facturas
+  gsGet('facturas', function(rows) {
+    if (!rows) return;
+    var objs = rowsToObjs(rows);
+    if (objs.length) {
+      FACTURAS = objs;
+      try { localStorage.setItem(LS_FACTURAS, JSON.stringify(FACTURAS)); } catch(e){}
+      if (typeof renderFacturas === 'function') renderFacturas();
+      if (typeof renderCarteraHome === 'function') renderCarteraHome();
+      if (typeof renderHome === 'function') renderHome();
+    }
+  });
+
+  // Gastos
+  gsGet('gastos', function(rows) {
+    if (!rows) return;
+    var objs = rowsToObjs(rows);
+    if (objs.length) {
+      GASTOS_DATA = objs;
+      try { localStorage.setItem(LS_GASTOS, JSON.stringify(GASTOS_DATA)); } catch(e){}
+      if (typeof renderGastosDashboard === 'function') renderGastosDashboard();
+      if (typeof renderMSD === 'function') renderMSD();
+      if (typeof renderEquipoBase === 'function') renderEquipoBase();
+    }
+  });
+
+  // Estado Equipo Base
+  gsGet('eb_estado', function(rows) {
+    if (!rows || rows.length < 2) return;
+    var est = {};
+    rows.slice(1).forEach(function(r){ if(r[0]) est[r[0]] = r[1]; });
+    try { localStorage.setItem('eb_estado_2026', JSON.stringify(est)); } catch(e){}
+    if (typeof renderEquipoBase === 'function') renderEquipoBase();
+  });
+
+  // Estado MSD VSR
+  gsGet('msd_estado', function(rows) {
+    if (!rows || rows.length < 2) return;
+    var est = {};
+    rows.slice(1).forEach(function(r){ if(r[0]) est[r[0]] = r[1]; });
+    try { localStorage.setItem('msd_estado_2026', JSON.stringify(est)); } catch(e){}
+    if (typeof renderMSD === 'function') renderMSD();
+  });
 }
 
 document.addEventListener('keydown', function(e) {
@@ -5359,7 +5644,7 @@ function gastoProcesarDatos(datos) {
   if (st) { st.textContent = datos.length + ' facturas cargadas'; st.style.color = '#C8DABB'; }
   var uz = g('gasto-upload-zone'); if (uz) uz.style.display = 'none';
   var dash = g('gasto-dash'); if (dash) dash.style.display = 'block';
-  gastoInicializar(); renderGastosDashboard();
+  gastoInicializar(); renderGastosDashboard(); if(typeof renderMSD==="function") renderMSD(); if(typeof renderEquipoBase==="function") renderEquipoBase();
 }
 
 function gastoLeerCSV(file) { gastoLeerArchivo(file); }
@@ -6240,20 +6525,34 @@ document.addEventListener('keydown', function(e) {
 var LS_FACTURAS = 'alzak_facturas';
 var LS_GASTOS   = 'alzak_gastos';
 
-function guardarDatos() {
+function guardarDatos() { gsGuardarDatos(); }
+function cargarDatos()  { gsCargarDatos();  }
+
+function gsGuardarDatos() {
   try {
     localStorage.setItem(LS_FACTURAS, JSON.stringify(FACTURAS));
     localStorage.setItem(LS_GASTOS,   JSON.stringify(GASTOS_DATA));
-  } catch(e) { console.warn('localStorage lleno o bloqueado:', e); }
+  } catch(e){}
+  if (typeof gsPost === 'function') {
+    gsPost('facturas', 'set', objsToRows(FACTURAS));
+    gsPost('gastos',   'set', objsToRows(GASTOS_DATA));
+    try {
+      var ebEst  = JSON.parse(localStorage.getItem('eb_estado_2026')  || '{}');
+      var msdEst = JSON.parse(localStorage.getItem('msd_estado_2026') || '{}');
+      gsPost('eb_estado',  'set', [['clave','valor']].concat(Object.keys(ebEst).map(function(k){ return [k, ebEst[k]]; })));
+      gsPost('msd_estado', 'set', [['clave','valor']].concat(Object.keys(msdEst).map(function(k){ return [k, msdEst[k]]; })));
+    } catch(e){}
+  }
 }
 
-function cargarDatos() {
+function gsCargarDatos() {
   try {
-    var f = localStorage.getItem(LS_FACTURAS);
+    var f  = localStorage.getItem(LS_FACTURAS);
     var g2 = localStorage.getItem(LS_GASTOS);
-    if (f) { var pf = JSON.parse(f); if (pf && pf.length) FACTURAS = pf; }
-    if (g2) { var pg = JSON.parse(g2); if (pg && pg.length) GASTOS_DATA = pg; }
-  } catch(e) {}
+    if (f)  { var pf=JSON.parse(f);  if(pf&&pf.length)  FACTURAS=pf;    }
+    if (g2) { var pg=JSON.parse(g2); if(pg&&pg.length)  GASTOS_DATA=pg; }
+  } catch(e){}
+  if (typeof gsCargarDesdeSheets === 'function') gsCargarDesdeSheets();
 }
 
 })();
@@ -6906,6 +7205,464 @@ function renderBcol() {
   <!-- BOLD CF -->
 
 </div>
+
+<!-- ══════════════════════════════════════════════════════════
+     JS: MÓDULO EQUIPO BASE OPS
+     ══════════════════════════════════════════════════════════ -->
+<script>
+(function() {
+
+  // ── Datos del equipo (valor 0 = sin honorarios ese mes) ──────────────
+  var EB_DATA = [
+    { nombre: 'Lina Moyano Tamara',
+      meses: [5138880,5138880,5138880,5138880,5138880,5138880,5138880,5138880,5138880,5138880,5138880,5138880] },
+    { nombre: 'Maria de los Angeles Carrasquilla Sotomayor',
+      meses: [6249760,6249760,6249760,6249760,6249760,6249760,6249760,6249760,6249760,6249760,6249760,6249760] },
+    { nombre: 'Fernando Salcedo Mejia',
+      meses: [5611657,0,0,0,0,0,0,0,0,0,0,0] },
+    { nombre: 'Alejandra Mazo',
+      meses: [1336067,0,0,0,0,0,0,0,0,0,0,0] },
+    { nombre: 'Rosmery Barroso',
+      meses: [2192982,2192982,2192982,2192982,2192982,0,2192982,2192982,2192982,2192982,2192982,2192982] },
+    { nombre: 'Ana Milena Lozano',
+      meses: [5139380,5139380,5139380,0,0,0,0,0,0,0,0,0] },
+    { nombre: 'Daniela Torres',
+      meses: [0,0,4350000,4350000,4350000,4350000,0,0,0,0,0,0] },
+    { nombre: 'Nelson Jose Alvis Zakzuk',
+      meses: [10000000,6249760,6249760,6249760,6249760,6249760,6249760,6249760,6249760,6249760,6249760,6249760] },
+    { nombre: 'Nelson Rafael Alvis',
+      meses: [10000000,6249760,6249760,6249760,6249760,6249760,6249760,6249760,6249760,6249760,6249760,6249760] },
+    { nombre: 'Faiber Andres Chaparro',
+      meses: [3000000,3000000,3000000,3180000,3180000,3180000,3000000,3000000,3000000,3180000,3180000,3180000] }
+  ];
+
+  var MESES_LBL = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+  var LS_KEY = 'eb_estado_2026';
+
+  // ── Estado persistente: { "nombre||M": "pagado"|"adeudado" } ──────────
+  function cargarEstado() {
+    try {
+      var raw = localStorage.getItem(LS_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch(e) { return {}; }
+  }
+
+  function guardarEstado(est) {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(est)); } catch(e) {}
+    if (typeof gsPost === "function") { gsPost("eb_estado","set",[["clave","valor"]].concat(Object.keys(est).map(function(k){return [k,est[k]];}))); }
+  }
+
+  // ── Formato COP ───────────────────────────────────────────────────────
+  function COP(n) {
+    if (!n) return '$0';
+    return '$' + Math.round(n).toLocaleString('es-CO');
+  }
+
+  // ── Clave de estado para cada celda ──────────────────────────────────
+  function clave(nombre, m) { return nombre + '||' + m; }
+
+  // ── Toggle de estado al hacer clic ────────────────────────────────────
+  window.ebToggleCelda = function(nombre, m) {
+    var est = cargarEstado();
+    var k = clave(nombre, m);
+    // Ciclo: (sin estado=rojo) → pagado(verde) → adeudado(rojo)
+    if (est[k] === 'pagado') {
+      est[k] = 'adeudado';
+    } else {
+      est[k] = 'pagado';
+    }
+    guardarEstado(est);
+    renderEquipoBase();
+  };
+
+  // ── Reiniciar todos los estados ───────────────────────────────────────
+  window.equipoBaseReset = function() {
+    if (!confirm('¿Reiniciar todos los estados de pago del Equipo Base?')) return;
+    guardarEstado({});
+    renderEquipoBase();
+  };
+
+  // ── Colapsar / expandir ───────────────────────────────────────────────
+  window.equipoBaseToggle = function() {
+    var panel = document.getElementById('panel-equipo-base');
+    var ico   = document.getElementById('ico-eb');
+    if (!panel) return;
+    if (panel.style.display === 'none') {
+      panel.style.display = '';
+      ico.textContent = '▼';
+    } else {
+      panel.style.display = 'none';
+      ico.textContent = '▶';
+    }
+  };
+
+  // ── Render principal ──────────────────────────────────────────────────
+  function renderEquipoBase() {
+    var tbody = document.getElementById('eb-tbody');
+    var tfoot = document.getElementById('eb-tfoot');
+    if (!tbody || !tfoot) return;
+
+    var est = cargarEstado();
+    var totalPagadoGlobal   = 0;
+    var totalAdeudadoGlobal = 0;
+    var totalPresupuesto    = 0;
+    var subtotalesMes = [0,0,0,0,0,0,0,0,0,0,0,0]; // subtotales adeudado por mes
+
+    var html = '';
+
+    EB_DATA.forEach(function(ct, idx) {
+      var totalAdeudadoFila   = 0;
+      var totalPagadoFila     = 0;
+      var presupuestoFila     = 0;
+      var bg = idx % 2 === 0 ? '#ffffff' : '#fafaf8';
+
+      html += '<tr style="background:' + bg + '">';
+      // Nombre (sticky)
+      html += '<td style="padding:6px 10px;border-bottom:1px solid #f0ede8;font-weight:600;font-size:11px;color:#333;position:sticky;left:0;background:' + bg + ';z-index:1">' + ct.nombre + '</td>';
+
+      ct.meses.forEach(function(val, m) {
+        if (val === 0) {
+          // Sin honorarios → celda gris vacía
+          html += '<td style="padding:4px 3px;border-bottom:1px solid #f0ede8;text-align:center">'
+               +  '<div style="background:#f0ede8;border-radius:5px;padding:4px 2px;font-size:9px;color:#bbb;min-width:64px">—</div>'
+               +  '</td>';
+        } else {
+          var k   = clave(ct.nombre, m);
+          var sta = est[k]; // 'pagado' | 'adeudado' | undefined
+          // Por defecto sin estado = adeudado (rojo) hasta que se marque
+          var esPagado = (sta === 'pagado');
+          presupuestoFila += val;
+
+          if (esPagado) {
+            totalPagadoFila += val;
+            totalPagadoGlobal += val;
+          } else {
+            totalAdeudadoFila += val;
+            totalAdeudadoGlobal += val;
+            subtotalesMes[m] += val;
+          }
+
+          var bgCell  = esPagado ? '#e8f5e9' : '#ffebee';
+          var clrCell = esPagado ? '#2E7D32' : '#A32D2D';
+          var icon    = esPagado ? '✓' : '!';
+          var title   = esPagado ? 'Pagado — clic para marcar adeudado' : 'Adeudado — clic para marcar pagado';
+
+          html += '<td style="padding:4px 3px;border-bottom:1px solid #f0ede8;text-align:center">'
+               +  '<div onclick="ebToggleCelda(' + JSON.stringify(ct.nombre) + ',' + m + ')" '
+               +       'title="' + title + '" '
+               +       'style="background:' + bgCell + ';border:1.5px solid ' + clrCell + ';border-radius:5px;padding:4px 2px;cursor:pointer;min-width:64px;transition:all .15s">'
+               +    '<div style="font-size:9px;font-weight:700;color:' + clrCell + '">' + icon + '</div>'
+               +    '<div style="font-size:9px;color:' + clrCell + ';font-weight:600">' + COP(val) + '</div>'
+               +  '</div>'
+               + '</td>';
+        }
+      });
+
+      presupuestoFila = ct.meses.reduce(function(a,v){ return a+v; }, 0);
+      totalPresupuesto += presupuestoFila;
+
+      // Columna TOTAL ADEUDADO
+      var clrTotal = totalAdeudadoFila > 0 ? '#A32D2D' : '#2E7D32';
+      html += '<td style="padding:6px 10px;border-bottom:1px solid #f0ede8;text-align:right;font-weight:700;font-size:11px;color:' + clrTotal + '">'
+           +    COP(totalAdeudadoFila)
+           + '</td>';
+
+      html += '</tr>';
+    });
+
+    tbody.innerHTML = html;
+
+    // ── SUBTOTAL fila footer ──────────────────────────────────────────
+    var ftHtml = '<tr style="background:#f1faf1">';
+    ftHtml += '<td style="padding:8px 10px;font-weight:700;font-size:11px;color:#2E7D32;text-transform:uppercase;position:sticky;left:0;background:#f1faf1;z-index:1">SUBTOTAL EQUIPO BASE</td>';
+
+    subtotalesMes.forEach(function(val) {
+      if (val > 0) {
+        ftHtml += '<td style="padding:6px 3px;text-align:center">'
+               +    '<div style="background:#ffebee;border-radius:5px;padding:3px 2px;font-size:9px;font-weight:700;color:#A32D2D;min-width:64px">' + COP(val) + '</div>'
+               +  '</td>';
+      } else {
+        ftHtml += '<td style="padding:6px 3px;text-align:center"><div style="background:#f0ede8;border-radius:5px;padding:3px 2px;font-size:9px;color:#ccc;min-width:64px">—</div></td>';
+      }
+    });
+
+    ftHtml += '<td style="padding:8px 10px;text-align:right;font-weight:700;font-size:13px;color:#A32D2D">' + COP(totalAdeudadoGlobal) + '</td>';
+    ftHtml += '</tr>';
+    tfoot.innerHTML = ftHtml;
+
+    // ── KPIs ─────────────────────────────────────────────────────────
+    var elPag  = document.getElementById('eb-kpi-pagado');
+    var elAdeu = document.getElementById('eb-kpi-adeudado');
+    var elTot  = document.getElementById('eb-kpi-total');
+    if (elPag)  elPag.textContent  = COP(totalPagadoGlobal);
+    if (elAdeu) elAdeu.textContent = COP(totalAdeudadoGlobal);
+    if (elTot)  elTot.textContent  = COP(totalPresupuesto);
+  }
+
+  // ── Inicializar cuando cargue el DOM ─────────────────────────────────
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', renderEquipoBase);
+  } else {
+    renderEquipoBase();
+  }
+
+  // Re-renderizar si cambian datos (por si acaso)
+  window.renderEquipoBase = renderEquipoBase;
+
+})();
+</script>
+
+<!-- ══════════════════════════════════════════════════════════
+     JS: MÓDULO PROYECTO MSD VSR
+     ══════════════════════════════════════════════════════════ -->
+<script>
+(function() {
+
+  // ── Datos del proyecto (0 = sin costo ese mes) ────────────────────────
+  // Índices: 0=ENE,1=FEB,2=MAR,3=ABR,4=MAY,5=JUN,6=JUL,7=AGO,8=SEP,9=OCT,10=NOV,11=DIC
+  var MSD_DATA = [
+    { nombre: 'TRADUCCION DEL PROTOCOLO',
+      keywords: ['protocolo'],
+      meses: [0,0,0,0,0,0,0,0,0,0,0,0] },
+    { nombre: 'IVAN FELIPE GUTIERREZ COLSUBSIDIO',
+      keywords: ['ivan','gutierrez','colsubsidio'],
+      meses: [0,0,0,0,16819312,0,25228968,0,42048279,0,0,0] },
+    { nombre: 'CLINICA EL ROSARIO',
+      keywords: ['rosario','clinica el rosario'],
+      meses: [0,0,0,3193639,0,4790459,0,7984097,0,0,0,0] },
+    { nombre: 'HOSPITANI INFANTIL NAPOLEON FRANCO PAREJA',
+      keywords: ['hospitani','napoleon','franco pareja'],
+      meses: [0,0,0,4841213,0,4841213,0,0,0,0,0,0] },
+    { nombre: 'ESE ERASMO MEOZ CUCUTA',
+      keywords: ['erasmo meoz','cucuta','ese erasmo'],
+      meses: [0,0,0,4548398,0,4548398,0,0,0,0,0,0] },
+    { nombre: 'COMITE DE ETICA INSTITUCIONAL CLINICA EL ROSARIO',
+      keywords: ['comite','etica','institucional'],
+      meses: [0,0,5081895,0,0,0,0,0,0,0,0,0] },
+    { nombre: 'ANA MARIA GARCIA CASA DEL NINO',
+      keywords: ['ana maria garcia','casa del nino'],
+      meses: [0,0,774036,0,0,0,0,0,0,0,0,0] },
+    { nombre: 'SEBASTIAN MONCADA ERASMO MEOZ',
+      keywords: ['sebastian moncada','moncada erasmo'],
+      meses: [0,0,774036,0,0,0,0,0,0,0,0,0] },
+    { nombre: 'RECOLECTOR CLINICA EL ROSARIO',
+      keywords: ['recolector rosario','recolector clinica'],
+      meses: [0,0,0,3096142,3096142,774036,0,0,0,0,0,0] },
+    { nombre: 'RECOLECTOR COLSUBSIDIO 1',
+      keywords: ['recolector colsubsidio 1','recolector 1'],
+      meses: [0,0,0,3096142,3096142,3096142,0,0,0,0,0,0] },
+    { nombre: 'RECOLECTOR COLSUBSIDIO 2',
+      keywords: ['recolector colsubsidio 2','recolector 2'],
+      meses: [0,0,0,3096142,3096142,0,0,0,0,0,0,0] },
+    { nombre: 'RECOLECTOR COLSUBSIDIO 3',
+      keywords: ['recolector colsubsidio 3','recolector 3'],
+      meses: [0,0,0,3096142,3096142,0,0,0,0,0,0,0] },
+    { nombre: 'RECOLECTOR COLSUBSIDIO 4',
+      keywords: ['recolector colsubsidio 4','recolector 4'],
+      meses: [0,0,0,3096142,3096142,0,0,0,0,0,0,0] },
+    { nombre: 'WILFRIDO CORONELL - EXPERTO VSR',
+      keywords: ['wilfrido','coronell'],
+      meses: [0,0,0,3916212,0,3916212,0,3916212,0,0,2610808,0] },
+    { nombre: 'ANDRES ARIAS - EXPERTO VSR',
+      keywords: ['andres arias'],
+      meses: [0,0,0,3916212,0,3916212,0,3916212,0,0,2610808,0] },
+    { nombre: 'IVAN GUTIERREZ - EXPERTO VSR',
+      keywords: ['ivan gutierrez experto','ivan gutierrez vsr'],
+      meses: [0,0,0,3916212,0,3916212,0,3916212,0,0,2610808,0] },
+    { nombre: 'HERNANDO PINZON - EXPERTO VSR',
+      keywords: ['hernando','pinzon'],
+      meses: [0,0,0,2700000,0,2700000,900000,0,0,0,0,0] },
+    { nombre: 'CLAUDIA BELTRAN - EXPERTO VSR',
+      keywords: ['claudia beltran'],
+      meses: [0,0,0,3916212,0,3916212,0,3916212,0,0,2610808,0] },
+    { nombre: 'DANIELA TORRES',
+      keywords: ['daniela torres'],
+      meses: [0,0,0,4300000,4300000,4300000,0,0,0,0,0,0] },
+    { nombre: 'CURSO BUENAS PRACTICAS CLINICAS',
+      keywords: ['buenas practicas','curso clinicas'],
+      meses: [0,0,0,0,0,0,0,0,0,0,0,0] }
+  ];
+
+  var MESES_NOMBRES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  var LS_KEY_MSD = 'msd_estado_2026';
+
+  // ── Estado manual persistente ─────────────────────────────────────────
+  function cargarEstadoMSD() {
+    try { var r = localStorage.getItem(LS_KEY_MSD); return r ? JSON.parse(r) : {}; }
+    catch(e) { return {}; }
+  }
+  function guardarEstadoMSD(est) {
+    try { localStorage.setItem(LS_KEY_MSD, JSON.stringify(est)); } catch(e) {}
+    if (typeof gsPost === "function") { gsPost("msd_estado","set",[["clave","valor"]].concat(Object.keys(est).map(function(k){return [k,est[k]];}))); }
+  }
+
+  // ── Formato COP ───────────────────────────────────────────────────────
+  function COPM(n) { return n ? '$' + Math.round(n).toLocaleString('es-CO') : '$0'; }
+
+  // ── Detectar si un ítem/mes está pagado en GASTOS_DATA ───────────────
+  // Lógica: buscar en GASTOS_DATA un gasto donde el proveedor contenga
+  // alguna keyword del ítem Y cuyo mes coincida (M+1 = nombre del mes)
+  function detectarEnEgresos(item, mesIdx) {
+    var gastos = window.GASTOS_DATA;
+    if (!gastos || !gastos.length) return false;
+    var mesNom = MESES_NOMBRES[mesIdx].toLowerCase();
+    var keywords = item.keywords;
+
+    for (var i = 0; i < gastos.length; i++) {
+      var g = gastos[i];
+      var prov = ((g['Proveedor'] || g['proveedor'] || g['PROVEEDOR'] || g['Beneficiario'] || '') + ' ' +
+                  (g['Concepto']  || g['concepto']  || g['CONCEPTO']  || '')).toLowerCase();
+      var mesg = (g['Mes'] || g['mes'] || g['MES'] || '').toLowerCase();
+
+      // Verificar que el mes coincida
+      var mesCoinc = (mesg.indexOf(mesNom) >= 0) ||
+                     (mesg === (mesIdx+1).toString()) ||
+                     (mesg === (mesIdx+1 < 10 ? '0'+(mesIdx+1) : ''+(mesIdx+1)));
+      if (!mesCoinc) continue;
+
+      // Verificar que alguna keyword esté en el proveedor/concepto
+      for (var k = 0; k < keywords.length; k++) {
+        if (prov.indexOf(keywords[k].toLowerCase()) >= 0) return true;
+      }
+    }
+    return false;
+  }
+
+  // ── Toggle manual ─────────────────────────────────────────────────────
+  window.msdToggleCelda = function(nombreIdx, m) {
+    var est = cargarEstadoMSD();
+    var k = nombreIdx + '||' + m;
+    if (est[k] === 'pagado') {
+      est[k] = 'adeudado'; // forzar adeudado (override del auto)
+    } else {
+      est[k] = 'pagado';
+    }
+    guardarEstadoMSD(est);
+    renderMSD();
+  };
+
+  window.msdReset = function() {
+    if (!confirm('¿Reiniciar todos los estados del Proyecto MSD VSR?')) return;
+    guardarEstadoMSD({});
+    renderMSD();
+  };
+
+  window.msdToggle = function() {
+    var panel = document.getElementById('panel-msd-vsr');
+    var ico   = document.getElementById('ico-msd');
+    if (!panel) return;
+    if (panel.style.display === 'none') {
+      panel.style.display = '';
+      ico.textContent = '▼';
+    } else {
+      panel.style.display = 'none';
+      ico.textContent = '▶';
+    }
+  };
+
+  // ── Render principal ──────────────────────────────────────────────────
+  function renderMSD() {
+    var tbody = document.getElementById('msd-tbody');
+    var tfoot = document.getElementById('msd-tfoot');
+    if (!tbody || !tfoot) return;
+
+    var estManual = cargarEstadoMSD();
+    var totalPag  = 0, totalAdeu = 0, totalPres = 0;
+    var subMes = [0,0,0,0,0,0,0,0,0,0,0,0];
+
+    var html = '';
+
+    MSD_DATA.forEach(function(item, idx) {
+      var rowAdeu = 0, rowPag = 0;
+      var bg = idx % 2 === 0 ? '#ffffff' : '#fdfbff';
+
+      html += '<tr style="background:' + bg + '">';
+      // Nombre (sticky)
+      html += '<td style="padding:6px 10px;border-bottom:1px solid #f0ede8;font-weight:600;font-size:11px;color:#333;position:sticky;left:0;background:' + bg + ';z-index:1">' + item.nombre + '</td>';
+
+      item.meses.forEach(function(val, m) {
+        if (val === 0) {
+          html += '<td style="padding:4px 3px;border-bottom:1px solid #f0ede8;text-align:center">'
+               +  '<div style="background:#f0ede8;border-radius:5px;padding:4px 2px;font-size:9px;color:#bbb;min-width:70px">—</div>'
+               +  '</td>';
+          return;
+        }
+
+        var k = idx + '||' + m;
+        var manualOv = estManual[k]; // 'pagado'|'adeudado'|undefined
+        var autoDetect = detectarEnEgresos(item, m);
+
+        var esPagado;
+        if (manualOv === 'pagado')   { esPagado = true; }
+        else if (manualOv === 'adeudado') { esPagado = false; }
+        else { esPagado = autoDetect; } // sin override → usar detección automática
+
+        totalPres += val;
+        if (esPagado) { rowPag  += val; totalPag  += val; }
+        else          { rowAdeu += val; totalAdeu += val; subMes[m] += val; }
+
+        var bgCell  = esPagado ? '#e8f5e9' : '#ffebee';
+        var clrCell = esPagado ? '#2E7D32' : '#A32D2D';
+        var icon    = esPagado ? '✓' : '!';
+        var autoTag = (autoDetect && !manualOv) ? '<div style="font-size:8px;color:#4CAF50">auto</div>' : '';
+        var title   = esPagado ? 'Pagado — clic para adeudado' : 'Adeudado — clic para pagado';
+
+        html += '<td style="padding:4px 3px;border-bottom:1px solid #f0ede8;text-align:center">'
+             +  '<div onclick="msdToggleCelda(' + idx + ',' + m + ')" title="' + title + '" '
+             +       'style="background:' + bgCell + ';border:1.5px solid ' + clrCell + ';border-radius:5px;padding:3px 2px;cursor:pointer;min-width:70px;transition:all .15s">'
+             +    '<div style="font-size:9px;font-weight:700;color:' + clrCell + '">' + icon + '</div>'
+             +    '<div style="font-size:9px;color:' + clrCell + ';font-weight:600">' + COPM(val) + '</div>'
+             +    autoTag
+             +  '</div>'
+             + '</td>';
+      });
+
+      // Total adeudado fila
+      var clrT = rowAdeu > 0 ? '#A32D2D' : '#2E7D32';
+      html += '<td style="padding:6px 10px;border-bottom:1px solid #f0ede8;text-align:right;font-weight:700;font-size:11px;color:' + clrT + '">'
+           +    COPM(rowAdeu)
+           + '</td>';
+      html += '</tr>';
+    });
+
+    tbody.innerHTML = html;
+
+    // ── Footer subtotales ─────────────────────────────────────────────
+    var ft = '<tr style="background:#f3e5f5">';
+    ft += '<td style="padding:8px 10px;font-weight:700;font-size:11px;color:#7B1FA2;text-transform:uppercase;position:sticky;left:0;background:#f3e5f5;z-index:1">TOTAL PROYECTO MSD VSR</td>';
+    subMes.forEach(function(val) {
+      if (val > 0) {
+        ft += '<td style="padding:6px 3px;text-align:center">'
+           +    '<div style="background:#ffebee;border-radius:5px;padding:3px 2px;font-size:9px;font-weight:700;color:#A32D2D;min-width:70px">' + COPM(val) + '</div>'
+           +  '</td>';
+      } else {
+        ft += '<td style="padding:6px 3px;text-align:center"><div style="background:#f0ede8;border-radius:5px;padding:3px 2px;font-size:9px;color:#ccc;min-width:70px">—</div></td>';
+      }
+    });
+    ft += '<td style="padding:8px 10px;text-align:right;font-weight:700;font-size:13px;color:#A32D2D">' + COPM(totalAdeu) + '</td>';
+    ft += '</tr>';
+    tfoot.innerHTML = ft;
+
+    // ── KPIs ─────────────────────────────────────────────────────────
+    var ep = document.getElementById('msd-kpi-pagado');
+    var ea = document.getElementById('msd-kpi-adeudado');
+    var et = document.getElementById('msd-kpi-total');
+    if (ep) ep.textContent = COPM(totalPag);
+    if (ea) ea.textContent = COPM(totalAdeu);
+    if (et) et.textContent = COPM(totalPres);
+  }
+
+  // ── Init + exponer para que Egresos lo llame al cargar CSV ────────────
+  window.renderMSD = renderMSD;
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', renderMSD);
+  } else {
+    renderMSD();
+  }
+
+})();
+</script>
 
 </body>
 </html>

@@ -7262,9 +7262,9 @@ function renderBcol() {
   function clave(nombre, m) { return nombre + '||' + m; }
 
   // ── Toggle de estado al hacer clic ────────────────────────────────────
-  window.ebToggleCelda = function(nombre, m) {
+  window.ebToggleCelda = function(idx, m) {
     var est = cargarEstado();
-    var k = clave(nombre, m);
+    var k = idx + '||' + m;
     // Ciclo: (sin estado=rojo) → pagado(verde) → adeudado(rojo)
     if (est[k] === 'pagado') {
       est[k] = 'adeudado';
@@ -7327,7 +7327,7 @@ function renderBcol() {
                +  '<div style="background:#f0ede8;border-radius:5px;padding:4px 2px;font-size:9px;color:#bbb;min-width:64px">—</div>'
                +  '</td>';
         } else {
-          var k   = clave(ct.nombre, m);
+          var k   = idx + '||' + m;
           var sta = est[k]; // 'pagado' | 'adeudado' | undefined
           // Por defecto sin estado = adeudado (rojo) hasta que se marque
           var esPagado = (sta === 'pagado');
@@ -7348,7 +7348,7 @@ function renderBcol() {
           var title   = esPagado ? 'Pagado — clic para marcar adeudado' : 'Adeudado — clic para marcar pagado';
 
           html += '<td style="padding:4px 3px;border-bottom:1px solid #f0ede8;text-align:center">'
-               +  '<div onclick="ebToggleCelda(' + JSON.stringify(ct.nombre) + ',' + m + ')" '
+               +  '<div onclick="ebToggleCelda(' + idx + ',' + m + ')" '
                +       'title="' + title + '" '
                +       'style="background:' + bgCell + ';border:1.5px solid ' + clrCell + ';border-radius:5px;padding:4px 2px;cursor:pointer;min-width:64px;transition:all .15s">'
                +    '<div style="font-size:9px;font-weight:700;color:' + clrCell + '">' + icon + '</div>'

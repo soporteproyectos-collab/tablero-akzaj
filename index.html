@@ -300,7 +300,32 @@ select,input{padding:6px 10px;border:1px solid #d0cec8;border-radius:7px;font-si
       <tfoot id="eb-tfoot"></tfoot>
     </table>
   </div>
-  <div style="margin-top:8px;font-size:10px;color:#aaa">💡 Clic en celda verde = marcar como adeudado · Clic en celda roja = marcar como pagado · Celda gris = sin honorarios ese mes</div>
+  <div style="margin-top:8px;font-size:10px;color:#aaa">💡 Clic en celda roja = marcar pagado · Clic en celda verde = marcar adeudado · "editar" debajo del valor para cambiar monto · Clic en nombre para renombrar</div>
+</div>
+
+<!-- Modal Equipo Base -->
+<div id="eb-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:99999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:14px;padding:28px 28px 22px;width:340px;max-width:95%;box-shadow:0 24px 60px rgba(0,0,0,0.3)">
+    <div id="eb-modal-titulo" style="font-size:15px;font-weight:700;color:#333;margin-bottom:6px"></div>
+    <div id="eb-modal-sub" style="font-size:11px;color:#888;margin-bottom:16px"></div>
+    <input id="eb-modal-input" type="text" style="width:100%;padding:10px 12px;border:1.5px solid #e0ddd8;border-radius:9px;font-size:14px;font-family:Helvetica,Arial,sans-serif;box-sizing:border-box;outline:none" placeholder="">
+    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+      <button onclick="ebModalCancelar()" style="padding:9px 18px;border:1px solid #d0cec8;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-family:Helvetica,Arial,sans-serif">Cancelar</button>
+      <button onclick="ebModalAceptar()" style="padding:9px 20px;border:none;border-radius:8px;background:#2E7D32;color:#fff;cursor:pointer;font-size:13px;font-weight:700;font-family:Helvetica,Arial,sans-serif">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal confirmación eliminar Equipo Base -->
+<div id="eb-modal-confirm" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:99999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:14px;padding:28px;width:320px;max-width:95%;box-shadow:0 24px 60px rgba(0,0,0,0.3)">
+    <div style="font-size:15px;font-weight:700;color:#A32D2D;margin-bottom:10px">🗑 Eliminar contratista</div>
+    <div id="eb-confirm-msg" style="font-size:13px;color:#555;margin-bottom:20px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="ebConfirmCancelar()" style="padding:9px 18px;border:1px solid #d0cec8;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-family:Helvetica,Arial,sans-serif">Cancelar</button>
+      <button onclick="ebConfirmAceptar()" style="padding:9px 20px;border:none;border-radius:8px;background:#A32D2D;color:#fff;cursor:pointer;font-size:13px;font-weight:700;font-family:Helvetica,Arial,sans-serif">Eliminar</button>
+    </div>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════════════════════════
@@ -368,7 +393,32 @@ select,input{padding:6px 10px;border:1px solid #d0cec8;border-radius:7px;font-si
     </table>
   </div>
   <div style="margin-top:8px;font-size:10px;color:#aaa">
-    🟢 Verde automático = detectado en Egresos como pagado · 🔴 Rojo = pendiente · Clic para cambiar manualmente
+    🟢 Verde automático = detectado en Egresos · 🔴 Rojo = pendiente · Clic para cambiar estado · "editar" para cambiar valor · Clic en nombre para renombrar
+  </div>
+</div>
+
+<!-- Modal input MSD VSR -->
+<div id="msd-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:99999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:14px;padding:28px 28px 22px;width:340px;max-width:95%;box-shadow:0 24px 60px rgba(0,0,0,0.3)">
+    <div id="msd-modal-titulo" style="font-size:15px;font-weight:700;color:#7B1FA2;margin-bottom:6px"></div>
+    <div id="msd-modal-sub" style="font-size:11px;color:#888;margin-bottom:16px"></div>
+    <input id="msd-modal-input" type="text" style="width:100%;padding:10px 12px;border:1.5px solid #e0ddd8;border-radius:9px;font-size:14px;font-family:Helvetica,Arial,sans-serif;box-sizing:border-box;outline:none">
+    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+      <button onclick="msdModalCancelar()" style="padding:9px 18px;border:1px solid #d0cec8;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-family:Helvetica,Arial,sans-serif">Cancelar</button>
+      <button onclick="msdModalAceptar()" style="padding:9px 20px;border:none;border-radius:8px;background:#7B1FA2;color:#fff;cursor:pointer;font-size:13px;font-weight:700;font-family:Helvetica,Arial,sans-serif">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal confirmación eliminar MSD VSR -->
+<div id="msd-modal-confirm" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:99999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:14px;padding:28px;width:320px;max-width:95%;box-shadow:0 24px 60px rgba(0,0,0,0.3)">
+    <div style="font-size:15px;font-weight:700;color:#A32D2D;margin-bottom:10px">🗑 Eliminar ítem</div>
+    <div id="msd-confirm-msg" style="font-size:13px;color:#555;margin-bottom:20px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="msdConfirmCancelar()" style="padding:9px 18px;border:1px solid #d0cec8;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-family:Helvetica,Arial,sans-serif">Cancelar</button>
+      <button onclick="msdConfirmAceptar()" style="padding:9px 20px;border:none;border-radius:8px;background:#A32D2D;color:#fff;cursor:pointer;font-size:13px;font-weight:700;font-family:Helvetica,Arial,sans-serif">Eliminar</button>
+    </div>
   </div>
 </div>
 
@@ -770,14 +820,24 @@ select,input{padding:6px 10px;border:1px solid #d0cec8;border-radius:7px;font-si
 <table>
 <thead>
 <tr>
-<th>No. Factura</th>
-<th>Cliente</th>
+<th onclick="factOrdenar('num')" style="cursor:pointer;user-select:none;white-space:nowrap">
+  No. Factura <span id="fact-ord-num" style="font-size:10px;color:#5DC3DA"></span>
+</th>
+<th onclick="factOrdenar('cliente')" style="cursor:pointer;user-select:none;white-space:nowrap">
+  Cliente <span id="fact-ord-cliente" style="font-size:10px;color:#5DC3DA"></span>
+</th>
 <th>NIT</th>
-<th>Fecha emisión</th>
-<th>Vencimiento</th>
+<th onclick="factOrdenar('fecha')" style="cursor:pointer;user-select:none;white-space:nowrap">
+  Fecha emisión <span id="fact-ord-fecha" style="font-size:10px;color:#5DC3DA"></span>
+</th>
+<th onclick="factOrdenar('vence')" style="cursor:pointer;user-select:none;white-space:nowrap">
+  Vencimiento <span id="fact-ord-vence" style="font-size:10px;color:#5DC3DA"></span>
+</th>
 <th>Días</th>
 <th style="text-align:right">Bruto</th>
-<th style="text-align:right">Total a Pagar</th>
+<th onclick="factOrdenar('total')" style="cursor:pointer;user-select:none;text-align:right;white-space:nowrap">
+  Total a Pagar <span id="fact-ord-total" style="font-size:10px;color:#5DC3DA"></span>
+</th>
 <th>Estado</th>
 <th>Acción</th>
 </tr>
@@ -1182,7 +1242,14 @@ function procesarFilasGasto(rows, tipo) {
     'Mantenimiento y reparaciones','Gastos administrativos','Por clasificar'];
 
   // Detectar formato: Excel ALZAK vs CSV estándar
+  // Detectar si fila 0 es título y fila 1 es el encabezado real (formato Excel ALZAK)
+  var dataStart = 1;
   var header = rows[0].map(function(h){ return (h||'').toString().toLowerCase().trim(); });
+  // Si la primera fila parece un título (no tiene 'fecha' ni columnas conocidas), saltar a fila 1
+  if (header.indexOf('fecha') < 0 && header.indexOf('proveedor') < 0 && rows.length > 2) {
+    header = rows[1].map(function(h){ return (h||'').toString().toLowerCase().trim(); });
+    dataStart = 2; // Saltar título + encabezado
+  }
   // Formato ALZAK con N° al inicio (formato antiguo)
   var isAlzakExcelNum = header.indexOf('proveedor / beneficiario') >= 0 &&
                         (header[0] === 'n°' || header[0] === 'num' || header[0] === '#');
@@ -1243,7 +1310,7 @@ function procesarFilasGasto(rows, tipo) {
   }
 
   var importados = 0, errores = 0;
-  var dataStart = 1; // Saltar encabezado
+  // dataStart ya definido arriba según formato
 
   for (var i=dataStart; i<rows.length; i++) {
     var row = rows[i];
@@ -3034,7 +3101,19 @@ function renderBancos() {
 // ============================================================
 var FACTURAS = [];
 
-var FACT_FILTRO = 'todas';
+var FACT_FILTRO    = 'todas';
+window.FACT_ORD_CAMPO = 'vence';
+window.FACT_ORD_DIR   = 1;
+
+function factOrdenar(campo) {
+  if (window.FACT_ORD_CAMPO === campo) {
+    window.FACT_ORD_DIR = window.FACT_ORD_DIR === 1 ? -1 : 1;
+  } else {
+    window.FACT_ORD_CAMPO = campo;
+    window.FACT_ORD_DIR   = 1;
+  }
+  renderFacturas();
+}
 
 function diasHasta(fechaStr) {
   var hoy = new Date(); hoy.setHours(0,0,0,0);
@@ -3266,7 +3345,39 @@ function renderFacturas() {
     }
     return true;
   });
-  lista.sort(function(a,b){ return new Date(a.vence)-new Date(b.vence); });
+  lista.sort(function(a,b){
+    var campo = window.FACT_ORD_CAMPO || 'vence';
+    var dir   = window.FACT_ORD_DIR   || 1;
+    var va, vb;
+    if (campo === 'num') {
+      // Extraer número al final del código (FEE2286 → 2286)
+      va = parseInt((a.num||'').replace(/[^0-9]/g,''), 10) || 0;
+      vb = parseInt((b.num||'').replace(/[^0-9]/g,''), 10) || 0;
+    } else if (campo === 'cliente') {
+      va = (a.cliente||'').toLowerCase();
+      vb = (b.cliente||'').toLowerCase();
+    } else if (campo === 'total') {
+      va = a.total || 0;
+      vb = b.total || 0;
+    } else {
+      va = a[campo] || '';
+      vb = b[campo] || '';
+    }
+    if (va < vb) return -1 * dir;
+    if (va > vb) return  1 * dir;
+    return 0;
+  });
+
+  // Actualizar iconos de ordenamiento en headers
+  ['num','cliente','fecha','vence','total'].forEach(function(c) {
+    var el = document.getElementById('fact-ord-' + c);
+    if (!el) return;
+    if (c === (window.FACT_ORD_CAMPO || 'vence')) {
+      el.textContent = (window.FACT_ORD_DIR || 1) === 1 ? '↑' : '↓';
+    } else {
+      el.textContent = '↕';
+    }
+  });
 
   // Resumen selección
   var resEl = g('fact-resumen-sel');
@@ -7212,8 +7323,12 @@ function renderBcol() {
 <script>
 (function() {
 
-  // ── Datos del equipo (valor 0 = sin honorarios ese mes) ──────────────
-  var EB_DATA = [
+  var LS_KEY      = 'eb_estado_2026';
+  var LS_DATA_KEY = 'eb_data_2026';
+  var MESES_LBL   = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+
+  // ── Datos base (sin Daniela Torres) ──────────────────────────────────
+  var EB_DATA_DEFAULT = [
     { nombre: 'Lina Moyano Tamara',
       meses: [5138880,5138880,5138880,5138880,5138880,5138880,5138880,5138880,5138880,5138880,5138880,5138880] },
     { nombre: 'Maria de los Angeles Carrasquilla Sotomayor',
@@ -7226,8 +7341,6 @@ function renderBcol() {
       meses: [2192982,2192982,2192982,2192982,2192982,0,2192982,2192982,2192982,2192982,2192982,2192982] },
     { nombre: 'Ana Milena Lozano',
       meses: [5139380,5139380,5139380,0,0,0,0,0,0,0,0,0] },
-    { nombre: 'Daniela Torres',
-      meses: [0,0,4350000,4350000,4350000,4350000,0,0,0,0,0,0] },
     { nombre: 'Nelson Jose Alvis Zakzuk',
       meses: [10000000,6249760,6249760,6249760,6249760,6249760,6249760,6249760,6249760,6249760,6249760,6249760] },
     { nombre: 'Nelson Rafael Alvis',
@@ -7236,46 +7349,173 @@ function renderBcol() {
       meses: [3000000,3000000,3000000,3180000,3180000,3180000,3000000,3000000,3000000,3180000,3180000,3180000] }
   ];
 
-  var MESES_LBL = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
-  var LS_KEY = 'eb_estado_2026';
-
-  // ── Estado persistente: { "nombre||M": "pagado"|"adeudado" } ──────────
-  function cargarEstado() {
+  // ── Cargar/guardar datos (estructura) ────────────────────────────────
+  function cargarData() {
     try {
-      var raw = localStorage.getItem(LS_KEY);
-      return raw ? JSON.parse(raw) : {};
-    } catch(e) { return {}; }
+      var raw = localStorage.getItem(LS_DATA_KEY);
+      if (raw) { var p = JSON.parse(raw); if (p && p.length) return p; }
+    } catch(e) {}
+    return JSON.parse(JSON.stringify(EB_DATA_DEFAULT));
+  }
+
+  function guardarData(data) {
+    try { localStorage.setItem(LS_DATA_KEY, JSON.stringify(data)); } catch(e) {}
+  }
+
+  // ── Cargar/guardar estados de pago ────────────────────────────────────
+  function cargarEstado() {
+    try { var r = localStorage.getItem(LS_KEY); return r ? JSON.parse(r) : {}; }
+    catch(e) { return {}; }
   }
 
   function guardarEstado(est) {
     try { localStorage.setItem(LS_KEY, JSON.stringify(est)); } catch(e) {}
-    if (typeof gsPost === "function") { gsPost("eb_estado","set",[["clave","valor"]].concat(Object.keys(est).map(function(k){return [k,est[k]];}))); }
+    if (typeof gsPost === 'function') {
+      gsPost('eb_estado','set',[['clave','valor']].concat(Object.keys(est).map(function(k){return [k,est[k]];})));
+    }
   }
 
   // ── Formato COP ───────────────────────────────────────────────────────
-  function COP(n) {
-    if (!n) return '$0';
-    return '$' + Math.round(n).toLocaleString('es-CO');
-  }
+  function COP(n) { return n ? '$' + Math.round(n).toLocaleString('es-CO') : '$0'; }
 
-  // ── Clave de estado para cada celda ──────────────────────────────────
-  function clave(nombre, m) { return nombre + '||' + m; }
-
-  // ── Toggle de estado al hacer clic ────────────────────────────────────
+  // ── Toggle pago ───────────────────────────────────────────────────────
   window.ebToggleCelda = function(idx, m) {
     var est = cargarEstado();
     var k = idx + '||' + m;
-    // Ciclo: (sin estado=rojo) → pagado(verde) → adeudado(rojo)
-    if (est[k] === 'pagado') {
-      est[k] = 'adeudado';
-    } else {
-      est[k] = 'pagado';
-    }
+    est[k] = (est[k] === 'pagado') ? 'adeudado' : 'pagado';
     guardarEstado(est);
     renderEquipoBase();
   };
 
-  // ── Reiniciar todos los estados ───────────────────────────────────────
+  // ── Variables del modal ──────────────────────────────────────────────
+  var _ebModalCb = null;
+  var _ebConfirmCb = null;
+
+  // ── Modal genérico de input ───────────────────────────────────────────
+  function ebModalAbrir(titulo, sub, valorActual, cb) {
+    var m = document.getElementById('eb-modal');
+    var t = document.getElementById('eb-modal-titulo');
+    var s = document.getElementById('eb-modal-sub');
+    var inp = document.getElementById('eb-modal-input');
+    if (!m) return;
+    t.textContent  = titulo;
+    s.textContent  = sub;
+    inp.value      = valorActual || '';
+    _ebModalCb     = cb;
+    m.style.display = 'flex';
+    setTimeout(function(){ inp.focus(); inp.select(); }, 100);
+  }
+
+  window.ebModalCancelar = function() {
+    var m = document.getElementById('eb-modal');
+    if (m) m.style.display = 'none';
+    _ebModalCb = null;
+  };
+
+  window.ebModalAceptar = function() {
+    var inp = document.getElementById('eb-modal-input');
+    var val = inp ? inp.value : '';
+    var m = document.getElementById('eb-modal');
+    if (m) m.style.display = 'none';
+    if (_ebModalCb) { _ebModalCb(val); _ebModalCb = null; }
+  };
+
+  // Enter para confirmar modal
+  document.addEventListener('keydown', function(e) {
+    var m = document.getElementById('eb-modal');
+    if (m && m.style.display === 'flex' && e.key === 'Enter') { window.ebModalAceptar(); }
+    if (m && m.style.display === 'flex' && e.key === 'Escape') { window.ebModalCancelar(); }
+  });
+
+  // ── Modal de confirmación ─────────────────────────────────────────────
+  function ebConfirmAbrir(msg, cb) {
+    var m = document.getElementById('eb-modal-confirm');
+    var t = document.getElementById('eb-confirm-msg');
+    if (!m) return;
+    t.textContent  = msg;
+    _ebConfirmCb   = cb;
+    m.style.display = 'flex';
+  }
+
+  window.ebConfirmCancelar = function() {
+    var m = document.getElementById('eb-modal-confirm');
+    if (m) m.style.display = 'none';
+    _ebConfirmCb = null;
+  };
+
+  window.ebConfirmAceptar = function() {
+    var m = document.getElementById('eb-modal-confirm');
+    if (m) m.style.display = 'none';
+    if (_ebConfirmCb) { _ebConfirmCb(); _ebConfirmCb = null; }
+  };
+
+  // ── Editar valor de celda ─────────────────────────────────────────────
+  window.ebEditarCelda = function(idx, m) {
+    var data = cargarData();
+    var actual = data[idx].meses[m];
+    ebModalAbrir(
+      'Editar honorario',
+      MESES_LBL[m] + ' · ' + data[idx].nombre + '  (0 = sin honorario)',
+      actual,
+      function(nuevo) {
+        var val = parseInt((nuevo||'').replace(/[^0-9]/g,''), 10);
+        if (isNaN(val) || val < 0) return;
+        data[idx].meses[m] = val;
+        guardarData(data);
+        renderEquipoBase();
+      }
+    );
+  };
+
+  // ── Editar nombre ─────────────────────────────────────────────────────
+  window.ebEditarNombre = function(idx) {
+    var data = cargarData();
+    ebModalAbrir(
+      'Editar nombre',
+      'Contratista #' + (idx+1),
+      data[idx].nombre,
+      function(nuevo) {
+        if (!nuevo || !nuevo.trim()) return;
+        data[idx].nombre = nuevo.trim();
+        guardarData(data);
+        renderEquipoBase();
+      }
+    );
+  };
+
+  // ── Eliminar fila ─────────────────────────────────────────────────────
+  window.ebEliminarFila = function(idx) {
+    var data = cargarData();
+    ebConfirmAbrir(
+      '¿Eliminar a ' + data[idx].nombre + ' del Equipo Base? Esta acción no se puede deshacer.',
+      function() {
+        var est = cargarEstado();
+        for (var mi = 0; mi < 12; mi++) { delete est[idx + '||' + mi]; }
+        guardarEstado(est);
+        data.splice(idx, 1);
+        guardarData(data);
+        renderEquipoBase();
+      }
+    );
+  };
+
+  // ── Agregar nueva fila ────────────────────────────────────────────────
+  window.ebAgregarFila = function() {
+    ebModalAbrir(
+      'Agregar contratista',
+      'Ingresa el nombre completo',
+      '',
+      function(nombre) {
+        if (!nombre || !nombre.trim()) return;
+        var data = cargarData();
+        data.push({ nombre: nombre.trim(), meses: [0,0,0,0,0,0,0,0,0,0,0,0] });
+        guardarData(data);
+        renderEquipoBase();
+      }
+    );
+  };
+
+  // ── Reiniciar estados ─────────────────────────────────────────────────
   window.equipoBaseReset = function() {
     if (!confirm('¿Reiniciar todos los estados de pago del Equipo Base?')) return;
     guardarEstado({});
@@ -7302,95 +7542,86 @@ function renderBcol() {
     var tfoot = document.getElementById('eb-tfoot');
     if (!tbody || !tfoot) return;
 
-    var est = cargarEstado();
+    var data = cargarData();
+    var est  = cargarEstado();
     var totalPagadoGlobal   = 0;
     var totalAdeudadoGlobal = 0;
     var totalPresupuesto    = 0;
-    var subtotalesMes = [0,0,0,0,0,0,0,0,0,0,0,0]; // subtotales adeudado por mes
-
+    var subtotalesMes = [0,0,0,0,0,0,0,0,0,0,0,0];
     var html = '';
 
-    EB_DATA.forEach(function(ct, idx) {
-      var totalAdeudadoFila   = 0;
-      var totalPagadoFila     = 0;
-      var presupuestoFila     = 0;
+    data.forEach(function(ct, idx) {
+      var totalAdeudadoFila = 0;
+      var totalPagadoFila   = 0;
       var bg = idx % 2 === 0 ? '#ffffff' : '#fafaf8';
-
       html += '<tr style="background:' + bg + '">';
-      // Nombre (sticky)
-      html += '<td style="padding:6px 10px;border-bottom:1px solid #f0ede8;font-weight:600;font-size:11px;color:#333;position:sticky;left:0;background:' + bg + ';z-index:1">' + ct.nombre + '</td>';
+      html += '<td style="padding:5px 8px;border-bottom:1px solid #f0ede8;position:sticky;left:0;background:' + bg + ';z-index:1;min-width:180px">'
+           +    '<div style="display:flex;align-items:center;gap:5px">'
+           +      '<span onclick="ebEditarNombre(' + idx + ')" title="Clic para editar nombre" '
+           +            'style="font-weight:600;font-size:11px;color:#333;cursor:pointer;flex:1">' + ct.nombre + '</span>'
+           +      '<button onclick="ebEliminarFila(' + idx + ')" title="Eliminar contratista" '
+           +              'style="background:none;border:none;cursor:pointer;color:#ccc;font-size:12px;padding:1px 3px;line-height:1;flex-shrink:0">x</button>'
+           +    '</div>'
+           + '</td>';
 
       ct.meses.forEach(function(val, m) {
         if (val === 0) {
-          // Sin honorarios → celda gris vacía
           html += '<td style="padding:4px 3px;border-bottom:1px solid #f0ede8;text-align:center">'
-               +  '<div style="background:#f0ede8;border-radius:5px;padding:4px 2px;font-size:9px;color:#bbb;min-width:64px">—</div>'
+               +  '<div onclick="ebEditarCelda(' + idx + ',' + m + ')" title="Clic para agregar valor" '
+               +       'style="background:#f0ede8;border-radius:5px;padding:4px 2px;font-size:9px;color:#bbb;min-width:64px;cursor:pointer">-</div>'
                +  '</td>';
         } else {
-          var k   = idx + '||' + m;
-          var sta = est[k]; // 'pagado' | 'adeudado' | undefined
-          // Por defecto sin estado = adeudado (rojo) hasta que se marque
-          var esPagado = (sta === 'pagado');
-          presupuestoFila += val;
-
-          if (esPagado) {
-            totalPagadoFila += val;
-            totalPagadoGlobal += val;
-          } else {
-            totalAdeudadoFila += val;
-            totalAdeudadoGlobal += val;
-            subtotalesMes[m] += val;
-          }
-
+          var k = idx + '||' + m;
+          var esPagado = (est[k] === 'pagado');
+          if (esPagado) { totalPagadoFila   += val; totalPagadoGlobal   += val; }
+          else          { totalAdeudadoFila  += val; totalAdeudadoGlobal += val; subtotalesMes[m] += val; }
           var bgCell  = esPagado ? '#e8f5e9' : '#ffebee';
           var clrCell = esPagado ? '#2E7D32' : '#A32D2D';
-          var icon    = esPagado ? '✓' : '!';
-          var title   = esPagado ? 'Pagado — clic para marcar adeudado' : 'Adeudado — clic para marcar pagado';
-
+          var icon    = esPagado ? 'OK' : '!';
           html += '<td style="padding:4px 3px;border-bottom:1px solid #f0ede8;text-align:center">'
-               +  '<div onclick="ebToggleCelda(' + idx + ',' + m + ')" '
-               +       'title="' + title + '" '
-               +       'style="background:' + bgCell + ';border:1.5px solid ' + clrCell + ';border-radius:5px;padding:4px 2px;cursor:pointer;min-width:64px;transition:all .15s">'
-               +    '<div style="font-size:9px;font-weight:700;color:' + clrCell + '">' + icon + '</div>'
-               +    '<div style="font-size:9px;color:' + clrCell + ';font-weight:600">' + COP(val) + '</div>'
+               +  '<div style="display:flex;flex-direction:column;align-items:center;gap:2px">'
+               +    '<div onclick="ebToggleCelda(' + idx + ',' + m + ')" '
+               +         'title="Clic para cambiar estado pago" '
+               +         'style="background:' + bgCell + ';border:1.5px solid ' + clrCell + ';border-radius:5px;padding:3px 2px;cursor:pointer;min-width:64px;transition:all .15s">'
+               +      '<div style="font-size:9px;font-weight:700;color:' + clrCell + '">' + icon + '</div>'
+               +      '<div style="font-size:9px;color:' + clrCell + ';font-weight:600">' + COP(val) + '</div>'
+               +    '</div>'
+               +    '<span onclick="ebEditarCelda(' + idx + ',' + m + ')" title="Editar valor" '
+               +          'style="font-size:8px;color:#bbb;cursor:pointer;text-decoration:underline">editar</span>'
                +  '</div>'
                + '</td>';
         }
       });
 
-      presupuestoFila = ct.meses.reduce(function(a,v){ return a+v; }, 0);
-      totalPresupuesto += presupuestoFila;
-
-      // Columna TOTAL ADEUDADO
+      totalPresupuesto += ct.meses.reduce(function(a,v){ return a+v; }, 0);
       var clrTotal = totalAdeudadoFila > 0 ? '#A32D2D' : '#2E7D32';
-      html += '<td style="padding:6px 10px;border-bottom:1px solid #f0ede8;text-align:right;font-weight:700;font-size:11px;color:' + clrTotal + '">'
-           +    COP(totalAdeudadoFila)
-           + '</td>';
-
+      html += '<td style="padding:6px 10px;border-bottom:1px solid #f0ede8;text-align:right;font-weight:700;font-size:11px;color:' + clrTotal + '">' + COP(totalAdeudadoFila) + '</td>';
       html += '</tr>';
     });
 
+    // Fila agregar
+    html += '<tr><td colspan="14" style="padding:6px 8px;border-top:2px dashed #c8e6c9">'
+         +  '<button onclick="ebAgregarFila()" '
+         +          'style="background:none;border:none;cursor:pointer;color:#2E7D32;font-size:11px;font-weight:700;font-family:Helvetica,Arial,sans-serif;padding:3px 8px;border-radius:6px" '
+         +          'style2="padding:3px 8px">'
+         +    '+ Agregar contratista'
+         +  '</button></td></tr>';
+
     tbody.innerHTML = html;
 
-    // ── SUBTOTAL fila footer ──────────────────────────────────────────
     var ftHtml = '<tr style="background:#f1faf1">';
     ftHtml += '<td style="padding:8px 10px;font-weight:700;font-size:11px;color:#2E7D32;text-transform:uppercase;position:sticky;left:0;background:#f1faf1;z-index:1">SUBTOTAL EQUIPO BASE</td>';
-
     subtotalesMes.forEach(function(val) {
       if (val > 0) {
-        ftHtml += '<td style="padding:6px 3px;text-align:center">'
-               +    '<div style="background:#ffebee;border-radius:5px;padding:3px 2px;font-size:9px;font-weight:700;color:#A32D2D;min-width:64px">' + COP(val) + '</div>'
-               +  '</td>';
+        ftHtml += '<td style="padding:6px 3px;text-align:center"><div style="background:#ffebee;border-radius:5px;padding:3px 2px;font-size:9px;font-weight:700;color:#A32D2D;min-width:64px">' + COP(val) + '</div></td>';
       } else {
-        ftHtml += '<td style="padding:6px 3px;text-align:center"><div style="background:#f0ede8;border-radius:5px;padding:3px 2px;font-size:9px;color:#ccc;min-width:64px">—</div></td>';
+        ftHtml += '<td style="padding:6px 3px;text-align:center"><div style="background:#f0ede8;border-radius:5px;padding:3px 2px;font-size:9px;color:#ccc;min-width:64px">-</div></td>';
       }
     });
-
     ftHtml += '<td style="padding:8px 10px;text-align:right;font-weight:700;font-size:13px;color:#A32D2D">' + COP(totalAdeudadoGlobal) + '</td>';
     ftHtml += '</tr>';
     tfoot.innerHTML = ftHtml;
 
-    // ── KPIs ─────────────────────────────────────────────────────────
     var elPag  = document.getElementById('eb-kpi-pagado');
     var elAdeu = document.getElementById('eb-kpi-adeudado');
     var elTot  = document.getElementById('eb-kpi-total');
@@ -7399,14 +7630,11 @@ function renderBcol() {
     if (elTot)  elTot.textContent  = COP(totalPresupuesto);
   }
 
-  // ── Inicializar cuando cargue el DOM ─────────────────────────────────
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', renderEquipoBase);
   } else {
     renderEquipoBase();
   }
-
-  // Re-renderizar si cambian datos (por si acaso)
   window.renderEquipoBase = renderEquipoBase;
 
 })();
@@ -7418,73 +7646,66 @@ function renderBcol() {
 <script>
 (function() {
 
-  // ── Datos del proyecto (0 = sin costo ese mes) ────────────────────────
-  // Índices: 0=ENE,1=FEB,2=MAR,3=ABR,4=MAY,5=JUN,6=JUL,7=AGO,8=SEP,9=OCT,10=NOV,11=DIC
-  var MSD_DATA = [
-    { nombre: 'TRADUCCION DEL PROTOCOLO',
-      keywords: ['protocolo'],
+  var LS_KEY_MSD      = 'msd_estado_2026';
+  var LS_DATA_KEY_MSD = 'msd_data_2026';
+  var MESES_LBL_MSD   = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+  var MESES_NOMBRES   = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+  // ── Datos base del proyecto ───────────────────────────────────────────
+  var MSD_DATA_DEFAULT = [
+    { nombre: 'TRADUCCION DEL PROTOCOLO', keywords: ['protocolo'],
       meses: [0,0,0,0,0,0,0,0,0,0,0,0] },
-    { nombre: 'IVAN FELIPE GUTIERREZ COLSUBSIDIO',
-      keywords: ['ivan','gutierrez','colsubsidio'],
+    { nombre: 'IVAN FELIPE GUTIERREZ COLSUBSIDIO', keywords: ['ivan','gutierrez','colsubsidio'],
       meses: [0,0,0,0,16819312,0,25228968,0,42048279,0,0,0] },
-    { nombre: 'CLINICA EL ROSARIO',
-      keywords: ['rosario','clinica el rosario'],
+    { nombre: 'CLINICA EL ROSARIO', keywords: ['rosario','clinica el rosario'],
       meses: [0,0,0,3193639,0,4790459,0,7984097,0,0,0,0] },
-    { nombre: 'HOSPITANI INFANTIL NAPOLEON FRANCO PAREJA',
-      keywords: ['hospitani','napoleon','franco pareja'],
+    { nombre: 'HOSPITANI INFANTIL NAPOLEON FRANCO PAREJA', keywords: ['hospitani','napoleon','franco pareja'],
       meses: [0,0,0,4841213,0,4841213,0,0,0,0,0,0] },
-    { nombre: 'ESE ERASMO MEOZ CUCUTA',
-      keywords: ['erasmo meoz','cucuta','ese erasmo'],
+    { nombre: 'ESE ERASMO MEOZ CUCUTA', keywords: ['erasmo meoz','cucuta','ese erasmo'],
       meses: [0,0,0,4548398,0,4548398,0,0,0,0,0,0] },
-    { nombre: 'COMITE DE ETICA INSTITUCIONAL CLINICA EL ROSARIO',
-      keywords: ['comite','etica','institucional'],
+    { nombre: 'COMITE DE ETICA INSTITUCIONAL CLINICA EL ROSARIO', keywords: ['comite','etica','institucional'],
       meses: [0,0,5081895,0,0,0,0,0,0,0,0,0] },
-    { nombre: 'ANA MARIA GARCIA CASA DEL NINO',
-      keywords: ['ana maria garcia','casa del nino'],
+    { nombre: 'ANA MARIA GARCIA CASA DEL NINO', keywords: ['ana maria garcia','casa del nino'],
       meses: [0,0,774036,0,0,0,0,0,0,0,0,0] },
-    { nombre: 'SEBASTIAN MONCADA ERASMO MEOZ',
-      keywords: ['sebastian moncada','moncada erasmo'],
+    { nombre: 'SEBASTIAN MONCADA ERASMO MEOZ', keywords: ['sebastian moncada','moncada erasmo'],
       meses: [0,0,774036,0,0,0,0,0,0,0,0,0] },
-    { nombre: 'RECOLECTOR CLINICA EL ROSARIO',
-      keywords: ['recolector rosario','recolector clinica'],
+    { nombre: 'RECOLECTOR CLINICA EL ROSARIO', keywords: ['recolector rosario','recolector clinica'],
       meses: [0,0,0,3096142,3096142,774036,0,0,0,0,0,0] },
-    { nombre: 'RECOLECTOR COLSUBSIDIO 1',
-      keywords: ['recolector colsubsidio 1','recolector 1'],
+    { nombre: 'RECOLECTOR COLSUBSIDIO 1', keywords: ['recolector colsubsidio 1','recolector 1'],
       meses: [0,0,0,3096142,3096142,3096142,0,0,0,0,0,0] },
-    { nombre: 'RECOLECTOR COLSUBSIDIO 2',
-      keywords: ['recolector colsubsidio 2','recolector 2'],
+    { nombre: 'RECOLECTOR COLSUBSIDIO 2', keywords: ['recolector colsubsidio 2','recolector 2'],
       meses: [0,0,0,3096142,3096142,0,0,0,0,0,0,0] },
-    { nombre: 'RECOLECTOR COLSUBSIDIO 3',
-      keywords: ['recolector colsubsidio 3','recolector 3'],
+    { nombre: 'RECOLECTOR COLSUBSIDIO 3', keywords: ['recolector colsubsidio 3','recolector 3'],
       meses: [0,0,0,3096142,3096142,0,0,0,0,0,0,0] },
-    { nombre: 'RECOLECTOR COLSUBSIDIO 4',
-      keywords: ['recolector colsubsidio 4','recolector 4'],
+    { nombre: 'RECOLECTOR COLSUBSIDIO 4', keywords: ['recolector colsubsidio 4','recolector 4'],
       meses: [0,0,0,3096142,3096142,0,0,0,0,0,0,0] },
-    { nombre: 'WILFRIDO CORONELL - EXPERTO VSR',
-      keywords: ['wilfrido','coronell'],
+    { nombre: 'WILFRIDO CORONELL - EXPERTO VSR', keywords: ['wilfrido','coronell'],
       meses: [0,0,0,3916212,0,3916212,0,3916212,0,0,2610808,0] },
-    { nombre: 'ANDRES ARIAS - EXPERTO VSR',
-      keywords: ['andres arias'],
+    { nombre: 'ANDRES ARIAS - EXPERTO VSR', keywords: ['andres arias'],
       meses: [0,0,0,3916212,0,3916212,0,3916212,0,0,2610808,0] },
-    { nombre: 'IVAN GUTIERREZ - EXPERTO VSR',
-      keywords: ['ivan gutierrez experto','ivan gutierrez vsr'],
+    { nombre: 'IVAN GUTIERREZ - EXPERTO VSR', keywords: ['ivan gutierrez experto','ivan gutierrez vsr'],
       meses: [0,0,0,3916212,0,3916212,0,3916212,0,0,2610808,0] },
-    { nombre: 'HERNANDO PINZON - EXPERTO VSR',
-      keywords: ['hernando','pinzon'],
+    { nombre: 'HERNANDO PINZON - EXPERTO VSR', keywords: ['hernando','pinzon'],
       meses: [0,0,0,2700000,0,2700000,900000,0,0,0,0,0] },
-    { nombre: 'CLAUDIA BELTRAN - EXPERTO VSR',
-      keywords: ['claudia beltran'],
+    { nombre: 'CLAUDIA BELTRAN - EXPERTO VSR', keywords: ['claudia beltran'],
       meses: [0,0,0,3916212,0,3916212,0,3916212,0,0,2610808,0] },
-    { nombre: 'DANIELA TORRES',
-      keywords: ['daniela torres'],
+    { nombre: 'DANIELA TORRES', keywords: ['daniela torres'],
       meses: [0,0,0,4300000,4300000,4300000,0,0,0,0,0,0] },
-    { nombre: 'CURSO BUENAS PRACTICAS CLINICAS',
-      keywords: ['buenas practicas','curso clinicas'],
+    { nombre: 'CURSO BUENAS PRACTICAS CLINICAS', keywords: ['buenas practicas','curso clinicas'],
       meses: [0,0,0,0,0,0,0,0,0,0,0,0] }
   ];
 
-  var MESES_NOMBRES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-  var LS_KEY_MSD = 'msd_estado_2026';
+  // ── Cargar/guardar datos (estructura) ────────────────────────────────
+  function cargarDataMSD() {
+    try {
+      var raw = localStorage.getItem(LS_DATA_KEY_MSD);
+      if (raw) { var p = JSON.parse(raw); if (p && p.length) return p; }
+    } catch(e) {}
+    return JSON.parse(JSON.stringify(MSD_DATA_DEFAULT));
+  }
+  function guardarDataMSD(data) {
+    try { localStorage.setItem(LS_DATA_KEY_MSD, JSON.stringify(data)); } catch(e) {}
+  }
 
   // ── Estado manual persistente ─────────────────────────────────────────
   function cargarEstadoMSD() {
@@ -7493,71 +7714,159 @@ function renderBcol() {
   }
   function guardarEstadoMSD(est) {
     try { localStorage.setItem(LS_KEY_MSD, JSON.stringify(est)); } catch(e) {}
-    if (typeof gsPost === "function") { gsPost("msd_estado","set",[["clave","valor"]].concat(Object.keys(est).map(function(k){return [k,est[k]];}))); }
+    if (typeof gsPost === 'function') {
+      gsPost('msd_estado','set',[['clave','valor']].concat(Object.keys(est).map(function(k){return [k,est[k]];})));
+    }
   }
 
-  // ── Formato COP ───────────────────────────────────────────────────────
   function COPM(n) { return n ? '$' + Math.round(n).toLocaleString('es-CO') : '$0'; }
 
-  // ── Detectar si un ítem/mes está pagado en GASTOS_DATA ───────────────
-  // Lógica: buscar en GASTOS_DATA un gasto donde el proveedor contenga
-  // alguna keyword del ítem Y cuyo mes coincida (M+1 = nombre del mes)
+  // ── Detectar pago automático desde Egresos ────────────────────────────
   function detectarEnEgresos(item, mesIdx) {
     var gastos = window.GASTOS_DATA;
     if (!gastos || !gastos.length) return false;
     var mesNom = MESES_NOMBRES[mesIdx].toLowerCase();
-    var keywords = item.keywords;
-
     for (var i = 0; i < gastos.length; i++) {
       var g = gastos[i];
-      var prov = ((g['Proveedor'] || g['proveedor'] || g['PROVEEDOR'] || g['Beneficiario'] || '') + ' ' +
-                  (g['Concepto']  || g['concepto']  || g['CONCEPTO']  || '')).toLowerCase();
-      var mesg = (g['Mes'] || g['mes'] || g['MES'] || '').toLowerCase();
-
-      // Verificar que el mes coincida
-      var mesCoinc = (mesg.indexOf(mesNom) >= 0) ||
-                     (mesg === (mesIdx+1).toString()) ||
-                     (mesg === (mesIdx+1 < 10 ? '0'+(mesIdx+1) : ''+(mesIdx+1)));
+      var prov = ((g['Proveedor']||'') + ' ' + (g['Concepto']||'')).toLowerCase();
+      var mesg = (g['Mes']||'').toLowerCase();
+      var mesCoinc = mesg.indexOf(mesNom) >= 0;
       if (!mesCoinc) continue;
-
-      // Verificar que alguna keyword esté en el proveedor/concepto
-      for (var k = 0; k < keywords.length; k++) {
-        if (prov.indexOf(keywords[k].toLowerCase()) >= 0) return true;
+      for (var k = 0; k < item.keywords.length; k++) {
+        if (prov.indexOf(item.keywords[k].toLowerCase()) >= 0) return true;
       }
     }
     return false;
   }
 
-  // ── Toggle manual ─────────────────────────────────────────────────────
-  window.msdToggleCelda = function(nombreIdx, m) {
-    var est = cargarEstadoMSD();
-    var k = nombreIdx + '||' + m;
-    if (est[k] === 'pagado') {
-      est[k] = 'adeudado'; // forzar adeudado (override del auto)
-    } else {
-      est[k] = 'pagado';
+  // ── Variables modal MSD ───────────────────────────────────────────────
+  var _msdModalCb   = null;
+  var _msdConfirmCb = null;
+
+  function msdModalAbrir(titulo, sub, valorActual, cb) {
+    var m = document.getElementById('msd-modal');
+    if (!m) return;
+    document.getElementById('msd-modal-titulo').textContent = titulo;
+    document.getElementById('msd-modal-sub').textContent    = sub;
+    var inp = document.getElementById('msd-modal-input');
+    inp.value = valorActual || '';
+    _msdModalCb = cb;
+    m.style.display = 'flex';
+    setTimeout(function(){ inp.focus(); inp.select(); }, 100);
+  }
+
+  window.msdModalCancelar = function() {
+    var m = document.getElementById('msd-modal');
+    if (m) m.style.display = 'none';
+    _msdModalCb = null;
+  };
+  window.msdModalAceptar = function() {
+    var inp = document.getElementById('msd-modal-input');
+    var val = inp ? inp.value : '';
+    var m = document.getElementById('msd-modal');
+    if (m) m.style.display = 'none';
+    if (_msdModalCb) { _msdModalCb(val); _msdModalCb = null; }
+  };
+
+  function msdConfirmAbrir(msg, cb) {
+    var m = document.getElementById('msd-modal-confirm');
+    if (!m) return;
+    document.getElementById('msd-confirm-msg').textContent = msg;
+    _msdConfirmCb = cb;
+    m.style.display = 'flex';
+  }
+  window.msdConfirmCancelar = function() {
+    var m = document.getElementById('msd-modal-confirm');
+    if (m) m.style.display = 'none';
+    _msdConfirmCb = null;
+  };
+  window.msdConfirmAceptar = function() {
+    var m = document.getElementById('msd-modal-confirm');
+    if (m) m.style.display = 'none';
+    if (_msdConfirmCb) { _msdConfirmCb(); _msdConfirmCb = null; }
+  };
+
+  // Enter/Escape para modal MSD
+  document.addEventListener('keydown', function(e) {
+    var m = document.getElementById('msd-modal');
+    if (m && m.style.display === 'flex') {
+      if (e.key === 'Enter') window.msdModalAceptar();
+      if (e.key === 'Escape') window.msdModalCancelar();
     }
+  });
+
+  // ── Acciones de edición ───────────────────────────────────────────────
+  window.msdEditarCelda = function(idx, m) {
+    var data = cargarDataMSD();
+    var actual = data[idx].meses[m];
+    msdModalAbrir(
+      'Editar costo',
+      MESES_LBL_MSD[m] + ' · ' + data[idx].nombre + '  (0 = sin costo)',
+      actual,
+      function(nuevo) {
+        var val = parseInt((nuevo||'').replace(/[^0-9]/g,''), 10);
+        if (isNaN(val) || val < 0) return;
+        data[idx].meses[m] = val;
+        guardarDataMSD(data);
+        renderMSD();
+      }
+    );
+  };
+
+  window.msdEditarNombre = function(idx) {
+    var data = cargarDataMSD();
+    msdModalAbrir('Editar ítem', 'Ítem #' + (idx+1), data[idx].nombre, function(nuevo) {
+      if (!nuevo || !nuevo.trim()) return;
+      data[idx].nombre = nuevo.trim();
+      guardarDataMSD(data);
+      renderMSD();
+    });
+  };
+
+  window.msdEliminarFila = function(idx) {
+    var data = cargarDataMSD();
+    msdConfirmAbrir('¿Eliminar "' + data[idx].nombre + '" del Proyecto MSD VSR?', function() {
+      var est = cargarEstadoMSD();
+      for (var mi = 0; mi < 12; mi++) { delete est[idx + '||' + mi]; }
+      guardarEstadoMSD(est);
+      data.splice(idx, 1);
+      guardarDataMSD(data);
+      renderMSD();
+    });
+  };
+
+  window.msdAgregarFila = function() {
+    msdModalAbrir('Agregar ítem', 'Ingresa el nombre del ítem o proveedor', '', function(nombre) {
+      if (!nombre || !nombre.trim()) return;
+      var data = cargarDataMSD();
+      data.push({ nombre: nombre.trim().toUpperCase(), keywords: [nombre.trim().toLowerCase()], meses: [0,0,0,0,0,0,0,0,0,0,0,0] });
+      guardarDataMSD(data);
+      renderMSD();
+    });
+  };
+
+  // ── Toggle pago ───────────────────────────────────────────────────────
+  window.msdToggleCelda = function(idx, m) {
+    var est = cargarEstadoMSD();
+    var k = idx + '||' + m;
+    est[k] = (est[k] === 'pagado') ? 'adeudado' : 'pagado';
     guardarEstadoMSD(est);
     renderMSD();
   };
 
   window.msdReset = function() {
-    if (!confirm('¿Reiniciar todos los estados del Proyecto MSD VSR?')) return;
-    guardarEstadoMSD({});
-    renderMSD();
+    msdConfirmAbrir('¿Reiniciar todos los estados del Proyecto MSD VSR?', function() {
+      guardarEstadoMSD({});
+      renderMSD();
+    });
   };
 
   window.msdToggle = function() {
     var panel = document.getElementById('panel-msd-vsr');
     var ico   = document.getElementById('ico-msd');
     if (!panel) return;
-    if (panel.style.display === 'none') {
-      panel.style.display = '';
-      ico.textContent = '▼';
-    } else {
-      panel.style.display = 'none';
-      ico.textContent = '▶';
-    }
+    if (panel.style.display === 'none') { panel.style.display = ''; ico.textContent = '▼'; }
+    else { panel.style.display = 'none'; ico.textContent = '▶'; }
   };
 
   // ── Render principal ──────────────────────────────────────────────────
@@ -7566,36 +7875,43 @@ function renderBcol() {
     var tfoot = document.getElementById('msd-tfoot');
     if (!tbody || !tfoot) return;
 
+    var data      = cargarDataMSD();
     var estManual = cargarEstadoMSD();
     var totalPag  = 0, totalAdeu = 0, totalPres = 0;
-    var subMes = [0,0,0,0,0,0,0,0,0,0,0,0];
-
+    var subMes    = [0,0,0,0,0,0,0,0,0,0,0,0];
     var html = '';
 
-    MSD_DATA.forEach(function(item, idx) {
+    data.forEach(function(item, idx) {
       var rowAdeu = 0, rowPag = 0;
       var bg = idx % 2 === 0 ? '#ffffff' : '#fdfbff';
-
       html += '<tr style="background:' + bg + '">';
-      // Nombre (sticky)
-      html += '<td style="padding:6px 10px;border-bottom:1px solid #f0ede8;font-weight:600;font-size:11px;color:#333;position:sticky;left:0;background:' + bg + ';z-index:1">' + item.nombre + '</td>';
+
+      // Nombre con botón eliminar y editar
+      html += '<td style="padding:5px 8px;border-bottom:1px solid #f0ede8;position:sticky;left:0;background:' + bg + ';z-index:1;min-width:220px">'
+           +    '<div style="display:flex;align-items:center;gap:5px">'
+           +      '<span onclick="msdEditarNombre(' + idx + ')" title="Clic para editar nombre" '
+           +            'style="font-weight:600;font-size:11px;color:#333;cursor:pointer;flex:1">' + item.nombre + '</span>'
+           +      '<button onclick="msdEliminarFila(' + idx + ')" title="Eliminar ítem" '
+           +              'style="background:none;border:none;cursor:pointer;color:#ccc;font-size:12px;padding:1px 3px;line-height:1;flex-shrink:0">x</button>'
+           +    '</div>'
+           + '</td>';
 
       item.meses.forEach(function(val, m) {
         if (val === 0) {
           html += '<td style="padding:4px 3px;border-bottom:1px solid #f0ede8;text-align:center">'
-               +  '<div style="background:#f0ede8;border-radius:5px;padding:4px 2px;font-size:9px;color:#bbb;min-width:70px">—</div>'
+               +  '<div onclick="msdEditarCelda(' + idx + ',' + m + ')" title="Clic para agregar valor" '
+               +       'style="background:#f0ede8;border-radius:5px;padding:4px 2px;font-size:9px;color:#bbb;min-width:70px;cursor:pointer">-</div>'
                +  '</td>';
           return;
         }
 
         var k = idx + '||' + m;
-        var manualOv = estManual[k]; // 'pagado'|'adeudado'|undefined
+        var manualOv   = estManual[k];
         var autoDetect = detectarEnEgresos(item, m);
-
         var esPagado;
-        if (manualOv === 'pagado')   { esPagado = true; }
+        if (manualOv === 'pagado')    { esPagado = true; }
         else if (manualOv === 'adeudado') { esPagado = false; }
-        else { esPagado = autoDetect; } // sin override → usar detección automática
+        else { esPagado = autoDetect; }
 
         totalPres += val;
         if (esPagado) { rowPag  += val; totalPag  += val; }
@@ -7603,47 +7919,48 @@ function renderBcol() {
 
         var bgCell  = esPagado ? '#e8f5e9' : '#ffebee';
         var clrCell = esPagado ? '#2E7D32' : '#A32D2D';
-        var icon    = esPagado ? '✓' : '!';
+        var icon    = esPagado ? 'OK' : '!';
         var autoTag = (autoDetect && !manualOv) ? '<div style="font-size:8px;color:#4CAF50">auto</div>' : '';
-        var title   = esPagado ? 'Pagado — clic para adeudado' : 'Adeudado — clic para pagado';
 
         html += '<td style="padding:4px 3px;border-bottom:1px solid #f0ede8;text-align:center">'
-             +  '<div onclick="msdToggleCelda(' + idx + ',' + m + ')" title="' + title + '" '
-             +       'style="background:' + bgCell + ';border:1.5px solid ' + clrCell + ';border-radius:5px;padding:3px 2px;cursor:pointer;min-width:70px;transition:all .15s">'
-             +    '<div style="font-size:9px;font-weight:700;color:' + clrCell + '">' + icon + '</div>'
-             +    '<div style="font-size:9px;color:' + clrCell + ';font-weight:600">' + COPM(val) + '</div>'
-             +    autoTag
+             +  '<div style="display:flex;flex-direction:column;align-items:center;gap:2px">'
+             +    '<div onclick="msdToggleCelda(' + idx + ',' + m + ')" title="Clic para cambiar estado" '
+             +         'style="background:' + bgCell + ';border:1.5px solid ' + clrCell + ';border-radius:5px;padding:3px 2px;cursor:pointer;min-width:70px;transition:all .15s">'
+             +      '<div style="font-size:9px;font-weight:700;color:' + clrCell + '">' + icon + '</div>'
+             +      '<div style="font-size:9px;color:' + clrCell + ';font-weight:600">' + COPM(val) + '</div>'
+             +      autoTag
+             +    '</div>'
+             +    '<span onclick="msdEditarCelda(' + idx + ',' + m + ')" title="Editar valor" '
+             +          'style="font-size:8px;color:#bbb;cursor:pointer;text-decoration:underline">editar</span>'
              +  '</div>'
              + '</td>';
       });
 
-      // Total adeudado fila
       var clrT = rowAdeu > 0 ? '#A32D2D' : '#2E7D32';
-      html += '<td style="padding:6px 10px;border-bottom:1px solid #f0ede8;text-align:right;font-weight:700;font-size:11px;color:' + clrT + '">'
-           +    COPM(rowAdeu)
-           + '</td>';
+      html += '<td style="padding:6px 10px;border-bottom:1px solid #f0ede8;text-align:right;font-weight:700;font-size:11px;color:' + clrT + '">' + COPM(rowAdeu) + '</td>';
       html += '</tr>';
     });
 
+    // Fila agregar
+    html += '<tr><td colspan="14" style="padding:6px 8px;border-top:2px dashed #ce93d8">'
+         +  '<button onclick="msdAgregarFila()" '
+         +          'style="background:none;border:none;cursor:pointer;color:#7B1FA2;font-size:11px;font-weight:700;font-family:Helvetica,Arial,sans-serif;padding:3px 8px;border-radius:6px">'
+         +    '+ Agregar ítem'
+         +  '</button></td></tr>';
+
     tbody.innerHTML = html;
 
-    // ── Footer subtotales ─────────────────────────────────────────────
     var ft = '<tr style="background:#f3e5f5">';
     ft += '<td style="padding:8px 10px;font-weight:700;font-size:11px;color:#7B1FA2;text-transform:uppercase;position:sticky;left:0;background:#f3e5f5;z-index:1">TOTAL PROYECTO MSD VSR</td>';
     subMes.forEach(function(val) {
-      if (val > 0) {
-        ft += '<td style="padding:6px 3px;text-align:center">'
-           +    '<div style="background:#ffebee;border-radius:5px;padding:3px 2px;font-size:9px;font-weight:700;color:#A32D2D;min-width:70px">' + COPM(val) + '</div>'
-           +  '</td>';
-      } else {
-        ft += '<td style="padding:6px 3px;text-align:center"><div style="background:#f0ede8;border-radius:5px;padding:3px 2px;font-size:9px;color:#ccc;min-width:70px">—</div></td>';
-      }
+      ft += val > 0
+        ? '<td style="padding:6px 3px;text-align:center"><div style="background:#ffebee;border-radius:5px;padding:3px 2px;font-size:9px;font-weight:700;color:#A32D2D;min-width:70px">' + COPM(val) + '</div></td>'
+        : '<td style="padding:6px 3px;text-align:center"><div style="background:#f0ede8;border-radius:5px;padding:3px 2px;font-size:9px;color:#ccc;min-width:70px">-</div></td>';
     });
     ft += '<td style="padding:8px 10px;text-align:right;font-weight:700;font-size:13px;color:#A32D2D">' + COPM(totalAdeu) + '</td>';
     ft += '</tr>';
     tfoot.innerHTML = ft;
 
-    // ── KPIs ─────────────────────────────────────────────────────────
     var ep = document.getElementById('msd-kpi-pagado');
     var ea = document.getElementById('msd-kpi-adeudado');
     var et = document.getElementById('msd-kpi-total');
@@ -7652,9 +7969,7 @@ function renderBcol() {
     if (et) et.textContent = COPM(totalPres);
   }
 
-  // ── Init + exponer para que Egresos lo llame al cargar CSV ────────────
   window.renderMSD = renderMSD;
-
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', renderMSD);
   } else {

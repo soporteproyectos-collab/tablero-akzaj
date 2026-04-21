@@ -150,6 +150,212 @@ select,input{padding:6px 10px;border:1px solid #d0cec8;border-radius:7px;font-si
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
+<style>
+#pg-conc{display:none;padding:0;}
+#pg-conc.on{display:block!important;}
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
+:root{
+  --cyan:#5BC8CD;--cyan-light:#EAF8F9;--cyan-mid:#B8E8EA;
+  --gray-dark:#3D3D3D;--gray:#6B6B6B;--gray-mid:#9E9E9E;
+  --gray-light:#E8E8E8;--gray-bg:#F7F7F7;--white:#FFFFFF;
+  --green:#2E9E6B;--green-bg:#EAF7F1;
+  --red:#D94040;--red-bg:#FDEAEA;
+  --amber:#C07A10;--amber-bg:#FDF3E3;
+  --purple:#6950B8;--purple-bg:#F0EDFC;--purple-mid:#C4B5FD;
+  --teal:#0E7490;--teal-bg:#ECFEFF;
+  --orange:#C2410C;--orange-bg:#FFF7ED;--orange-mid:#FED7AA;--orange-btn:#EA580C;
+  --navy:#1E3A5F;--navy-bg:#EFF6FF;--navy-mid:#BFDBFE;--navy-btn:#1D4ED8;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Montserrat','Helvetica Neue',Helvetica,Arial,sans-serif;background:var(--gray-bg);color:var(--gray-dark);min-height:100vh;}
+
+/* HEADER */
+.header{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:62px;border-bottom:3px solid var(--cyan);background:var(--white);position:sticky;top:0;z-index:100;gap:12px;flex-wrap:wrap;}
+.logo-al{font-size:24px;font-weight:700;color:var(--cyan);letter-spacing:-.5px;}
+.logo-zak{font-size:24px;font-weight:700;color:var(--gray-dark);letter-spacing:-.5px;}
+.logo-sub{font-size:9px;color:var(--gray-mid);letter-spacing:.4px;margin-top:1px;}
+.logo-sub span{color:var(--cyan);font-weight:600;}
+.hdr-right{display:flex;gap:7px;align-items:center;flex-wrap:wrap;}
+select,button{font-family:'Montserrat',Helvetica,sans-serif;font-size:12px;font-weight:500;border-radius:4px;cursor:pointer;transition:all .15s;}
+select{background:var(--white);color:var(--gray-dark);border:1.5px solid var(--gray-light);padding:5px 26px 5px 9px;height:32px;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239E9E9E'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;}
+select:focus{outline:none;border-color:var(--cyan);}
+.btn{background:var(--white);color:var(--gray);border:1.5px solid var(--gray-light);padding:0 13px;height:32px;}
+.btn:hover{border-color:var(--cyan);color:var(--cyan);}
+.btn-pri{background:var(--cyan);color:var(--white);border:none;font-weight:600;}
+.btn-pri:hover{background:#4AB5BA;}
+
+/* LAYOUT */
+.scroll-area{padding:22px 28px;max-width:1400px;margin:0 auto;}
+.section{background:var(--white);border-radius:10px;border:1.5px solid var(--gray-light);overflow:hidden;margin-bottom:18px;}
+.section-head{display:flex;align-items:center;gap:10px;padding:13px 20px;border-bottom:1.5px solid var(--gray-light);flex-wrap:wrap;}
+.section-head.s-global {background:var(--teal);      border-color:var(--teal);}
+.section-head.s-ahorros{background:var(--cyan-light); border-color:var(--cyan-mid);}
+.section-head.s-fondo  {background:var(--purple-bg);  border-color:var(--purple-mid);}
+.section-head.s-caja   {background:var(--orange-bg);  border-color:var(--orange-mid);}
+.section-head.s-bold   {background:var(--navy-bg);    border-color:var(--navy-mid);}
+.sec-badge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:3px;text-transform:uppercase;letter-spacing:.6px;white-space:nowrap;}
+.sb-global {background:rgba(255,255,255,.2);color:var(--white);}
+.sb-ahorros{background:var(--cyan);   color:var(--white);}
+.sb-fondo  {background:var(--purple); color:var(--white);}
+.sb-caja   {background:var(--orange-btn);color:var(--white);}
+.sb-bold   {background:var(--navy-btn); color:var(--white);}
+.sec-title{font-size:12px;font-weight:600;}
+.on-teal  {color:var(--white);}
+.on-cyan  {color:#2E9099;}
+.on-purple{color:var(--purple);}
+.on-orange{color:var(--orange);}
+.on-navy  {color:var(--navy);}
+.sec-sub{font-size:10px;margin-left:auto;white-space:nowrap;color:var(--gray-mid);}
+.sec-sub.on-teal{color:rgba(255,255,255,.7);}
+.section-body{padding:18px 20px;}
+
+/* GLOBAL KPIs */
+.global-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:13px;}
+.gc{background:rgba(255,255,255,.11);border:1px solid rgba(255,255,255,.17);border-radius:6px;padding:10px 13px;}
+.gc-lbl{font-size:9px;font-weight:600;color:rgba(255,255,255,.62);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px;}
+.gc-val{font-size:14px;font-weight:700;color:var(--white);}
+.gc-val.dim{color:rgba(255,255,255,.35);}
+.gc.hl{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.4);}
+.gc.hl .gc-val{font-size:18px;}
+
+/* GLOBAL ROWS */
+.global-rows{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;}
+.grow{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.13);border-radius:6px;padding:12px 14px;}
+.grow-title{font-size:9px;font-weight:700;color:rgba(255,255,255,.52);text-transform:uppercase;letter-spacing:.7px;margin-bottom:9px;}
+.grow-line{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.07);font-size:11px;gap:8px;}
+.grow-line:last-of-type{border-bottom:none;}
+.grow-label{color:rgba(255,255,255,.75);flex:1;}
+.grow-val{color:var(--white);font-weight:600;white-space:nowrap;}
+.grow-val.pos{color:#6EE7B7;}
+.grow-val.neg{color:#FCA5A5;}
+.grow-val.dim{color:rgba(255,255,255,.32);}
+.grow-total{display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,.15);border-radius:5px;padding:7px 10px;margin-top:8px;}
+.grow-total-lbl{font-size:11px;font-weight:700;color:var(--white);}
+.grow-total-val{font-size:13px;font-weight:700;color:var(--white);}
+
+/* CHARTS */
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:13px;}
+.chart-box{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:7px;padding:13px 13px 7px;}
+.chart-title{font-size:9px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.7px;margin-bottom:7px;}
+
+/* ACCOUNT CARDS */
+.acct-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:9px;margin-bottom:15px;}
+.ac{background:var(--white);border:1.5px solid var(--gray-light);border-radius:6px;padding:10px 14px;}
+.ac-lbl{font-size:9px;font-weight:700;color:var(--gray-mid);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px;}
+.ac-val{font-size:14px;font-weight:700;color:var(--gray-dark);}
+.ac-val.cyan  {color:var(--cyan);}
+.ac-val.green {color:var(--green);}
+.ac-val.red   {color:var(--red);}
+.ac-val.purple{color:var(--purple);}
+.ac-val.orange{color:var(--orange-btn);}
+.ac-val.navy  {color:var(--navy-btn);}
+.ac-val.dim   {color:var(--gray-mid);}
+.bt-cyan  {border-top:3px solid var(--cyan);}
+.bt-green {border-top:3px solid var(--green);}
+.bt-red   {border-top:3px solid var(--red);}
+.bt-purple{border-top:3px solid var(--purple);}
+.bt-orange{border-top:3px solid var(--orange-btn);}
+.bt-navy  {border-top:3px solid var(--navy-btn);}
+
+/* PANELS */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:13px;}
+.inner-panel{background:var(--gray-bg);border:1.5px solid var(--gray-light);border-radius:6px;padding:12px 16px;}
+.inner-title{font-size:10px;font-weight:700;color:var(--gray-mid);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.inner-title::before{content:'';display:inline-block;width:3px;height:12px;border-radius:2px;flex-shrink:0;}
+.bar-cyan::before  {background:var(--cyan);}
+.bar-purple::before{background:var(--purple);}
+.bar-orange::before{background:var(--orange-btn);}
+.bar-navy::before  {background:var(--navy-btn);}
+
+.dr{display:flex;justify-content:space-between;align-items:flex-start;padding:5px 0;border-bottom:1px solid var(--gray-light);font-size:12px;gap:9px;}
+.dr:last-child{border-bottom:none;}
+.dr.ind{padding-left:11px;}
+.dr.ind .dl{color:var(--gray);font-weight:400;}
+.dl{flex:1;font-weight:500;color:var(--gray-dark);}
+.dv{font-weight:600;font-size:12px;white-space:nowrap;}
+.ap{color:var(--green);font-weight:600;}
+.an{color:var(--red);font-weight:600;}
+.av-cyan  {color:var(--cyan);}
+.av-purple{color:var(--purple);}
+.av-orange{color:var(--orange-btn);}
+.av-navy  {color:var(--navy-btn);}
+.av-dim   {color:var(--gray-mid);}
+
+/* RESULT BARS */
+.result-bar{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:6px;margin-top:11px;}
+.rb-cyan  {background:var(--cyan);  color:var(--white);}
+.rb-purple{background:var(--purple);color:var(--white);}
+.rb-orange{background:var(--orange-btn);color:var(--white);}
+.rb-navy  {background:var(--navy-btn);  color:var(--white);}
+.rb-label{font-size:12px;font-weight:600;}
+.rb-val  {font-size:15px;font-weight:700;}
+
+/* ALERTS */
+.alert{padding:9px 13px;border-radius:5px;font-size:11px;font-weight:500;margin-bottom:12px;display:flex;align-items:flex-start;gap:8px;border-left:4px solid;}
+.aok{background:var(--green-bg);color:var(--green);border-color:var(--green);}
+.awt{background:var(--teal-bg); color:var(--teal); border-color:var(--teal);}
+.awk{background:var(--amber-bg);color:var(--amber);border-color:var(--amber);}
+
+/* TABLE */
+.tbl-wrap{border:1.5px solid var(--gray-light);border-radius:6px;overflow:hidden;overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+thead tr{background:var(--gray-bg);}
+th{padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--gray-mid);text-transform:uppercase;letter-spacing:.7px;border-bottom:1.5px solid var(--gray-light);white-space:nowrap;}
+td{padding:7px 12px;border-bottom:1px solid var(--gray-light);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tbody tr:hover td{background:var(--cyan-light);}
+.pill{display:inline-block;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;}
+.pg{background:var(--green-bg); color:var(--green);}
+.pr{background:var(--red-bg);   color:var(--red);}
+.pa{background:var(--amber-bg); color:var(--amber);}
+.pc{background:var(--cyan-light);color:#2E9099;}
+.pp{background:var(--purple-bg);color:var(--purple);}
+.pot{background:var(--orange-bg);color:var(--orange-btn);}
+.pn{background:var(--navy-bg);  color:var(--navy-btn);}
+.pz{background:var(--gray-bg);  color:var(--gray);}
+
+/* TOOLBAR */
+.toolbar{display:flex;gap:7px;margin-bottom:10px;flex-wrap:wrap;align-items:center;}
+.toolbar input{font-family:'Montserrat',Helvetica,sans-serif;font-size:12px;height:32px;padding:0 10px;border-radius:4px;border:1.5px solid var(--gray-light);background:var(--white);color:var(--gray-dark);width:200px;}
+.toolbar input::placeholder{color:var(--gray-mid);}
+.toolbar input:focus{outline:none;border-color:var(--cyan);}
+.cbadge{font-size:11px;font-weight:600;color:var(--gray-mid);}
+
+/* TOGGLE */
+.toggle-btn{width:100%;display:flex;align-items:center;justify-content:space-between;padding:10px 15px;border-radius:6px;cursor:pointer;font-family:'Montserrat',sans-serif;font-size:12px;font-weight:600;margin-top:14px;}
+.toggle-btn .tb-bar{width:3px;height:12px;border-radius:2px;display:inline-block;flex-shrink:0;}
+.toggle-btn .tb-cnt{display:flex;align-items:center;gap:9px;}
+.toggle-btn .tb-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;}
+.toggle-btn .tb-arrow{font-size:13px;transition:transform .22s;}
+.tb-cyan  {border:1.5px solid var(--cyan-mid);background:var(--cyan-light);color:#2E9099;}
+.tb-cyan  .tb-bar{background:var(--cyan);}
+.tb-cyan  .tb-badge{background:var(--cyan);color:var(--white);}
+.tb-purple{border:1.5px solid var(--purple-mid);background:var(--purple-bg);color:var(--purple);}
+.tb-purple .tb-bar{background:var(--purple);}
+.tb-purple .tb-badge{background:var(--purple);color:var(--white);}
+.tb-orange{border:1.5px solid var(--orange-mid);background:var(--orange-bg);color:var(--orange-btn);}
+.tb-orange .tb-bar{background:var(--orange-btn);}
+.tb-orange .tb-badge{background:var(--orange-btn);color:var(--white);}
+.tb-navy  {border:1.5px solid var(--navy-mid);background:var(--navy-bg);color:var(--navy-btn);}
+.tb-navy  .tb-bar{background:var(--navy-btn);}
+.tb-navy  .tb-badge{background:var(--navy-btn);color:var(--white);}
+
+/* NOTAS */
+.nota{border-radius:0 5px 5px 0;padding:10px 13px;font-size:11px;line-height:1.6;border-left:4px solid;margin-top:12px;}
+.nota-p{background:var(--purple-bg);border-color:var(--purple);color:var(--gray-dark);}
+.nota-p strong{color:var(--purple);}
+.nota-o{background:var(--orange-bg);border-color:var(--orange-btn);color:var(--gray-dark);}
+.nota-o strong{color:var(--orange-btn);}
+.nota-n{background:var(--navy-bg);border-color:var(--navy-btn);color:var(--gray-dark);}
+.nota-n strong{color:var(--navy-btn);}
+
+.footer{padding:12px 28px;border-top:1px solid var(--gray-light);font-size:10px;font-weight:500;color:var(--gray-mid);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;background:var(--white);}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:var(--gray-bg);}
+::-webkit-scrollbar-thumb{background:var(--cyan-mid);border-radius:10px;}
+@media print{.hdr-right{display:none!important;}.scroll-area{padding:10px;}}
+@media(max-width:700px){.header{padding:10px 14px;height:auto;}.scroll-area{padding:12px;}.two-col,.charts-grid{grid-template-columns:1fr;}.acct-cards{grid-template-columns:repeat(2,1fr);}.global-cards{grid-template-columns:repeat(2,1fr);}}
+</style>
 </head>
 
 <body>
@@ -298,6 +504,10 @@ select,input{padding:6px 10px;border:1px solid #d0cec8;border-radius:7px;font-si
 
 </div>
 
+<div id="tab-nav" style="background:#333;padding:8px 28px;gap:8px;align-items:center;display:none;">
+  <button id="tab-home-btn" onclick="tabHome()" style="padding:6px 18px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:Helvetica,Arial,sans-serif;background:#5DC3DA;color:#fff;">&#127968; Tablero</button>
+  <button id="tab-conc-btn" onclick="tabConc()" style="padding:6px 18px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:Helvetica,Arial,sans-serif;background:rgba(255,255,255,0.12);color:#ccc;">&#127970; Conciliaci&#243;n</button>
+</div>
 <div id="pg-home" class="pg on">
 
 <!-- RESUMEN DEL TABLERO -->
@@ -940,16 +1150,6 @@ select,input{padding:6px 10px;border:1px solid #d0cec8;border-radius:7px;font-si
 
 </div>
 
-
-
-
-
-
-
-
-
-
-
 <div id="pg-facturas" class="pg">
 
 <div id="fact-kpis" class="g4" style="margin-bottom:12px"></div>
@@ -1079,10 +1279,6 @@ select,input{padding:6px 10px;border:1px solid #d0cec8;border-radius:7px;font-si
 </div>
 
 </div>
-
-
-
-
 
 </div>
 
@@ -1943,29 +2139,51 @@ function procesarFilasGasto(rows, tipo) {
         total  = toNum(row[7]);
 
         // Usar categoría exacta del archivo — normalizar tildes para consistencia
+
         if (catRaw) {
+
           var CAT_FIX = {
+
             'Nomina y Honorarios':                'Nómina y Honorarios',
+
             'Arrendamientos y Administracion':    'Arrendamientos y Administración',
+
             'Capacitacion e Investigacion':       'Capacitación e Investigación',
+
             'Gastos de Representacion':           'Gastos de Representación',
+
             'Mantenimiento y Reparaciones':       'Mantenimiento y Reparaciones',
+
             'Materiales y Construccion':          'Materiales y Construcción',
+
             'Prestamos':                          'Préstamos',
+
             'Procesamiento Electronico de Datos': 'Procesamiento Electrónico de Datos',
+
             'Servicios Publicos':                 'Servicios Públicos'
+
           };
+
           cat_override = CAT_FIX[catRaw] || catRaw;
+
         }
 
         // Leer columna Estado del Excel (columna 8, índice 8)
+
         var estExcel = row[8] ? (row[8]||'').toString().trim().toUpperCase() : '';
+
         if (estExcel === 'PAGADO' || estExcel === 'PAGADA') {
+
           cat_override = cat_override || catRaw;
+
           // Marcar como pagado vía variable temporal
+
           row.__est_excel = 'pagado';
+
         } else if (estExcel === 'PENDIENTE') {
+
           row.__est_excel = 'pendiente';
+
         }
 
       } else {
@@ -2053,44 +2271,79 @@ function procesarFilasGasto(rows, tipo) {
     var cat = cat_override || inferirCategoria(prov, conc);
 
     // ── Determinar estado pagado/pendiente ──────────────────────────────
+
     // Prioridad: 1) row.__est_excel (columna Estado del Excel ALZAK)
+
     //            2) columna Estado del CSV estándar
+
     //            3) lógica automática por categoría
+
     var _esPagadoFinal;
 
     if (row.__est_excel === 'pagado') {
+
       _esPagadoFinal = true;
+
     } else if (row.__est_excel === 'pendiente') {
+
       _esPagadoFinal = false;
+
     } else {
+
       // Buscar columna Estado en CSV estándar
+
       var rawHEst2 = rows[dataStart > 1 ? 1 : 0].map(function(x){
+
         return (x||'').toString().toLowerCase().trim();
+
       });
+
       var idxEstCol = -1;
+
       for (var _ei=0; _ei<rawHEst2.length; _ei++) {
+
         if (rawHEst2[_ei]==='estado' || rawHEst2[_ei]==='pagada' || rawHEst2[_ei]==='pagado') {
+
           idxEstCol = _ei; break;
+
         }
+
       }
+
       var estFileVal = idxEstCol >= 0 && row[idxEstCol]
+
         ? (row[idxEstCol]||'').toString().toLowerCase().trim()
+
         : '';
 
       if (estFileVal === 'pagado' || estFileVal === 'pagada' || estFileVal === 'si' || estFileVal === 'sí') {
+
         _esPagadoFinal = true;
+
       } else if (estFileVal === 'pendiente' || estFileVal === 'no') {
+
         _esPagadoFinal = false;
+
       } else {
+
         // Lógica automática por categoría
+
         var _catLow2 = (cat || '').toLowerCase();
+
         var _cnLow2  = (conc || '').toLowerCase();
+
         var _esPend = (_catLow2.indexOf('nomina') >= 0 || _catLow2.indexOf('nómina') >= 0 ||
+
                        _catLow2.indexOf('honorar') >= 0 ||
+
                        /^cc-/i.test(nfact) ||
+
                        _cnLow2.indexOf('cuenta de cobro') >= 0);
+
         _esPagadoFinal = !_esPend;
+
       }
+
     }
 
     var entry = {
@@ -8294,15 +8547,25 @@ function renderResumenTablero() {
   var nFact = FACTURAS.length;
 
   // Excluir obligaciones tributarias del cálculo de gastos operativos (no afectan P&L)
+
   var CATS_NO_OPERATIVAS = ['Obligacion Tributaria DIAN','Obligaciones Tributarias DIAN','Obligacion Tributaria','Obligaciones Tributarias'];
+
   function esGastoOperativo(r) {
+
     var cat = (r['Categoria'] || '').trim();
+
     for (var ci=0; ci<CATS_NO_OPERATIVAS.length; ci++) {
+
       if (cat === CATS_NO_OPERATIVAS[ci] || cat.indexOf('Obligaci') >= 0 && cat.indexOf('DIAN') >= 0) return false;
+
     }
+
     return true;
+
   }
+
   var totalEgr    = GASTOS_DATA.filter(esGastoOperativo).reduce(function(a,r){ return a+parseFloat(r['Total_COP']||0); }, 0);
+
   var totalEgrOblig = GASTOS_DATA.filter(function(r){ return !esGastoOperativo(r); }).reduce(function(a,r){ return a+parseFloat(r['Total_COP']||0); }, 0);
 
   var totalPendEgr= GASTOS_DATA.filter(function(r){return !r._pagada && esGastoOperativo(r);}).reduce(function(a,r){return a+parseFloat(r['Total_COP']||0);},0);
@@ -8868,8 +9131,11 @@ function calcBalMes(mes) {
   var oblFin = sumPend(['Obligaciones financieras','Gastos Financieros']);
 
   // Impuestos por pagar (incluye obligaciones tributarias DIAN pendientes)
+
   var CATS_DIAN = ['Obligacion Tributaria DIAN','Obligaciones Tributarias DIAN','Obligacion Tributaria','Obligaciones Tributarias'];
+
   var oblTrib = sumPend(CATS_DIAN);
+
   var imptos = sumPend(['Impuestos y gravamenes','Impuestos y Gravámenes']) + oblTrib;
 
   // Tarjeta de crédito
@@ -8911,12 +9177,19 @@ function calcBalMes(mes) {
   var ingT = factFil.reduce(function(a,f){return a+(f.bruto||0);},0);
 
   // Excluir Obligaciones Tributarias DIAN del cálculo de utilidad del ejercicio
+
   var CATS_DIAN_BAL = ['Obligacion Tributaria DIAN','Obligaciones Tributarias DIAN','Obligacion Tributaria','Obligaciones Tributarias'];
+
   var gasT = GASTOS_DATA.filter(function(r){
+
     var cat = (r['Categoria']||'').trim();
+
     if(CATS_DIAN_BAL.indexOf(cat)>=0) return false;
+
     if(cat.indexOf('Obligaci')>=0 && cat.indexOf('DIAN')>=0) return false;
+
     return !mes||(r['Mes']||'')===mes;
+
   }).reduce(function(a,r){return a+parseFloat(r['Total_COP']||0);},0);
 
   var utilEj = ingT - gasT;
@@ -9140,7 +9413,9 @@ function renderBalance() {
   if (d.oblFin) html += fila('Obligaciones financieras', d.oblFin, 'item', 1);
 
   if (d.oblTrib) html += fila('Obligaciones Tributarias DIAN (pendientes)', d.oblTrib, 'item', 1,
+
     'Acuerdos de pago IVA — no afectan el P&L');
+
   if (d.imptos - d.oblTrib > 0) html += fila('Impuestos y retenciones por pagar', d.imptos - d.oblTrib, 'item', 1);
 
   if (d.tc)     html += fila('Tarjeta de crédito por pagar', d.tc, 'item', 1);
@@ -9234,21 +9509,37 @@ function erVista(v) {
 }
 
 // ── Categorías NO operativas — no afectan el Estado de Resultados ──
+
 var CATS_NO_OPERATIVAS_PL = [
+
   'Obligacion Tributaria DIAN',
+
   'Obligaciones Tributarias DIAN', 
+
   'Obligacion Tributaria',
+
   'Obligaciones Tributarias'
+
 ];
+
 function esGastoOpPL(r) {
+
   var cat = (r['Categoria'] || '').trim();
+
   for (var _ci=0; _ci<CATS_NO_OPERATIVAS_PL.length; _ci++) {
+
     if (cat === CATS_NO_OPERATIVAS_PL[_ci]) return false;
+
   }
+
   // También excluir si contiene "Obligaci" y "DIAN"
+
   if (cat.indexOf('Obligaci') >= 0 && cat.indexOf('DIAN') >= 0) return false;
+
   return true;
+
 }
+
 function calcMesData(mes) {
 
   var MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -9256,6 +9547,7 @@ function calcMesData(mes) {
   var ff=FACTURAS.filter(function(f){var dp=(f.fecha||'').split('-');if(dp.length<3)return false;return MN[parseInt(dp[1])-1]+' '+dp[0]===mes;});
 
   var gf=GASTOS_DATA.filter(function(r){return (r['Mes']||'')===mes;});
+
   var gfOp=gf.filter(esGastoOpPL); // Solo gastos operativos para P&L
 
   var ing=ff.reduce(function(a,f){return a+(f.bruto||0);},0);
@@ -11351,28 +11643,43 @@ function renderGastosDashboard() {
   var hayFiltro=filMes||filCat||filQ||filAnio||filEst;
 
   // Excluir Obligacion Tributaria DIAN de los KPIs operativos
+
   function esOpDash(r){ var c=(r['Categoria']||'').trim(); return !(c==='Obligacion Tributaria DIAN'||c==='Obligaciones Tributarias DIAN'||(c.indexOf('Obligaci')>=0&&c.indexOf('DIAN')>=0)); }
+
   var totalAll=GASTOS_DATA.filter(esOpDash).reduce(function(a,r){return a+parseFloat(r['Total_COP']||0);},0);
+
   var totalDIAN=GASTOS_DATA.filter(function(r){return !esOpDash(r);}).reduce(function(a,r){return a+parseFloat(r['Total_COP']||0);},0);
+
   var pagadoAll=GASTOS_DATA.filter(function(r){return r._pagada&&esOpDash(r);}).reduce(function(a,r){return a+parseFloat(r['Total_COP']||0);},0);
+
   var pct=totalAll?Math.round(pagadoAll/totalAll*100):0;
+
   var nOp=GASTOS_DATA.filter(esOpDash).length;
 
   var kp=g('dash-gastos-kpis');
+
   var notaDIAN=totalDIAN>0?'<div style="background:#FFF3E0;border:1px solid #FFB74D;border-radius:8px;padding:8px 12px;font-size:11px;color:#E65100;margin-top:8px">⚠️ <b>Obligaciones Tributarias DIAN: '+F(totalDIAN)+'</b> — No computan como gasto operativo. Se registran por separado.</div>':'';
+
   if(kp)kp.innerHTML='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">'+kpi('Total egresos',F(totalAll),'tr',nOp+' registros')+kpi('Pagado',F(pagadoAll),'tg',pct+'% del total')+kpi('Pendiente',F(totalAll-pagadoAll),'tw',(100-pct)+'% restante')+kpi('Avance',pct+'%',pct>70?'tg':'tw','de pago')+'</div>'+notaDIAN;
 
   // Barras mes a mes
 
   var mesGr={};
+
   for(var i=0;i<GASTOS_DATA.length;i++){if(!esOpDash(GASTOS_DATA[i]))continue;var mm=GASTOS_DATA[i]['Mes']||'';if(mm)mesGr[mm]=(mesGr[mm]||0)+parseFloat(GASTOS_DATA[i]['Total_COP']||0);}
 
   var _MORD=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
   var meses=Object.keys(mesGr).sort(function(a,b){
+
     var pa=a.split(' '), pb=b.split(' ');
+
     var ya=parseInt(pa[pa.length-1])||0, yb=parseInt(pb[pb.length-1])||0;
+
     if(ya!==yb) return ya-yb;
+
     return _MORD.indexOf(pa[0])-_MORD.indexOf(pb[0]);
+
   });
 
   var barEl=g('dash-gastos-barras');
@@ -11398,6 +11705,7 @@ function renderGastosDashboard() {
   // Filtrar
 
   // Base de datos operativa — excluir DIAN salvo que el filtro sea específicamente esa categoría
+
   var dataOp = GASTOS_DATA.filter(function(r){ return esOpDash(r) || filCat === (r['Categoria']||''); });
 
   var listaFiltrada=dataOp.filter(function(r){
@@ -12800,7 +13108,6 @@ function renderBcol() {
 
 </script>
 
-
 <!-- ══════════════════════════════════════════════════════════
 
      JS: MÓDULO EQUIPO BASE OPS
@@ -13987,6 +14294,815 @@ function renderBcol() {
 
 </script>
 
+<div id="pg-conc" class="pg">
+<div class="header">
+  <div style="display:flex;align-items:center;gap:13px">
+    <div>
+      <div><span class="logo-al">AL</span><span class="logo-zak">ZAK</span></div>
+      <div class="logo-sub">Consulting <span>& Research</span></div>
+    </div>
+    <div style="width:1px;height:30px;background:var(--gray-light)"></div>
+    <div>
+      <div style="font-size:12px;font-weight:600;color:var(--gray-dark)">Conciliación Bancaria</div>
+      <div style="font-size:10px;color:var(--gray-mid)">Bancolombia · Fiducuenta · Caja Social · Bold CF</div>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <select id="sel-periodo" onchange="renderConc()">
+      <option value="0">Enero 2026</option>
+      <option value="1">Febrero 2026</option>
+      <option value="2" selected>Marzo 2026</option>
+    </select>
+    <button class="btn" onclick="exportarCSVConc()">↓ CSV</button>
+    <button class="btn btn-pri" onclick="window.print()">⎙ Imprimir</button>
+  </div>
+</div>
+
+<div class="scroll-area">
+  <div class="section"><div class="section-head s-global"><span class="sec-badge sb-global">Resumen global</span><span class="sec-title on-teal" id="g-title"></span><span class="sec-sub on-teal" id="g-periodo"></span></div><div class="section-body" id="body-global" style="background:var(--teal)"></div></div>
+  <div class="section"><div class="section-head s-ahorros"><span class="sec-badge sb-ahorros">Cta. Ahorros</span><span class="sec-title on-cyan">78349636556 · Bancolombia · Sucursal Mall Plaza del Castillo</span><span class="sec-sub" id="ah-per"></span></div><div class="section-body" id="body-ahorros"></div></div>
+  <div class="section"><div class="section-head s-fondo"><span class="sec-badge sb-fondo">Fiducuenta</span><span class="sec-title on-purple">98000001771 · Fondo de Inversión Colectiva · Fiduciaria Bancolombia</span><span class="sec-sub" id="fid-per"></span></div><div class="section-body" id="body-fondo"></div></div>
+  <div class="section"><div class="section-head s-caja"><span class="sec-badge sb-caja">Cta. Corriente</span><span class="sec-title on-orange">21003622970 · Banco Caja Social · Cartagena</span><span class="sec-sub" id="cj-per"></span></div><div class="section-body" id="body-caja"></div></div>
+  <div class="section"><div class="section-head s-bold"><span class="sec-badge sb-bold">Bold CF</span><span class="sec-title on-navy">1700-1155-2371 · Bold Compañía de Financiamiento · Depósito Ordinario</span><span class="sec-sub" id="bl-per"></span></div><div class="section-body" id="body-bold"></div></div>
+</div>
+
+<div class="footer">
+  <span>ALZAK GROUP SAS · Bancolombia 78349636556 · Fiducuenta 98000001771 · Caja Social 21003622970 · Bold CF 1700-1155-2371</span>
+  <span id="fecha-gen"></span>
+</div>
+</div>
+<script>
+function tabHome() {
+  var pgs = document.querySelectorAll('.pg');
+  for (var i=0; i<pgs.length; i++) pgs[i].classList.remove('on');
+  var c = document.getElementById('pg-conc');
+  if (c) c.classList.remove('on');
+  var h = document.getElementById('pg-home');
+  if (h) h.classList.add('on');
+  var tb = document.getElementById('topbar-t');
+  if (tb) tb.textContent = 'Inicio';
+  document.getElementById('tab-home-btn').style.background='#5DC3DA';
+  document.getElementById('tab-home-btn').style.color='#fff';
+  document.getElementById('tab-conc-btn').style.background='rgba(255,255,255,0.12)';
+  document.getElementById('tab-conc-btn').style.color='#ccc';
+  if (typeof renderHome === 'function') renderHome();
+}
+function tabConc() {
+  var pgs = document.querySelectorAll('.pg');
+  for (var i=0; i<pgs.length; i++) pgs[i].classList.remove('on');
+  var c = document.getElementById('pg-conc');
+  if (c) c.classList.add('on');
+  var tb = document.getElementById('topbar-t');
+  if (tb) tb.textContent = 'Conciliacion Bancaria';
+  document.getElementById('tab-home-btn').style.background='rgba(255,255,255,0.12)';
+  document.getElementById('tab-home-btn').style.color='#ccc';
+  document.getElementById('tab-conc-btn').style.background='#5DC3DA';
+  document.getElementById('tab-conc-btn').style.color='#fff';
+  setTimeout(function(){ try{ renderConc(); }catch(e){} }, 60);
+}
+// Intercept tablero's ir() to also hide pg-conc and update tabs
+document.addEventListener('DOMContentLoaded', function() {
+  var nav = document.getElementById('tab-nav');
+  if (nav) nav.style.display = 'flex';
+  var origIr = window.ir;
+  if (origIr) {
+    window.ir = function(id) {
+      var c = document.getElementById('pg-conc');
+      if (c) c.classList.remove('on');
+      origIr(id);
+      var hb = document.getElementById('tab-home-btn');
+      var cb = document.getElementById('tab-conc-btn');
+      if (hb && cb) {
+        hb.style.background = '#5DC3DA'; hb.style.color = '#fff';
+        cb.style.background = 'rgba(255,255,255,0.12)'; cb.style.color = '#ccc';
+      }
+    };
+  }
+});
+</script>
+<script>
+document.getElementById('fecha-gen').textContent='Generado: '+new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'});
+
+/* ══════════════════════ DATA ══════════════════════ */
+const P=[
+{label:'Enero 2026',desde:'2025/12/31',hasta:'2026/01/31',
+ sA:11325.27,tAb:75260267.37,tCar:48484155.12,sF:26787437.52,
+ movs:[
+  {f:'04/01',d:'Abono intereses ahorros',v:0.04,t:'interes'},
+  {f:'05/01',d:'Transferencia CTA SUC Virtual',v:10000,t:'transf'},
+  {f:'05/01',d:'Abono intereses ahorros',v:0.02,t:'interes'},
+  {f:'06/01',d:'Transferencia CTA SUC Virtual',v:250000,t:'transf'},
+  {f:'06/01',d:'Abono intereses ahorros',v:0.37,t:'interes'},
+  {f:'07/01',d:'Apertura exenta encargo fiduc → Fiducuenta',v:-250000,t:'fondo'},
+  {f:'13/01',d:'Abono intereses ahorros',v:0.14,t:'interes'},
+  {f:'14/01',d:'Pago interbanc ALZAK GROUP SAS (traslado interno)',v:5000000,t:'interno'},
+  {f:'14/01',d:'Abono intereses ahorros',v:6.87,t:'interes'},
+  {f:'15/01',d:'Impto Gobierno 4x1000',v:-5803.95,t:'impto'},
+  {f:'15/01',d:'Transferencia CTA SUC Virtual',v:-1450988,t:'transf'},
+  {f:'18/01',d:'Abono intereses ahorros',v:19.52,t:'interes'},
+  {f:'19/01',d:'Impto Gobierno 4x1000',v:-4000,t:'impto'},
+  {f:'19/01',d:'Transferencia CTA SUC Virtual',v:-1000000,t:'transf'},
+  {f:'20/01',d:'Abono intereses ahorros',v:7.00,t:'interes'},
+  {f:'21/01',d:'Abono intereses ahorros',v:2.06,t:'interes'},
+  {f:'21/01',d:'Transferencia Virtual',v:-50000,t:'transf'},
+  {f:'21/01',d:'Impto Gobierno 4x1000',v:-4200,t:'impto'},
+  {f:'21/01',d:'Transferencia CTA SUC Virtual',v:-1000000,t:'transf'},
+  {f:'22/01',d:'Traslado Fiducuenta → Ahorros',v:20000000,t:'fondo'},
+  {f:'22/01',d:'Traslado Fiducuenta → Ahorros',v:10000000,t:'fondo'},
+  {f:'22/01',d:'Abono intereses ahorros',v:1.98,t:'interes'},
+  {f:'22/01',d:'Transferencia Virtual',v:-2500000,t:'transf'},
+  {f:'22/01',d:'Transferencia Virtual',v:-23800000,t:'transf'},
+  {f:'22/01',d:'Impto Gobierno 4x1000',v:-119744.02,t:'impto'},
+  {f:'22/01',d:'Transferencia CTA SUC Virtual',v:-1336007,t:'transf'},
+  {f:'22/01',d:'Transferencia CTA SUC Virtual',v:-2300000,t:'transf'},
+  {f:'23/01',d:'Traslado Fiducuenta → Ahorros',v:20000000,t:'fondo'},
+  {f:'23/01',d:'Transferencia Virtual',v:-100000,t:'transf'},
+  {f:'23/01',d:'Impto Gobierno 4x1000',v:-12400,t:'impto'},
+  {f:'23/01',d:'Transferencia CTA SUC Virtual',v:-3000000,t:'transf'},
+  {f:'25/01',d:'Abono intereses ahorros',v:75.36,t:'interes'},
+  {f:'26/01',d:'Abono intereses ahorros',v:23.67,t:'interes'},
+  {f:'26/01',d:'Transferencia Virtual',v:-50000,t:'transf'},
+  {f:'26/01',d:'Impto Gobierno 4x1000',v:-4218.64,t:'impto'},
+  {f:'26/01',d:'Transferencia CTA SUC Virtual',v:-1004662,t:'transf'},
+  {f:'27/01',d:'Abono intereses ahorros',v:23.53,t:'interes'},
+  {f:'27/01',d:'Impto Gobierno 4x1000',v:-386.80,t:'impto'},
+  {f:'27/01',d:'Pago PSE Cámara de Comercio',v:-12100,t:'egreso'},
+  {f:'27/01',d:'Transferencia CTA SUC Virtual',v:-84600,t:'transf'},
+  {f:'28/01',d:'Abono intereses ahorros',v:17.87,t:'interes'},
+  {f:'28/01',d:'Transferencia Virtual',v:-50000,t:'transf'},
+  {f:'28/01',d:'Impto Gobierno 4x1000',v:-16471.19,t:'impto'},
+  {f:'28/01',d:'Transferencia CTA SUC Virtual',v:-2559799,t:'transf'},
+  {f:'28/01',d:'Transferencia CTA SUC Virtual',v:-1508000,t:'transf'},
+  {f:'29/01',d:'Abono intereses ahorros',v:15.56,t:'interes'},
+  {f:'29/01',d:'Impto Gobierno 4x1000',v:-6721.20,t:'impto'},
+  {f:'29/01',d:'Transferencia CTA SUC Virtual',v:-530000,t:'transf'},
+  {f:'29/01',d:'Transferencia CTA SUC Virtual',v:-1150300,t:'transf'},
+  {f:'30/01',d:'Traslado Fiducuenta → Ahorros',v:20000000,t:'fondo'},
+  {f:'30/01',d:'Servicio Transferencia Virtual',v:-7590,t:'comision'},
+  {f:'30/01',d:'Servicio Transferencia Virtual',v:-7590,t:'comision'},
+  {f:'30/01',d:'Impto Gobierno 4x1000',v:-18222.12,t:'impto'},
+  {f:'30/01',d:'Transferencia CTA SUC Virtual',v:-838500,t:'transf'},
+  {f:'30/01',d:'Transferencia CTA SUC Virtual',v:-201067,t:'transf'},
+  {f:'30/01',d:'Transferencia CTA SUC Virtual',v:-1588450,t:'transf'},
+  {f:'30/01',d:'Transferencia CTA SUC Virtual',v:-1588450,t:'transf'},
+  {f:'30/01',d:'Transferencia CTA SUC Virtual',v:-321000,t:'transf'},
+  {f:'30/01',d:'Cobro IVA Pagos Automáticos',v:-1442.10,t:'comision'},
+  {f:'30/01',d:'Cobro IVA Pagos Automáticos',v:-1442.10,t:'comision'},
+  {f:'31/01',d:'Abono intereses ahorros',v:73.38,t:'interes'},
+ ],
+ fid:{sA:0,sF:130314331.49,adiciones:200250000,retiros:70000000,rendNetos:69202.51,retencion:4871.02,movs:[
+  {f:'07/01',d:'Apertura / Adición al fondo',v:250000,t:'adicion'},
+  {f:'20/01',d:'Adición desde Cta. Ahorros',v:55000000,t:'adicion'},
+  {f:'22/01',d:'Retiro traslado → Cta. Ahorros',v:-20000000,t:'retiro'},
+  {f:'22/01',d:'Retiro traslado → Cta. Ahorros',v:-10000000,t:'retiro'},
+  {f:'23/01',d:'Retiro traslado → Cta. Ahorros',v:-20000000,t:'retiro'},
+  {f:'29/01',d:'Adición desde Cta. Ahorros',v:145000000,t:'adicion'},
+  {f:'30/01',d:'Retiro traslado → Cta. Ahorros',v:-20000000,t:'retiro'},
+  {f:'31/01',d:'Rendimientos netos del período',v:69202.51,t:'rend'},
+  {f:'31/01',d:'Retención sobre rendimientos',v:-4871.02,t:'reten'},
+ ]},
+ caja:{sA:4484895.54,tCred:228256779.55,tDeb:-232662314.00,sF:79361.09,movs:[
+  {f:'05/01',d:'Débito ACH',v:-3000000,t:'egreso'},
+  {f:'05/01',d:'Compra internet — certificadosvirtuales',v:-12100,t:'egreso'},
+  {f:'07/01',d:'Débito ACH — nómina',v:-220000,t:'egreso'},
+  {f:'07/01',d:'Débito ACH — nómina',v:-446000,t:'egreso'},
+  {f:'07/01',d:'Débito ACH — nómina',v:-338867,t:'egreso'},
+  {f:'07/01',d:'Débito ACH — nómina',v:-234922,t:'egreso'},
+  {f:'09/01',d:'Transferencia — FEE2275 (ingreso cliente)',v:25370236,t:'ingreso'},
+  {f:'13/01',d:'Débito ACH',v:-266600,t:'egreso'},
+  {f:'14/01',d:'Débito ACH',v:-5000000,t:'egreso'},
+  {f:'14/01',d:'Débito ACH',v:-120490,t:'egreso'},
+  {f:'14/01',d:'Débito ACH',v:-290200,t:'egreso'},
+  {f:'14/01',d:'Débito ACH',v:-98400,t:'egreso'},
+  {f:'14/01',d:'Débito ACH',v:-50000,t:'egreso'},
+  {f:'14/01',d:'Pago tarjeta de crédito',v:-2654548,t:'egreso'},
+  {f:'15/01',d:'Débito ACH',v:-2000000,t:'egreso'},
+  {f:'15/01',d:'Débito ACH',v:-1000000,t:'egreso'},
+  {f:'15/01',d:'Devolución transacción no exitosa',v:1000000,t:'devol'},
+  {f:'16/01',d:'Transferencia — PAGOS 54292-016226 (ingreso cliente)',v:6188077,t:'ingreso'},
+  {f:'19/01',d:'Transferencia — FEE2279 (ingreso cliente)',v:34218439,t:'ingreso'},
+  {f:'19/01',d:'Compra internet',v:-193814,t:'egreso'},
+  {f:'19/01',d:'Compra internet',v:-238950,t:'egreso'},
+  {f:'19/01',d:'Compra internet',v:-22807,t:'egreso'},
+  {f:'20/01',d:'Transf. Fondos Comunes → Bancolombia',v:-55000000,t:'traslado'},
+  {f:'22/01',d:'Transferencia — ADIUM SAS (ingreso cliente)',v:26712043,t:'ingreso'},
+  {f:'22/01',d:'Transferencia — PAGOS 54292-029626 (ingreso cliente)',v:3534454.55,t:'ingreso'},
+  {f:'23/01',d:'Transferencia — FEE2280 (ingreso cliente)',v:131233530,t:'ingreso'},
+  {f:'27/01',d:'Débito ACH',v:-7500000,t:'egreso'},
+  {f:'29/01',d:'Transf. Fondos Comunes → Bancolombia',v:-145000000,t:'traslado'},
+  {f:'29/01',d:'Débito ACH',v:-4848472,t:'egreso'},
+  {f:'30/01',d:'Débito ACH',v:-4000000,t:'egreso'},
+  {f:'31/01',d:'Gravamen movimientos financieros',v:-126144,t:'impto'},
+ ]},
+ bold:{sA:0,sF:0,tAb:0,tCar:0,intereses:0,movs:[]}
+},
+{label:'Febrero 2026',desde:'2026/01/31',hasta:'2026/02/28',
+ sA:26787437.52,tAb:127503088.60,tCar:108947682.87,sF:45342843.25,
+ movs:[
+  {f:'01/02',d:'Abono intereses ahorros',v:31.60,t:'interes'},
+  {f:'01/02',d:'Impto Gobierno 4x1000',v:-14800,t:'impto'},
+  {f:'01/02',d:'Transferencia CTA SUC Virtual',v:-3700000,t:'transf'},
+  {f:'02/02',d:'Traslado Fiducuenta → Ahorros',v:10000000,t:'fondo'},
+  {f:'02/02',d:'Abono intereses ahorros',v:28.14,t:'interes'},
+  {f:'02/02',d:'Impto Gobierno 4x1000',v:-49911.62,t:'impto'},
+  {f:'02/02',d:'Pago PSE Fiduciaria',v:-2185466,t:'egreso'},
+  {f:'02/02',d:'Pago PSE Fideicomisos Socieda',v:-475120,t:'egreso'},
+  {f:'02/02',d:'Pago PSE Banco Caja Social',v:-2483335,t:'egreso'},
+  {f:'02/02',d:'Transferencia CTA SUC Virtual',v:-338867,t:'transf'},
+  {f:'02/02',d:'Transferencia CTA SUC Virtual',v:-6000000,t:'transf'},
+  {f:'02/02',d:'Transferencia CTA SUC Virtual',v:-234922,t:'transf'},
+  {f:'02/02',d:'Transferencia CTA SUC Virtual',v:-760196,t:'transf'},
+  {f:'03/02',d:'Transferencia Virtual',v:-10000000,t:'transf'},
+  {f:'03/02',d:'Impto Gobierno 4x1000',v:-40000,t:'impto'},
+  {f:'04/02',d:'Abono intereses ahorros',v:28.78,t:'interes'},
+  {f:'05/02',d:'Abono intereses ahorros',v:14.29,t:'interes'},
+  {f:'05/02',d:'Impto Gobierno 4x1000',v:-280,t:'impto'},
+  {f:'05/02',d:'Transferencia CTA SUC Virtual',v:-70000,t:'transf'},
+  {f:'06/02',d:'Traslado Fiducuenta → Ahorros',v:18043763,t:'fondo'},
+  {f:'06/02',d:'Transferencia Virtual',v:-5138880,t:'transf'},
+  {f:'06/02',d:'Transferencia Virtual',v:-64000,t:'transf'},
+  {f:'06/02',d:'Impto Gobierno 4x1000',v:-94738,t:'impto'},
+  {f:'06/02',d:'Transferencia CTA SUC Virtual',v:-2192982,t:'transf'},
+  {f:'06/02',d:'Transferencia CTA SUC Virtual',v:-1900000,t:'transf'},
+  {f:'06/02',d:'Transferencia CTA SUC Virtual',v:-6249760,t:'transf'},
+  {f:'06/02',d:'Transferencia CTA SUC Virtual',v:-5138880,t:'transf'},
+  {f:'06/02',d:'Transferencia CTA SUC Virtual',v:-3000000,t:'transf'},
+  {f:'09/02',d:'Abono intereses ahorros',v:25.72,t:'interes'},
+  {f:'10/02',d:'Traslado Fiducuenta → Ahorros',v:10000000,t:'fondo'},
+  {f:'10/02',d:'Traslado Fiducuenta → Ahorros',v:10000000,t:'fondo'},
+  {f:'10/02',d:'Transferencia Virtual',v:-150000,t:'transf'},
+  {f:'10/02',d:'Impto Gobierno 4x1000',v:-72265.99,t:'impto'},
+  {f:'10/02',d:'Pago PSE Impuesto DIAN',v:-5000000,t:'egreso'},
+  {f:'10/02',d:'Transferencia CTA SUC Virtual',v:-3916912,t:'transf'},
+  {f:'10/02',d:'Transferencia CTA SUC Virtual',v:-5611657,t:'transf'},
+  {f:'10/02',d:'Transferencia CTA SUC Virtual',v:-3387930,t:'transf'},
+  {f:'12/02',d:'Abono intereses ahorros',v:26.94,t:'interes'},
+  {f:'13/02',d:'Traslado Fiducuenta → Ahorros',v:30000000,t:'fondo'},
+  {f:'13/02',d:'Transferencia Virtual',v:-15000000,t:'transf'},
+  {f:'13/02',d:'Impto Gobierno 4x1000',v:-76272.99,t:'impto'},
+  {f:'13/02',d:'Pago PSE Aguas de Cartagena',v:-267681,t:'egreso'},
+  {f:'13/02',d:'Pago PSE Surtidora de Gas',v:-4567,t:'egreso'},
+  {f:'13/02',d:'Transferencia CTA SUC Virtual',v:-3000000,t:'transf'},
+  {f:'13/02',d:'Transferencia CTA SUC Virtual',v:-446000,t:'transf'},
+  {f:'13/02',d:'Transferencia CTA SUC Virtual',v:-350000,t:'transf'},
+  {f:'15/02',d:'Abono intereses ahorros',v:71.55,t:'interes'},
+  {f:'16/02',d:'Abono intereses ahorros',v:10.10,t:'interes'},
+  {f:'16/02',d:'Transferencia Virtual',v:-10000000,t:'transf'},
+  {f:'16/02',d:'Impto Gobierno 4x1000',v:-40000,t:'impto'},
+  {f:'17/02',d:'Impto Gobierno 4x1000',v:-5677.52,t:'impto'},
+  {f:'17/02',d:'Transferencia CTA SUC Virtual',v:-69800,t:'transf'},
+  {f:'17/02',d:'Transferencia CTA SUC Virtual',v:-1160900,t:'transf'},
+  {f:'17/02',d:'Transferencia CTA SUC Virtual',v:-188682,t:'transf'},
+  {f:'18/02',d:'Abono intereses ahorros',v:16.30,t:'interes'},
+  {f:'19/02',d:'Pago de prov P&G Grupo Emp (ingreso externo)',v:49458000,t:'ingreso'},
+  {f:'19/02',d:'Abono intereses ahorros',v:151.80,t:'interes'},
+  {f:'20/02',d:'Impto Gobierno 4x1000',v:-3471.40,t:'impto'},
+  {f:'20/02',d:'Pago PSE Banco Caja Social',v:-867851,t:'egreso'},
+  {f:'23/02',d:'Abono intereses ahorros',v:597.64,t:'interes'},
+  {f:'24/02',d:'Abono intereses ahorros',v:66.24,t:'interes'},
+  {f:'24/02',d:'Impto Gobierno 4x1000',v:-24618.44,t:'impto'},
+  {f:'24/02',d:'Transferencia CTA SUC Virtual',v:-142800,t:'transf'},
+  {f:'24/02',d:'Transferencia CTA SUC Virtual',v:-1463000,t:'transf'},
+  {f:'24/02',d:'Transferencia CTA SUC Virtual',v:-3916912,t:'transf'},
+  {f:'24/02',d:'Transferencia CTA SUC Virtual',v:-440000,t:'transf'},
+  {f:'24/02',d:'Transferencia CTA SUC Virtual',v:-191900,t:'transf'},
+  {f:'25/02',d:'Abono intereses ahorros',v:66.19,t:'interes'},
+  {f:'25/02',d:'Impto Gobierno 4x1000',v:-144,t:'impto'},
+  {f:'25/02',d:'Pago PSE Wingo Aerorepublica',v:-36000,t:'egreso'},
+  {f:'26/02',d:'Impto Gobierno 4x1000',v:-6069,t:'impto'},
+  {f:'26/02',d:'Transferencia CTA SUC Virtual',v:-1517250,t:'transf'},
+  {f:'27/02',d:'Abono intereses ahorros',v:128.20,t:'interes'},
+  {f:'28/02',d:'Abono intereses ahorros',v:62.11,t:'interes'},
+  {f:'28/02',d:'Servicio Transferencia Virtual',v:-7590,t:'comision'},
+  {f:'28/02',d:'Servicio Transferencia Virtual',v:-7590,t:'comision'},
+  {f:'28/02',d:'Servicio Transferencia Virtual',v:-7590,t:'comision'},
+  {f:'28/02',d:'Servicio Transferencia Virtual',v:-7590,t:'comision'},
+  {f:'28/02',d:'Impto Gobierno 4x1000',v:-5805.51,t:'impto'},
+  {f:'28/02',d:'Transferencia CTA SUC Virtual',v:-1415250,t:'transf'},
+  {f:'28/02',d:'Cobro IVA Pagos Automáticos',v:-1442.10,t:'comision'},
+  {f:'28/02',d:'Cobro IVA Pagos Automáticos',v:-1442.10,t:'comision'},
+  {f:'28/02',d:'Cobro IVA Pagos Automáticos',v:-1442.10,t:'comision'},
+  {f:'28/02',d:'Cobro IVA Pagos Automáticos',v:-1442.10,t:'comision'},
+ ],
+ fid:{sA:130314331.49,sF:52623118.18,adiciones:0,retiros:78043763,rendNetos:369299.15,retencion:16749.46,movs:[
+  {f:'02/02',d:'Retiro traslado → Cta. Ahorros',v:-10000000,t:'retiro'},
+  {f:'06/02',d:'Retiro traslado → Cta. Ahorros',v:-18043763,t:'retiro'},
+  {f:'10/02',d:'Retiro traslado → Cta. Ahorros',v:-10000000,t:'retiro'},
+  {f:'10/02',d:'Retiro traslado → Cta. Ahorros',v:-10000000,t:'retiro'},
+  {f:'13/02',d:'Retiro traslado → Cta. Ahorros',v:-30000000,t:'retiro'},
+  {f:'28/02',d:'Rendimientos netos del período',v:369299.15,t:'rend'},
+  {f:'28/02',d:'Retención sobre rendimientos',v:-16749.46,t:'reten'},
+ ]},
+ caja:{sA:79361.09,tCred:86770155.75,tDeb:-14679536.00,sF:72169980.84,movs:[
+  {f:'04/02',d:'Transferencia — PAGOS 20000195692026 (ingreso cliente)',v:5257500,t:'ingreso'},
+  {f:'06/02',d:'Débito ACH',v:-2000000,t:'egreso'},
+  {f:'06/02',d:'Débito ACH',v:-2000000,t:'egreso'},
+  {f:'06/02',d:'Débito ACH',v:-1305404,t:'egreso'},
+  {f:'20/02',d:'Transferencia — ref. 5194126 (ingreso cliente)',v:52541770.50,t:'ingreso'},
+  {f:'23/02',d:'Débito ACH',v:-2000000,t:'egreso'},
+  {f:'23/02',d:'Débito ACH',v:-1305404,t:'egreso'},
+  {f:'23/02',d:'Débito ACH',v:-321000,t:'egreso'},
+  {f:'23/02',d:'Débito ACH',v:-900000,t:'egreso'},
+  {f:'23/02',d:'Débito ACH',v:-900000,t:'egreso'},
+  {f:'23/02',d:'Débito ACH',v:-900000,t:'egreso'},
+  {f:'23/02',d:'Devolución transacción no exitosa',v:900000,t:'devol'},
+  {f:'23/02',d:'Devolución transacción no exitosa',v:900000,t:'devol'},
+  {f:'23/02',d:'Devolución transacción no exitosa',v:900000,t:'devol'},
+  {f:'24/02',d:'Débito ACH',v:-300000,t:'egreso'},
+  {f:'26/02',d:'Débito ACH',v:-900000,t:'egreso'},
+  {f:'26/02',d:'Débito ACH',v:-900000,t:'egreso'},
+  {f:'26/02',d:'Débito ACH',v:-900000,t:'egreso'},
+  {f:'27/02',d:'Transferencia — ref. 5204426 (ingreso cliente)',v:26270885.25,t:'ingreso'},
+  {f:'28/02',d:'Gravamen movimientos financieros',v:-47728,t:'impto'},
+ ]},
+ bold:{sA:0,sF:19657053.36,tAb:25000000,tCar:-5342946.64,intereses:0,movs:[
+  {f:'13/02',d:'Transferencia ACH desde Bancolombia (traslado interno)',v:15000000,t:'traslado'},
+  {f:'13/02',d:'Envío por Llaves',v:-1540000,t:'egreso'},
+  {f:'13/02',d:'GMF de envío por Llaves',v:-6160,t:'impto'},
+  {f:'13/02',d:'Envío por Llaves',v:-660000,t:'egreso'},
+  {f:'13/02',d:'GMF de envío por Llaves',v:-2640,t:'impto'},
+  {f:'16/02',d:'Transferencia ACH desde Bancolombia (traslado interno)',v:10000000,t:'traslado'},
+  {f:'23/02',d:'Envío por Llaves',v:-2549760,t:'egreso'},
+  {f:'23/02',d:'GMF de envío por Llaves',v:-10199.04,t:'impto'},
+  {f:'24/02',d:'Envío por Llaves',v:-571900,t:'egreso'},
+  {f:'24/02',d:'GMF de envío por Llaves',v:-2287.60,t:'impto'},
+ ]}
+},
+{label:'Marzo 2026',desde:'2026/02/28',hasta:'2026/03/31',
+ sA:45342843.25,tAb:21878860.93,tCar:67127125.23,sF:94578.95,
+ movs:[
+  {f:'01/03',d:'Abono intereses ahorros',v:62.11,t:'interes'},
+  {f:'02/03',d:'Abono intereses ahorros',v:55.17,t:'interes'},
+  {f:'02/03',d:'Impto Gobierno 4x1000',v:-20167.39,t:'impto'},
+  {f:'02/03',d:'Pago PSE Banco Falabella SA',v:-4642400,t:'egreso'},
+  {f:'02/03',d:'Transferencia CTA SUC Virtual',v:-270000,t:'transf'},
+  {f:'02/03',d:'Transferencia CTA SUC Virtual',v:-64450,t:'transf'},
+  {f:'02/03',d:'Transferencia CTA SUC Virtual',v:-64999,t:'transf'},
+  {f:'03/03',d:'Impto Gobierno 4x1000',v:-10200,t:'impto'},
+  {f:'03/03',d:'Transferencia CTA SUC Virtual',v:-2550000,t:'transf'},
+  {f:'04/03',d:'Abono intereses ahorros',v:103.34,t:'interes'},
+  {f:'05/03',d:'Impto Gobierno 4x1000',v:-7379.86,t:'impto'},
+  {f:'05/03',d:'Pago PSE Fideicomisos Socieda',v:-576770,t:'egreso'},
+  {f:'05/03',d:'Transferencia CTA SUC Virtual',v:-760196,t:'transf'},
+  {f:'05/03',d:'Transferencia CTA SUC Virtual',v:-62000,t:'transf'},
+  {f:'05/03',d:'Transferencia CTA SUC Virtual',v:-446000,t:'transf'},
+  {f:'09/03',d:'Abono intereses ahorros',v:245.65,t:'interes'},
+  {f:'10/03',d:'Pago de prov VAXTHERA SAS (ingreso externo)',v:21878256.90,t:'ingreso'},
+  {f:'10/03',d:'Abono intereses ahorros',v:43.14,t:'interes'},
+  {f:'10/03',d:'Traslado Ahorros → Fiducuenta',v:-25000000,t:'fondo'},
+  {f:'10/03',d:'Impto Gobierno 4x1000',v:-4987.82,t:'impto'},
+  {f:'10/03',d:'Pago PSE Cámara de Comercio C',v:-12100,t:'egreso'},
+  {f:'10/03',d:'Transferencia CTA SUC Virtual',v:-201067,t:'transf'},
+  {f:'10/03',d:'Transferencia CTA SUC Virtual',v:-460000,t:'transf'},
+  {f:'10/03',d:'Transferencia CTA SUC Virtual',v:-338867,t:'transf'},
+  {f:'10/03',d:'Transferencia CTA SUC Virtual',v:-234922,t:'transf'},
+  {f:'11/03',d:'Abono intereses ahorros',v:33.89,t:'interes'},
+  {f:'11/03',d:'Impto Gobierno 4x1000',v:-26908.34,t:'impto'},
+  {f:'11/03',d:'Transferencia CTA SUC Virtual',v:-5138880,t:'transf'},
+  {f:'11/03',d:'Transferencia CTA SUC Virtual',v:-1588205,t:'transf'},
+  {f:'12/03',d:'Transferencia Virtual',v:-20000000,t:'transf'},
+  {f:'12/03',d:'Impto Gobierno 4x1000',v:-80000,t:'impto'},
+  {f:'15/03',d:'Abono intereses ahorros',v:25.52,t:'interes'},
+  {f:'16/03',d:'Impto Gobierno 4x1000',v:-157.60,t:'impto'},
+  {f:'16/03',d:'Pago PSE Hacemos Buenos Momentos',v:-39400,t:'egreso'},
+  {f:'18/03',d:'Abono intereses ahorros',v:18.99,t:'interes'},
+  {f:'19/03',d:'Impto Gobierno 4x1000',v:-12000,t:'impto'},
+  {f:'19/03',d:'Transferencia CTA SUC Virtual',v:-3000000,t:'transf'},
+  {f:'25/03',d:'Abono intereses ahorros',v:15.40,t:'interes'},
+  {f:'26/03',d:'Impto Gobierno 4x1000',v:-6000,t:'impto'},
+  {f:'26/03',d:'Transferencia CTA SUC Virtual',v:-1500000,t:'transf'},
+  {f:'30/03',d:'Abono intereses ahorros',v:0.70,t:'interes'},
+  {f:'31/03',d:'Abono intereses ahorros',v:0.12,t:'interes'},
+  {f:'31/03',d:'Servicio Transferencia Virtual',v:-7590,t:'comision'},
+  {f:'31/03',d:'Impto Gobierno 4x1000',v:-36.12,t:'impto'},
+  {f:'31/03',d:'Cobro IVA Pagos Automáticos',v:-1442.10,t:'comision'},
+ ],
+ fid:{sA:52623118.18,sF:78147690.75,adiciones:25000000,retiros:0,rendNetos:524572.57,retencion:0,movs:[
+  {f:'10/03',d:'Adición desde Cta. Ahorros',v:25000000,t:'adicion'},
+  {f:'31/03',d:'Rendimientos netos del período',v:524572.57,t:'rend'},
+ ]},
+ caja:{sA:72169980.84,tCred:0,tDeb:-56521386.00,sF:15648594.84,movs:[
+  {f:'03/03',d:'Débito ACH — nómina',v:-2837600,t:'egreso'},
+  {f:'03/03',d:'Débito ACH — nómina',v:-3670400,t:'egreso'},
+  {f:'11/03',d:'Débito ACH — nómina',v:-1353580,t:'egreso'},
+  {f:'11/03',d:'Débito ACH — nómina',v:-1353580,t:'egreso'},
+  {f:'11/03',d:'Débito ACH',v:-1097970,t:'egreso'},
+  {f:'11/03',d:'Débito ACH',v:-1097970,t:'egreso'},
+  {f:'11/03',d:'Débito ACH',v:-2163996,t:'egreso'},
+  {f:'11/03',d:'Compra internet — AO 2026 PERIODO 2',v:-102000,t:'egreso'},
+  {f:'11/03',d:'Compra internet — AO 2025 PERIODO 2',v:-5000000,t:'egreso'},
+  {f:'14/03',d:'Pago tarjeta de crédito',v:-3000000,t:'egreso'},
+  {f:'14/03',d:'Compra internet — Portal pagos',v:-387659,t:'egreso'},
+  {f:'18/03',d:'Compra internet — Falabella',v:-3049000,t:'egreso'},
+  {f:'19/03',d:'Débito ACH',v:-6249760,t:'egreso'},
+  {f:'19/03',d:'Débito ACH',v:-5139380,t:'egreso'},
+  {f:'19/03',d:'Débito ACH',v:-2192982,t:'egreso'},
+  {f:'19/03',d:'Débito ACH',v:-3000000,t:'egreso'},
+  {f:'19/03',d:'Débito ACH',v:-1703861,t:'egreso'},
+  {f:'19/03',d:'Débito ACH',v:-321000,t:'egreso'},
+  {f:'19/03',d:'Compra internet',v:-262256,t:'egreso'},
+  {f:'19/03',d:'Compra internet — Pago factura',v:-4583,t:'egreso'},
+  {f:'21/03',d:'Pago tarjeta de crédito',v:-3975496,t:'egreso'},
+  {f:'24/03',d:'Débito ACH',v:-72544,t:'egreso'},
+  {f:'24/03',d:'Débito ACH',v:-2299900,t:'egreso'},
+  {f:'24/03',d:'Débito ACH',v:-1469900,t:'egreso'},
+  {f:'26/03',d:'Débito ACH — nómina',v:-2837600,t:'egreso'},
+  {f:'26/03',d:'Débito ACH',v:-1653184,t:'egreso'},
+  {f:'31/03',d:'Gravamen movimientos financieros',v:-225185,t:'impto'},
+ ]},
+ bold:{sA:19657053.36,sF:36614121.45,tAb:20068865.69,tCar:-3111797.60,intereses:68865.69,movs:[
+  {f:'01/03',d:'Abono de intereses (Ahorro)',v:68865.69,t:'interes'},
+  {f:'12/03',d:'Transferencia ACH desde Bancolombia (traslado interno)',v:20000000,t:'traslado'},
+  {f:'15/03',d:'Compra tarjeta débito — ATRIUM ZONA NORTE',v:-221000,t:'egreso'},
+  {f:'15/03',d:'GMF compra tarjeta — ATRIUM ZONA NORTE',v:-884,t:'impto'},
+  {f:'15/03',d:'Compra tarjeta débito — BOLD*Mucho Padel Col',v:-627800,t:'egreso'},
+  {f:'15/03',d:'GMF compra tarjeta — BOLD*Mucho Padel Col',v:-2511.20,t:'impto'},
+  {f:'28/03',d:'Pago por PSE',v:-1630600,t:'egreso'},
+  {f:'28/03',d:'GMF de pago por PSE',v:-6522.40,t:'impto'},
+  {f:'28/03',d:'Envío por Llaves',v:-620000,t:'egreso'},
+  {f:'28/03',d:'GMF de envío por Llaves',v:-2480,t:'impto'},
+ ]}
+}];
+
+/* ══════════════ TIPOS ══════════════ */
+const TM={ingreso:{l:'Ingreso externo',c:'pg'},interno:{l:'Traslado interno',c:'pc'},fondo:{l:'↔ Fiducuenta',c:'pp'},transf:{l:'Transferencia',c:'pc'},egreso:{l:'Egreso/Pago',c:'pa'},interes:{l:'Intereses',c:'pg'},impto:{l:'4x1000/GMF',c:'pr'},comision:{l:'Comisión',c:'pr'},devol:{l:'Devolución ACH',c:'pz'},traslado:{l:'Traslado banco',c:'pot'}};
+const TMF={adicion:{l:'Adición',c:'pp'},retiro:{l:'Retiro→Ahorros',c:'pc'},rend:{l:'Rendimientos',c:'pg'},reten:{l:'Retención',c:'pr'}};
+const TMB={traslado:{l:'Traslado desde Bancolombia',c:'pn'},egreso:{l:'Egreso/Pago',c:'pa'},impto:{l:'GMF',c:'pr'},interes:{l:'Intereses',c:'pg'}};
+
+/* ══════════════ HELPERS ══════════════ */
+const fmt=n=>n.toLocaleString('es-CO',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fc=n=>'$'+fmt(Math.abs(n));
+const st=(m,t)=>m.filter(x=>!t||x.t===t).reduce((a,x)=>a+x.v,0);
+let fT='',fB='',fTc='',fBc='',fTb='',fBb='';
+var _movsOpen=false,_fidOpen=false,_cajaOpen=false,_boldOpen=false;
+const pi=()=>parseInt(document.getElementById('sel-periodo').value);
+
+/* ══════════════ CHARTS ══════════════ */
+function fmtM(n){const a=Math.abs(n);if(a>=1e9)return(n/1e9).toFixed(1)+'B';if(a>=1e6)return(n/1e6).toFixed(1)+'M';if(a>=1e3)return(n/1e3).toFixed(0)+'K';return n.toFixed(0);}
+function drawBars(id,datasets,xLabels){
+  const cv=document.getElementById(id);if(!cv)return;
+  const ctx=cv.getContext('2d');
+  const W=cv.parentElement.clientWidth-26;cv.width=W;cv.height=140;
+  const H=140,pad={top:18,right:6,bottom:34,left:52};
+  const cW=W-pad.left-pad.right,cH=H-pad.top-pad.bottom;
+  const cM='rgba(255,255,255,0.4)',cG='rgba(255,255,255,0.1)';
+  let mx=0;datasets.forEach(d=>d.data.forEach(v=>{if(Math.abs(v)>mx)mx=Math.abs(v);}));
+  if(!mx)mx=1;ctx.clearRect(0,0,W,H);
+  [0,.25,.5,.75,1].forEach(t=>{
+    const y=pad.top+cH*(1-t);ctx.strokeStyle=cG;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cW,y);ctx.stroke();
+    ctx.fillStyle=cM;ctx.font='9px Montserrat,sans-serif';ctx.textAlign='right';ctx.fillText(fmtM(mx*t),pad.left-4,y+3);
+  });
+  const nG=xLabels.length,nB=datasets.length,gW=cW/nG,bW=Math.min((gW-6)/(nB+0.5),24),gGap=(gW-bW*nB)/(nB+1);
+  datasets.forEach((ds,di)=>{
+    ds.data.forEach((val,gi)=>{
+      const x=pad.left+gi*gW+gGap*(di+1)+bW*di,bH=(Math.abs(val)/mx)*cH,y=pad.top+cH-bH;
+      ctx.fillStyle=ds.color;ctx.globalAlpha=0.88;
+      ctx.beginPath();if(ctx.roundRect)ctx.roundRect(x,y,bW,bH,[3,3,0,0]);else ctx.rect(x,y,bW,bH);
+      ctx.fill();ctx.globalAlpha=1;
+      if(bH>12){ctx.fillStyle='rgba(255,255,255,0.9)';ctx.font='bold 8px Montserrat,sans-serif';ctx.textAlign='center';ctx.fillText(fmtM(val),x+bW/2,y-3);}
+    });
+  });
+  xLabels.forEach((l,gi)=>{ctx.fillStyle=cM;ctx.font='10px Montserrat,sans-serif';ctx.textAlign='center';ctx.fillText(l,pad.left+gi*gW+gW/2,H-10);});
+  let lx=pad.left;
+  datasets.forEach(ds=>{ctx.fillStyle=ds.color;ctx.fillRect(lx,H-22,6,6);ctx.fillStyle=cM;ctx.font='8px Montserrat,sans-serif';ctx.textAlign='left';ctx.fillText(ds.label,lx+9,H-15);lx+=ctx.measureText(ds.label).width+20;});
+}
+
+/* ══════════════ TOGGLES ══════════════ */
+function toggleMovsConc(){_movsOpen=!_movsOpen;var p=document.getElementById('movs-panel'),a=document.getElementById('movs-arrow');if(p)p.style.display=_movsOpen?'block':'none';if(a)a.style.transform=_movsOpen?'rotate(180deg)':'rotate(0deg)';}
+function toggleFidMovsConc(){_fidOpen=!_fidOpen;var p=document.getElementById('fid-panel'),a=document.getElementById('fid-arrow');if(p)p.style.display=_fidOpen?'block':'none';if(a)a.style.transform=_fidOpen?'rotate(180deg)':'rotate(0deg)';}
+function toggleCajaMovsConc(){_cajaOpen=!_cajaOpen;var p=document.getElementById('caja-panel'),a=document.getElementById('caja-arrow');if(p)p.style.display=_cajaOpen?'block':'none';if(a)a.style.transform=_cajaOpen?'rotate(180deg)':'rotate(0deg)';}
+function toggleBoldMovsConc(){_boldOpen=!_boldOpen;var p=document.getElementById('bold-panel'),a=document.getElementById('bold-arrow');if(p)p.style.display=_boldOpen?'block':'none';if(a)a.style.transform=_boldOpen?'rotate(180deg)':'rotate(0deg)';}
+
+/* ══════════════ RENDER GLOBAL ══════════════ */
+function renderGlobal(p){
+  const idx=pi(),m=p.movs,fid=p.fid,cj=p.caja,bl=p.bold;
+  const labels=['Ene 26','Feb 26','Mar 26'].slice(0,idx+1);
+  const ingAh=st(m,'ingreso'),ingCj=st(cj.movs,'ingreso');
+  const ingTotal=ingAh+ingCj;
+  const int_=st(m,'interes'),intBl=bl.intereses,rend=fid.rendNetos;
+  const totalMes=ingTotal+int_+intBl+rend;
+  const dAh=p.sF,dFid=fid.sF,dCj=cj.sF,dBl=bl.sF;
+  const dTotal=dAh+dFid+dCj+dBl;
+  const acum=P.slice(0,idx+1).reduce((a,per)=>({
+    ing: a.ing+st(per.movs,'ingreso')+st(per.caja.movs,'ingreso'),
+    int: a.int+st(per.movs,'interes')+per.bold.intereses,
+    rend:a.rend+per.fid.rendNetos,
+    eg:  a.eg +Math.abs(st(per.movs,'egreso'))+Math.abs(st(per.caja.movs,'egreso'))+Math.abs(st(per.bold.movs,'egreso')),
+    imp: a.imp+Math.abs(st(per.movs,'impto')) +Math.abs(st(per.caja.movs,'impto')) +Math.abs(st(per.bold.movs,'impto')),
+  }),{ing:0,int:0,rend:0,eg:0,imp:0});
+
+  document.getElementById('g-title').textContent='ALZAK GROUP SAS — Todas las cuentas';
+  document.getElementById('g-periodo').textContent=p.desde+' al '+p.hasta;
+
+  document.getElementById('body-global').innerHTML=`
+    <div class="global-cards">
+      <div class="gc"><div class="gc-lbl">Apertura Ahorros</div><div class="gc-val">${fc(p.sA)}</div></div>
+      <div class="gc"><div class="gc-lbl">Apertura Fiducuenta</div><div class="gc-val">${fc(fid.sA)}</div></div>
+      <div class="gc"><div class="gc-lbl">Apertura Caja Social</div><div class="gc-val">${fc(cj.sA)}</div></div>
+      <div class="gc"><div class="gc-lbl">Apertura Bold CF</div><div class="gc-val ${bl.sA===0?'dim':''}">${bl.sA>0?fc(bl.sA):'$0,00'}</div></div>
+      <div class="gc"><div class="gc-lbl">Ingresos externos reales</div><div class="gc-val ${ingTotal===0?'dim':''}">${ingTotal>0?fc(ingTotal):'$0,00'}</div></div>
+      <div class="gc"><div class="gc-lbl">Rendimientos Fiducuenta</div><div class="gc-val">+${fc(rend)}</div></div>
+      <div class="gc"><div class="gc-lbl">Intereses Bold CF</div><div class="gc-val ${intBl===0?'dim':''}">${intBl>0?'+'+fc(intBl):'$0,00'}</div></div>
+      <div class="gc"><div class="gc-lbl">Cierre Ahorros</div><div class="gc-val">${fc(dAh)}</div></div>
+      <div class="gc"><div class="gc-lbl">Cierre Fiducuenta</div><div class="gc-val">${fc(dFid)}</div></div>
+      <div class="gc"><div class="gc-lbl">Cierre Caja Social</div><div class="gc-val">${fc(dCj)}</div></div>
+      <div class="gc"><div class="gc-lbl">Cierre Bold CF</div><div class="gc-val ${dBl===0?'dim':''}">${dBl>0?fc(dBl):'$0,00'}</div></div>
+      <div class="gc hl"><div class="gc-lbl">Total disponible ALZAK</div><div class="gc-val">${fc(dTotal)}</div></div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-box"><div class="chart-title">Disponible por cuenta · mes actual</div><canvas id="ch1" height="140"></canvas></div>
+      <div class="chart-box"><div class="chart-title">Composición ingresos reales · mes actual</div><canvas id="ch2" height="140"></canvas></div>
+      <div class="chart-box"><div class="chart-title">Disponible total ALZAK · evolución mensual</div><canvas id="ch3" height="140"></canvas></div>
+      <div class="chart-box"><div class="chart-title">Ingresos reales acumulados · Ene → ${labels[labels.length-1]}</div><canvas id="ch4" height="140"></canvas></div>
+    </div>
+
+    <div class="global-rows">
+      <div class="grow">
+        <div class="grow-title">Entró este mes</div>
+        <div class="grow-line"><span class="grow-label">Ingresos clientes · Ahorros</span><span class="grow-val pos">${ingAh>0?'+'+fc(ingAh):'$0,00'}</span></div>
+        <div class="grow-line"><span class="grow-label">Ingresos clientes · Caja Social</span><span class="grow-val pos">${ingCj>0?'+'+fc(ingCj):'$0,00'}</span></div>
+        <div class="grow-line"><span class="grow-label">Rendimientos Fiducuenta</span><span class="grow-val pos">+${fc(rend)}</span></div>
+        <div class="grow-line"><span class="grow-label">Intereses Cta. Ahorros</span><span class="grow-val pos">+${fc(int_)}</span></div>
+        <div class="grow-line"><span class="grow-label">Intereses Bold CF</span><span class="grow-val ${intBl>0?'pos':'dim'}">${intBl>0?'+'+fc(intBl):'$0,00'}</span></div>
+        <div class="grow-total"><span class="grow-total-lbl">Total real del mes</span><span class="grow-total-val">+${fc(totalMes)}</span></div>
+      </div>
+      <div class="grow">
+        <div class="grow-title">Disponible al ${p.hasta}</div>
+        <div class="grow-line"><span class="grow-label">Cta. Ahorros Bancolombia</span><span class="grow-val" style="color:#67E8F9">${fc(dAh)}</span></div>
+        <div class="grow-line"><span class="grow-label">Fiducuenta Bancolombia</span><span class="grow-val" style="color:#C4B5FD">${fc(dFid)}</span></div>
+        <div class="grow-line"><span class="grow-label">Cta. Corriente Caja Social</span><span class="grow-val" style="color:#FED7AA">${fc(dCj)}</span></div>
+        <div class="grow-line"><span class="grow-label">Bold CF</span><span class="grow-val" style="color:#93C5FD">${dBl>0?fc(dBl):'$0,00'}</span></div>
+        <div class="grow-total"><span class="grow-total-lbl">Total disponible ALZAK</span><span class="grow-total-val">${fc(dTotal)}</span></div>
+      </div>
+      <div class="grow">
+        <div class="grow-title">Acumulado Ene → ${labels[labels.length-1]}</div>
+        <div class="grow-line"><span class="grow-label">Ingresos externos acum.</span><span class="grow-val pos">${acum.ing>0?'+'+fc(acum.ing):'$0,00'}</span></div>
+        <div class="grow-line"><span class="grow-label">Rendim. + intereses acum.</span><span class="grow-val pos">+${fc(acum.rend+acum.int)}</span></div>
+        <div class="grow-line"><span class="grow-label">Egresos pagados acum.</span><span class="grow-val neg">-${fc(acum.eg)}</span></div>
+        <div class="grow-line"><span class="grow-label">4x1000 + GMF acum.</span><span class="grow-val neg">-${fc(acum.imp)}</span></div>
+        <div class="grow-total"><span class="grow-total-lbl">Total real acumulado</span><span class="grow-total-val">+${fc(acum.ing+acum.rend+acum.int)}</span></div>
+      </div>
+    </div>`;
+
+  requestAnimationFrame(()=>{
+    const cC='#5BC8CD',cP='#A78BFA',cO='#FB923C',cN='#60A5FA',cG='#34D399',cA='#FBBF24';
+    drawBars('ch1',[{label:'Ahorros',color:cC,data:[dAh]},{label:'Fiducuenta',color:cP,data:[dFid]},{label:'Caja Social',color:cO,data:[dCj]},{label:'Bold CF',color:cN,data:[dBl]}],[p.label.split(' ')[0]]);
+    drawBars('ch2',[{label:'Externos Ahorros',color:cG,data:[ingAh]},{label:'Externos Caja',color:cO,data:[ingCj]},{label:'Rendimientos',color:cP,data:[rend]},{label:'Intereses',color:cA,data:[int_+intBl]}],[p.label.split(' ')[0]]);
+    drawBars('ch3',[{label:'Ahorros',color:cC,data:P.slice(0,idx+1).map(x=>x.sF)},{label:'Fiducuenta',color:cP,data:P.slice(0,idx+1).map(x=>x.fid.sF)},{label:'Caja Social',color:cO,data:P.slice(0,idx+1).map(x=>x.caja.sF)},{label:'Bold CF',color:cN,data:P.slice(0,idx+1).map(x=>x.bold.sF)}],labels);
+    let cE=0,cR=0,cI=0;const dE=[],dR=[],dI=[];
+    P.slice(0,idx+1).forEach(per=>{cE+=st(per.movs,'ingreso')+st(per.caja.movs,'ingreso');dE.push(cE);cR+=per.fid.rendNetos;dR.push(cR);cI+=st(per.movs,'interes')+per.bold.intereses;dI.push(cI);});
+    drawBars('ch4',[{label:'Externos acum.',color:cG,data:dE},{label:'Rendim. acum.',color:cP,data:dR},{label:'Intereses acum.',color:cA,data:dI}],labels);
+  });
+}
+
+/* ══════════════ RENDER AHORROS ══════════════ */
+function renderAhorros(p){
+  const m=p.movs;
+  const ing=st(m,'ingreso'),int_=st(m,'interes'),intn=st(m,'interno');
+  const fE=m.filter(x=>x.t==='fondo'&&x.v>0).reduce((a,x)=>a+x.v,0);
+  const fS=m.filter(x=>x.t==='fondo'&&x.v<0).reduce((a,x)=>a+x.v,0);
+  const eg=st(m,'egreso'),tr=st(m,'transf'),imp=st(m,'impto'),com=st(m,'comision');
+  const sc=p.sA+ing+int_+intn+fE+fS+eg+tr+imp+com;
+  const ok=Math.abs(sc-p.sF)<1;
+  document.getElementById('ah-per').textContent=p.desde+' al '+p.hasta;
+  const rows=m.filter(mv=>{const q=fB.toLowerCase(),ft=fT;if(q&&!mv.d.toLowerCase().includes(q)&&!mv.f.includes(q))return false;if(ft&&mv.t!==ft)return false;return true;});
+  const tbody=rows.map(mv=>{const meta=TM[mv.t]||{l:mv.t,c:'pz'};return`<tr><td style="color:var(--gray-mid);font-weight:500;white-space:nowrap">${mv.f}</td><td>${mv.d}</td><td><span class="pill ${meta.c}">${meta.l}</span></td><td style="text-align:right"><span class="${mv.v>=0?'ap':'an'}">${mv.v>=0?'+':'-'}${fc(mv.v)}</span></td></tr>`;}).join('')||`<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--gray-mid)">Sin resultados</td></tr>`;
+  document.getElementById('body-ahorros').innerHTML=`
+    <div class="alert ${ok?'aok':'awk'}"><strong>${ok?'✓ Cuadre perfecto':'⚠ Diferencia'}</strong> ${ok?'Saldo calculado coincide con extracto Bancolombia.':'Diferencia de '+fc(sc-p.sF)+'.'}
+    </div>${!ing?`<div class="alert awt"><strong>ℹ Sin ingresos externos.</strong> Fondos desde Fiducuenta o traslados internos.</div>`:''}
+    <div class="acct-cards">
+      <div class="ac bt-cyan"><div class="ac-lbl">Saldo apertura</div><div class="ac-val cyan">${fc(p.sA)}</div></div>
+      <div class="ac ${ing>0?'bt-green':''}"><div class="ac-lbl">Ingresos externos</div><div class="ac-val ${ing>0?'green':'dim'}">${ing>0?'+'+fc(ing):'$0,00'}</div></div>
+      <div class="ac"><div class="ac-lbl">Intereses</div><div class="ac-val green">+${fc(int_)}</div></div>
+      <div class="ac"><div class="ac-lbl">Entradas Fiducuenta</div><div class="ac-val purple">+${fc(fE)}</div></div>
+      <div class="ac bt-red"><div class="ac-lbl">Total cargos (extracto)</div><div class="ac-val red">${fc(p.tCar)}</div></div>
+      <div class="ac bt-cyan"><div class="ac-lbl">Saldo cierre · ${p.hasta}</div><div class="ac-val cyan">${fc(p.sF)}</div></div>
+    </div>
+    <div class="two-col">
+      <div class="inner-panel"><div class="inner-title bar-cyan">Entradas</div>
+        <div class="dr"><span class="dl">Saldo inicial</span><span class="dv av-cyan">${fc(p.sA)}</span></div>
+        <div class="dr"><span class="dl">Ingresos externos reales</span><span class="dv ${ing>0?'ap':'av-dim'}">${ing>0?'+'+fc(ing):'$0,00 — ninguno'}</span></div>
+        <div class="dr"><span class="dl">Intereses bancarios</span><span class="dv ap">+${fc(int_)}</span></div>
+        <div class="dr"><span class="dl">Traslados Fiducuenta → Ahorros</span><span class="dv ap">+${fc(fE)}</span></div>
+        ${intn!==0?`<div class="dr"><span class="dl">Traslados internos ALZAK</span><span class="dv" style="color:var(--teal)">+${fc(intn)}</span></div>`:''}
+      </div>
+      <div class="inner-panel"><div class="inner-title bar-cyan">Salidas</div>
+        <div class="dr"><span class="dl">Transferencias propias</span><span class="dv an">-${fc(Math.abs(tr))}</span></div>
+        <div class="dr"><span class="dl">Egresos / pagos a terceros</span><span class="dv an">-${fc(Math.abs(eg))}</span></div>
+        <div class="dr"><span class="dl">Traslados Ahorros → Fiducuenta</span><span class="dv an">-${fc(Math.abs(fS))}</span></div>
+        <div class="dr"><span class="dl">Impuesto 4x1000</span><span class="dv an">-${fc(Math.abs(imp))}</span></div>
+        <div class="dr"><span class="dl">Comisiones bancarias</span><span class="dv an">-${fc(Math.abs(com))}</span></div>
+      </div>
+    </div>
+    <div class="result-bar rb-cyan"><span class="rb-label">Saldo Cta. Ahorros al cierre · ${p.hasta}</span><span class="rb-val">${fc(p.sF)}</span></div>
+    <button class="toggle-btn tb-cyan" onclick="toggleMovsConc()">
+      <span class="tb-cnt"><span class="tb-bar"></span>Todos los movimientos<span class="tb-badge">${m.length} mov.</span></span>
+      <span class="tb-arrow" id="movs-arrow">▼</span>
+    </button>
+    <div id="movs-panel" style="display:none;margin-top:10px">
+      <div class="toolbar">
+        <input type="text" placeholder="Buscar…" oninput="fB=this.value;renderAhorros(P[pi()])" value="${fB}">
+        <select onchange="fT=this.value;renderAhorros(P[pi()])">
+          <option value="">Todos</option>
+          <option value="ingreso" ${fT==='ingreso'?'selected':''}>Ingreso externo</option>
+          <option value="interno" ${fT==='interno'?'selected':''}>Traslado interno</option>
+          <option value="fondo"   ${fT==='fondo'?'selected':''}>↔ Fiducuenta</option>
+          <option value="transf"  ${fT==='transf'?'selected':''}>Transferencias</option>
+          <option value="egreso"  ${fT==='egreso'?'selected':''}>Egresos</option>
+          <option value="interes" ${fT==='interes'?'selected':''}>Intereses</option>
+          <option value="impto"   ${fT==='impto'?'selected':''}>4x1000</option>
+          <option value="comision"${fT==='comision'?'selected':''}>Comisiones</option>
+        </select>
+        <span class="cbadge">${rows.length} mov.</span>
+      </div>
+      <div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Descripción</th><th>Tipo</th><th style="text-align:right">Valor (COP)</th></tr></thead><tbody>${tbody}</tbody></table></div>
+    </div>`;
+  if(_movsOpen){document.getElementById('movs-panel').style.display='block';document.getElementById('movs-arrow').style.transform='rotate(180deg)';}
+}
+
+/* ══════════════ RENDER FIDUCUENTA ══════════════ */
+function renderFondo(p){
+  const fid=p.fid;
+  const sfCalc=fid.sA+fid.adiciones-fid.retiros+fid.rendNetos-fid.retencion;
+  const ok=Math.abs(sfCalc-fid.sF)<1;
+  document.getElementById('fid-per').textContent=p.desde+' al '+p.hasta;
+  const tbody=fid.movs.map(m=>{const meta=TMF[m.t]||{l:m.t,c:'pz'};return`<tr><td style="color:var(--gray-mid);font-weight:500;white-space:nowrap">${m.f}</td><td>${m.d}</td><td><span class="pill ${meta.c}">${meta.l}</span></td><td style="text-align:right"><span class="${m.v>=0?'ap':'an'}">${m.v>=0?'+':'-'}${fc(m.v)}</span></td></tr>`;}).join('');
+  document.getElementById('body-fondo').innerHTML=`
+    <div class="alert ${ok?'aok':'awk'}"><strong>${ok?'✓ Cuadre perfecto':'⚠ Diferencia'}</strong> ${ok?'Saldo calculado coincide con extracto Fiduciaria Bancolombia.':'Diferencia de '+fc(sfCalc-fid.sF)+'.'}
+    </div>
+    <div class="acct-cards">
+      <div class="ac bt-purple"><div class="ac-lbl">Saldo apertura fondo</div><div class="ac-val purple">${fc(fid.sA)}</div></div>
+      <div class="ac ${fid.adiciones>0?'bt-green':''}"><div class="ac-lbl">Adiciones desde Ahorros</div><div class="ac-val ${fid.adiciones>0?'green':'dim'}">${fid.adiciones>0?'+'+fc(fid.adiciones):'$0,00'}</div></div>
+      <div class="ac ${fid.retiros>0?'bt-red':''}"><div class="ac-lbl">Retiros → Cta. Ahorros</div><div class="ac-val ${fid.retiros>0?'red':'dim'}">${fid.retiros>0?fc(fid.retiros):'$0,00'}</div></div>
+      <div class="ac bt-green"><div class="ac-lbl">Rendimientos netos</div><div class="ac-val green">+${fc(fid.rendNetos)}</div></div>
+      <div class="ac ${fid.retencion>0?'bt-red':''}"><div class="ac-lbl">Retención</div><div class="ac-val ${fid.retencion>0?'red':'dim'}">${fid.retencion>0?fc(fid.retencion):'$0,00'}</div></div>
+      <div class="ac bt-purple"><div class="ac-lbl">Saldo cierre · ${p.hasta}</div><div class="ac-val purple">${fc(fid.sF)}</div></div>
+    </div>
+    <div class="inner-panel" style="margin-bottom:12px"><div class="inner-title bar-purple">Resumen del fondo</div>
+      <div class="dr"><span class="dl">Saldo inicial</span><span class="dv av-purple">${fc(fid.sA)}</span></div>
+      <div class="dr"><span class="dl">+ Adiciones desde Cta. Ahorros</span><span class="dv ${fid.adiciones>0?'ap':'av-dim'}">${fid.adiciones>0?'+'+fc(fid.adiciones):'$0,00'}</span></div>
+      <div class="dr"><span class="dl">- Retiros trasladados a Ahorros</span><span class="dv ${fid.retiros>0?'an':'av-dim'}">${fid.retiros>0?'-'+fc(fid.retiros):'$0,00'}</span></div>
+      <div class="dr"><span class="dl">+ Rendimientos netos del período</span><span class="dv ap">+${fc(fid.rendNetos)}</span></div>
+      <div class="dr"><span class="dl">- Retención sobre rendimientos</span><span class="dv ${fid.retencion>0?'an':'av-dim'}">${fid.retencion>0?'-'+fc(fid.retencion):'$0,00'}</span></div>
+    </div>
+    <div class="result-bar rb-purple"><span class="rb-label">Saldo Fiducuenta al cierre · ${p.hasta}</span><span class="rb-val">${fc(fid.sF)}</span></div>
+    <button class="toggle-btn tb-purple" onclick="toggleFidMovsConc()">
+      <span class="tb-cnt"><span class="tb-bar"></span>Movimientos del fondo<span class="tb-badge">${fid.movs.length} mov.</span></span>
+      <span class="tb-arrow" id="fid-arrow">▼</span>
+    </button>
+    <div id="fid-panel" style="display:none;margin-top:10px">
+      <div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Descripción</th><th>Tipo</th><th style="text-align:right">Valor (COP)</th></tr></thead><tbody>${tbody}</tbody></table></div>
+      <div class="nota nota-p" style="margin-top:11px"><strong>Rendimientos — registro contable:</strong> No transitan por Cta. Ahorros. Registrar como ingreso financiero al cierre del período.</div>
+    </div>`;
+  if(_fidOpen){document.getElementById('fid-panel').style.display='block';document.getElementById('fid-arrow').style.transform='rotate(180deg)';}
+}
+
+/* ══════════════ RENDER CAJA SOCIAL ══════════════ */
+function renderCaja(p){
+  const cj=p.caja;
+  const ing=st(cj.movs,'ingreso'),eg=st(cj.movs,'egreso'),imp=st(cj.movs,'impto');
+  const devol=st(cj.movs,'devol'),trasl=st(cj.movs,'traslado');
+  const sc=cj.sA+ing+eg+imp+devol+trasl;
+  const ok=Math.abs(sc-cj.sF)<1;
+  document.getElementById('cj-per').textContent=p.desde+' al '+p.hasta;
+  const rows=cj.movs.filter(mv=>{const q=fBc.toLowerCase(),ft=fTc;if(q&&!mv.d.toLowerCase().includes(q)&&!mv.f.includes(q))return false;if(ft&&mv.t!==ft)return false;return true;});
+  const tbody=rows.map(mv=>{const meta=TM[mv.t]||{l:mv.t,c:'pz'};return`<tr><td style="color:var(--gray-mid);font-weight:500;white-space:nowrap">${mv.f}</td><td>${mv.d}</td><td><span class="pill ${meta.c}">${meta.l}</span></td><td style="text-align:right"><span class="${mv.v>=0?'ap':'an'}">${mv.v>=0?'+':'-'}${fc(mv.v)}</span></td></tr>`;}).join('')||`<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--gray-mid)">Sin resultados</td></tr>`;
+  document.getElementById('body-caja').innerHTML=`
+    <div class="alert ${ok?'aok':'awk'}"><strong>${ok?'✓ Cuadre perfecto':'⚠ Diferencia'}</strong> ${ok?'Saldo calculado coincide con extracto Banco Caja Social.':'Diferencia de '+fc(sc-cj.sF)+'.'}
+    </div>
+    ${cj.tCred===0?`<div class="alert awt"><strong>ℹ Sin créditos este mes.</strong> Solo salidas en la cuenta corriente Caja Social.</div>`:''}
+    ${trasl!==0?`<div class="alert awt"><strong>ℹ Traslado de fondos comunes:</strong> ${fc(Math.abs(trasl))} trasladados hacia Bancolombia — movimiento interno ALZAK.</div>`:''}
+    <div class="acct-cards">
+      <div class="ac bt-orange"><div class="ac-lbl">Saldo apertura</div><div class="ac-val orange">${fc(cj.sA)}</div></div>
+      <div class="ac ${cj.tCred>0?'bt-green':''}"><div class="ac-lbl">Total créditos (extracto)</div><div class="ac-val ${cj.tCred>0?'green':'dim'}">${cj.tCred>0?fc(cj.tCred):'$0,00'}</div></div>
+      <div class="ac ${ing>0?'bt-green':''}"><div class="ac-lbl">Ingresos externos reales</div><div class="ac-val ${ing>0?'green':'dim'}">${ing>0?'+'+fc(ing):'$0,00'}</div></div>
+      <div class="ac bt-red"><div class="ac-lbl">Total débitos (extracto)</div><div class="ac-val red">${fc(Math.abs(cj.tDeb))}</div></div>
+      <div class="ac"><div class="ac-lbl">Traslado a Bancolombia</div><div class="ac-val ${trasl!==0?'orange':'dim'}">${trasl!==0?'-'+fc(Math.abs(trasl)):'$0,00'}</div></div>
+      <div class="ac bt-orange"><div class="ac-lbl">Saldo cierre · ${p.hasta}</div><div class="ac-val orange">${fc(cj.sF)}</div></div>
+    </div>
+    <div class="two-col">
+      <div class="inner-panel"><div class="inner-title bar-orange">Entradas</div>
+        <div class="dr"><span class="dl">Saldo inicial</span><span class="dv av-orange">${fc(cj.sA)}</span></div>
+        <div class="dr"><span class="dl">Ingresos externos reales (clientes)</span><span class="dv ${ing>0?'ap':'av-dim'}">${ing>0?'+'+fc(ing):'$0,00'}</span></div>
+        <div class="dr"><span class="dl">Devoluciones ACH</span><span class="dv ${devol>0?'ap':'av-dim'}">${devol>0?'+'+fc(devol):'$0,00'}</span></div>
+      </div>
+      <div class="inner-panel"><div class="inner-title bar-orange">Salidas</div>
+        <div class="dr"><span class="dl">Egresos / pagos a terceros</span><span class="dv an">-${fc(Math.abs(eg))}</span></div>
+        <div class="dr"><span class="dl">Traslado fondos comunes → Bancolombia</span><span class="dv ${trasl!==0?'an':'av-dim'}">${trasl!==0?'-'+fc(Math.abs(trasl)):'$0,00'}</span></div>
+        <div class="dr"><span class="dl">Gravamen movimientos financieros</span><span class="dv an">-${fc(Math.abs(imp))}</span></div>
+      </div>
+    </div>
+    <div class="result-bar rb-orange"><span class="rb-label">Saldo Cta. Corriente Caja Social al cierre · ${p.hasta}</span><span class="rb-val">${fc(cj.sF)}</span></div>
+    <button class="toggle-btn tb-orange" onclick="toggleCajaMovsConc()">
+      <span class="tb-cnt"><span class="tb-bar"></span>Todos los movimientos<span class="tb-badge">${cj.movs.length} mov.</span></span>
+      <span class="tb-arrow" id="caja-arrow">▼</span>
+    </button>
+    <div id="caja-panel" style="display:none;margin-top:10px">
+      <div class="toolbar">
+        <input type="text" placeholder="Buscar…" oninput="fBc=this.value;renderCaja(P[pi()])" value="${fBc}">
+        <select onchange="fTc=this.value;renderCaja(P[pi()])">
+          <option value="">Todos</option>
+          <option value="ingreso"  ${fTc==='ingreso'?'selected':''}>Ingreso externo</option>
+          <option value="traslado" ${fTc==='traslado'?'selected':''}>Traslado a Bancolombia</option>
+          <option value="egreso"   ${fTc==='egreso'?'selected':''}>Egresos</option>
+          <option value="devol"    ${fTc==='devol'?'selected':''}>Devoluciones ACH</option>
+          <option value="impto"    ${fTc==='impto'?'selected':''}>Gravamen</option>
+        </select>
+        <span class="cbadge">${rows.length} mov.</span>
+      </div>
+      <div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Descripción</th><th>Tipo</th><th style="text-align:right">Valor (COP)</th></tr></thead><tbody>${tbody}</tbody></table></div>
+      <div class="nota nota-o" style="margin-top:11px"><strong>Traslados a Bancolombia:</strong> Movimientos propios de ALZAK durante migración de banco. No son egresos operativos.</div>
+    </div>`;
+  if(_cajaOpen){document.getElementById('caja-panel').style.display='block';document.getElementById('caja-arrow').style.transform='rotate(180deg)';}
+}
+
+/* ══════════════ RENDER BOLD CF ══════════════ */
+function renderBold(p){
+  const bl=p.bold;
+  const trasl=st(bl.movs,'traslado'),eg=st(bl.movs,'egreso'),imp=st(bl.movs,'impto'),int_=bl.intereses;
+  const sc=bl.sA+trasl+eg+imp+int_;
+  const ok=bl.movs.length===0?true:Math.abs(sc-bl.sF)<1;
+  document.getElementById('bl-per').textContent=p.desde+' al '+p.hasta;
+  const rows=bl.movs.filter(mv=>{const q=fBb.toLowerCase(),ft=fTb;if(q&&!mv.d.toLowerCase().includes(q)&&!mv.f.includes(q))return false;if(ft&&mv.t!==ft)return false;return true;});
+  const tbody=rows.length?rows.map(mv=>{const meta=TMB[mv.t]||TM[mv.t]||{l:mv.t,c:'pz'};return`<tr><td style="color:var(--gray-mid);font-weight:500;white-space:nowrap">${mv.f}</td><td>${mv.d}</td><td><span class="pill ${meta.c}">${meta.l}</span></td><td style="text-align:right"><span class="${mv.v>=0?'ap':'an'}">${mv.v>=0?'+':'-'}${fc(mv.v)}</span></td></tr>`;}).join(''):
+  `<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--gray-mid)">Sin movimientos en este período</td></tr>`;
+
+  document.getElementById('body-bold').innerHTML=`
+    ${bl.movs.length===0?`<div class="alert awt"><strong>ℹ Sin actividad en este período.</strong> Bold CF inicia operaciones en febrero 2026.</div>`:`<div class="alert ${ok?'aok':'awk'}"><strong>${ok?'✓ Cuadre perfecto':'⚠ Diferencia'}</strong> ${ok?'Saldo calculado coincide con extracto Bold CF.':'Diferencia de '+fc(sc-bl.sF)+'.'}
+    </div>`}
+    ${trasl!==0?`<div class="alert awt"><strong>ℹ Fondos desde Bancolombia:</strong> ${fc(Math.abs(trasl))} recibidos como traslado interno ALZAK — no son ingresos externos.</div>`:''}
+    <div class="acct-cards">
+      <div class="ac bt-navy"><div class="ac-lbl">Saldo apertura</div><div class="ac-val navy ${bl.sA===0?'dim':''}">${bl.sA>0?fc(bl.sA):'$0,00'}</div></div>
+      <div class="ac"><div class="ac-lbl">Traslados desde Bancolombia</div><div class="ac-val ${trasl>0?'navy':'dim'}">${trasl>0?'+'+fc(trasl):'$0,00'}</div></div>
+      <div class="ac ${int_>0?'bt-green':''}"><div class="ac-lbl">Intereses (Ahorro Bold)</div><div class="ac-val ${int_>0?'green':'dim'}">${int_>0?'+'+fc(int_):'$0,00'}</div></div>
+      <div class="ac bt-red"><div class="ac-lbl">Total cargos (extracto)</div><div class="ac-val ${Math.abs(bl.tCar)>0?'red':'dim'}">${Math.abs(bl.tCar)>0?fc(bl.tCar):'$0,00'}</div></div>
+      <div class="ac"><div class="ac-lbl">Egresos + GMF</div><div class="ac-val red">${fc(Math.abs(eg+imp))}</div></div>
+      <div class="ac bt-navy"><div class="ac-lbl">Saldo cierre · ${p.hasta}</div><div class="ac-val navy ${bl.sF===0?'dim':''}">${bl.sF>0?fc(bl.sF):'$0,00'}</div></div>
+    </div>
+    <div class="two-col">
+      <div class="inner-panel"><div class="inner-title bar-navy">Entradas</div>
+        <div class="dr"><span class="dl">Saldo inicial</span><span class="dv av-navy ${bl.sA===0?'av-dim':''}">${bl.sA>0?fc(bl.sA):'$0,00'}</span></div>
+        <div class="dr"><span class="dl">Traslados desde Bancolombia (interno)</span><span class="dv ${trasl>0?'ap':'av-dim'}">${trasl>0?'+'+fc(trasl):'$0,00'}</span></div>
+        <div class="dr"><span class="dl">Intereses Bold (Ahorro)</span><span class="dv ${int_>0?'ap':'av-dim'}">${int_>0?'+'+fc(int_):'$0,00'}</span></div>
+      </div>
+      <div class="inner-panel"><div class="inner-title bar-navy">Salidas</div>
+        <div class="dr"><span class="dl">Envíos por Llaves / Compras / PSE</span><span class="dv ${Math.abs(eg)>0?'an':'av-dim'}">${Math.abs(eg)>0?'-'+fc(Math.abs(eg)):'$0,00'}</span></div>
+        <div class="dr"><span class="dl">GMF (4x1000 sobre movimientos)</span><span class="dv ${Math.abs(imp)>0?'an':'av-dim'}">${Math.abs(imp)>0?'-'+fc(Math.abs(imp)):'$0,00'}</span></div>
+      </div>
+    </div>
+    <div class="result-bar rb-navy"><span class="rb-label">Saldo Bold CF al cierre · ${p.hasta}</span><span class="rb-val">${bl.sF>0?fc(bl.sF):'$0,00'}</span></div>
+    ${bl.movs.length>0?`
+    <button class="toggle-btn tb-navy" onclick="toggleBoldMovsConc()">
+      <span class="tb-cnt"><span class="tb-bar"></span>Movimientos Bold CF<span class="tb-badge">${bl.movs.length} mov.</span></span>
+      <span class="tb-arrow" id="bold-arrow">▼</span>
+    </button>
+    <div id="bold-panel" style="display:none;margin-top:10px">
+      <div class="toolbar">
+        <input type="text" placeholder="Buscar…" oninput="fBb=this.value;renderBold(P[pi()])" value="${fBb}">
+        <select onchange="fTb=this.value;renderBold(P[pi()])">
+          <option value="">Todos</option>
+          <option value="traslado" ${fTb==='traslado'?'selected':''}>Traslado desde Bancolombia</option>
+          <option value="egreso"   ${fTb==='egreso'?'selected':''}>Egresos / pagos</option>
+          <option value="impto"    ${fTb==='impto'?'selected':''}>GMF</option>
+          <option value="interes"  ${fTb==='interes'?'selected':''}>Intereses</option>
+        </select>
+        <span class="cbadge">${rows.length} mov.</span>
+      </div>
+      <div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Descripción</th><th>Tipo</th><th style="text-align:right">Valor (COP)</th></tr></thead><tbody>${tbody}</tbody></table></div>
+      <div class="nota nota-n" style="margin-top:11px">
+        <strong>Bold CF — Depósito Ordinario:</strong> Cuenta utilizada para pagos rápidos y aprovechamiento de rendimientos de bolsillo. Los traslados desde Bancolombia son movimientos internos de ALZAK. Los intereses se registran como ingreso financiero del período.
+      </div>
+    </div>`:''}`;
+  if(_boldOpen){const pa=document.getElementById('bold-panel'),ar=document.getElementById('bold-arrow');if(pa)pa.style.display='block';if(ar)ar.style.transform='rotate(180deg)';}
+}
+
+/* ══════════════ EXPORT ══════════════ */
+function exportarCSVConc(){
+  const p=P[pi()];
+  let csv='\uFEFF'+'BANCOLOMBIA AHORROS 78349636556\nFecha,Descripcion,Tipo,Valor COP\n';
+  p.movs.forEach(m=>{const meta=TM[m.t]||{l:m.t};csv+=`${m.f},"${m.d}",${meta.l},${m.v.toFixed(2)}\n`;});
+  csv+='\nFIDUCUENTA 98000001771\nFecha,Descripcion,Tipo,Valor COP\n';
+  p.fid.movs.forEach(m=>{const meta=TMF[m.t]||{l:m.t};csv+=`${m.f},"${m.d}",${meta.l},${m.v.toFixed(2)}\n`;});
+  csv+='\nCAJA SOCIAL CORRIENTE 21003622970\nFecha,Descripcion,Tipo,Valor COP\n';
+  p.caja.movs.forEach(m=>{const meta=TM[m.t]||{l:m.t};csv+=`${m.f},"${m.d}",${meta.l},${m.v.toFixed(2)}\n`;});
+  csv+='\nBOLD CF 1700-1155-2371\nFecha,Descripcion,Tipo,Valor COP\n';
+  p.bold.movs.forEach(m=>{const meta=TMB[m.t]||TM[m.t]||{l:m.t};csv+=`${m.f},"${m.d}",${meta.l},${m.v.toFixed(2)}\n`;});
+  const ingT=st(p.movs,'ingreso')+st(p.caja.movs,'ingreso');
+  csv+=`\nCONSOLIDADO\nConcepto,Valor COP\nIngresos externos reales,${ingT.toFixed(2)}\nRendimientos Fiducuenta,${p.fid.rendNetos.toFixed(2)}\nIntereses Bold CF,${p.bold.intereses.toFixed(2)}\nSaldo Ahorros al cierre,${p.sF.toFixed(2)}\nSaldo Fiducuenta al cierre,${p.fid.sF.toFixed(2)}\nSaldo Caja Social al cierre,${p.caja.sF.toFixed(2)}\nSaldo Bold CF al cierre,${p.bold.sF.toFixed(2)}\nTotal disponible ALZAK,${(p.sF+p.fid.sF+p.caja.sF+p.bold.sF).toFixed(2)}\n`;
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`conciliacion_alzak_${p.label.replace(' ','_')}.csv`;a.click();
+}
+
+/* ══════════════ MAIN ══════════════ */
+function renderConc(){
+  fB='';fT='';fBc='';fTc='';fBb='';fTb='';
+  _movsOpen=false;_fidOpen=false;_cajaOpen=false;_boldOpen=false;
+  const p=P[pi()];
+  renderGlobal(p);renderAhorros(p);renderFondo(p);renderCaja(p);renderBold(p);
+}
+// init on demand
+</script>
 </body>
 
 </html>

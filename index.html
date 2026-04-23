@@ -488,7 +488,7 @@ tbody tr:hover td{background:var(--cyan-light);}
 
   <div style="display:flex;align-items:center;gap:14px">
 
-    <div style="display:flex;align-items:center;gap:14px">    <div style="font-size:11px;color:rgba(255,255,255,0.4)" id="header-fecha"></div>    <div id="header-usuario" style="display:none;font-size:11px;color:rgba(255,255,255,0.5)">      <span id="header-user-nombre"></span>      <button onclick="abrirConfigAPI()" style="margin-left:10px;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:10px;font-family:Helvetica,Arial,sans-serif">🔑 API</button><button onclick="guardarDatos();mostrarToast('💾 Datos guardados')" style="margin-left:6px;background:rgba(29,158,117,0.3);border:none;color:#4DD9A8;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-family:Helvetica,Arial,sans-serif;font-weight:700">💾 Guardar</button><button onclick="cerrarSesion()" style="margin-left:6px;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.5);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:10px;font-family:Helvetica,Arial,sans-serif">Salir</button>    </div>  </div>
+    <div style="display:flex;align-items:center;gap:14px">    <div style="font-size:11px;color:rgba(255,255,255,0.4)" id="header-fecha"></div>    <div id="header-usuario" style="display:none;font-size:11px;color:rgba(255,255,255,0.5)">      <span id="header-user-nombre"></span>      <button onclick="abrirConfigAPI()" style="margin-left:10px;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:10px;font-family:Helvetica,Arial,sans-serif">🔑 API</button><button onclick="guardarDatos();mostrarToast('💾 Datos guardados')" style="margin-left:6px;background:rgba(29,158,117,0.3);border:none;color:#4DD9A8;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-family:Helvetica,Arial,sans-serif;font-weight:700">💾 Guardar</button><button onclick="alzakExportarDatos()" title="Descargar copia de seguridad completa" style="margin-left:6px;background:rgba(93,195,218,0.3);border:none;color:#5DC3DA;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-family:Helvetica,Arial,sans-serif;font-weight:700">📦 Exportar</button><label title="Restaurar desde copia de seguridad" style="margin-left:4px;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);padding:4px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-family:Helvetica,Arial,sans-serif;font-weight:700">📂 Importar<input type="file" accept=".json" style="display:none" onchange="alzakImportarDatos(this)"></label><button onclick="cerrarSesion()" style="margin-left:6px;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.5);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:10px;font-family:Helvetica,Arial,sans-serif">Salir</button>    </div>  </div>
 
     <div id="header-usuario" style="font-size:11px;color:rgba(255,255,255,0.5);display:none">
 
@@ -507,6 +507,7 @@ tbody tr:hover td{background:var(--cyan-light);}
 <div id="tab-nav" style="background:#333;padding:8px 28px;gap:8px;align-items:center;display:none;">
   <button id="tab-home-btn" onclick="tabHome()" style="padding:6px 18px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:Helvetica,Arial,sans-serif;background:#5DC3DA;color:#fff;">&#127968; Tablero</button>
   <button id="tab-conc-btn" onclick="tabConc()" style="padding:6px 18px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:Helvetica,Arial,sans-serif;background:rgba(255,255,255,0.12);color:#ccc;">&#127970; Conciliaci&#243;n</button>
+  <button id="tab-pres-btn" onclick="tabPres()" style="padding:6px 18px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:Helvetica,Arial,sans-serif;background:rgba(255,255,255,0.12);color:#ccc;">&#128203; Presupuesto</button>
 </div>
 <div id="pg-home" class="pg on">
 
@@ -522,343 +523,6 @@ tbody tr:hover td{background:var(--cyan-light);}
 
      ══════════════════════════════════════════════════════════ -->
 
-<div class="card" id="bloque-equipo-base" style="margin-bottom:12px;border:1.5px solid #2E7D32">
-
-  <!-- Encabezado -->
-
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
-
-    <div>
-
-      <div style="font-size:11px;font-weight:700;color:#2E7D32;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">👥 Equipo Base</div>
-
-      <div style="font-size:15px;font-weight:700;color:#54504F">Presupuesto de Honorarios — Contratistas OPS</div>
-
-      <div style="font-size:11px;color:#888;margin-top:2px">Haz clic en cada celda para marcar como <b style="color:#2E7D32">pagado</b> (verde) o <b style="color:#A32D2D">adeudado</b> (rojo) · 2026</div>
-
-    </div>
-
-    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-
-      <button class="btn" onclick="equipoBaseReset()" style="font-size:11px;color:#A32D2D;border-color:#f0ccc8">↺ Reiniciar</button>
-
-      <button onclick="equipoBaseToggle()" id="btn-eb-toggle"
-
-        style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:700;color:#54504F;font-family:Helvetica,Arial,sans-serif;display:flex;align-items:center;gap:5px">
-
-        <span id="ico-eb">▶</span>
-
-      </button>
-
-    </div>
-
-  </div>
-
-  <!-- KPIs resumen -->
-
-  <div id="eb-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
-
-    <div style="background:#f1faf1;border-radius:10px;padding:11px 13px;border:1px solid #c8e6c9">
-
-      <div style="font-size:10px;font-weight:700;color:#2E7D32;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">✅ Total pagado</div>
-
-      <div id="eb-kpi-pagado" style="font-size:17px;font-weight:700;color:#2E7D32">$0</div>
-
-    </div>
-
-    <div style="background:#fff5f5;border-radius:10px;padding:11px 13px;border:1px solid #ffcdd2">
-
-      <div style="font-size:10px;font-weight:700;color:#A32D2D;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">⚠️ Total adeudado</div>
-
-      <div id="eb-kpi-adeudado" style="font-size:17px;font-weight:700;color:#A32D2D">$0</div>
-
-    </div>
-
-    <div style="background:#f9f8f5;border-radius:10px;padding:11px 13px;border:1px solid #e0ddd8">
-
-      <div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">📋 Presupuesto total</div>
-
-      <div id="eb-kpi-total" style="font-size:17px;font-weight:700;color:#54504F">$0</div>
-
-    </div>
-
-  </div>
-
-  <!-- Tabla colapsable -->
-
-  <div id="panel-equipo-base" style="overflow-x:auto;display:none">
-
-    <table id="eb-tabla" style="width:100%;border-collapse:collapse;font-size:11px;min-width:900px">
-
-      <thead>
-
-        <tr style="background:#f1faf1">
-
-          <th style="text-align:left;padding:7px 10px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-transform:uppercase;letter-spacing:.05em;min-width:180px;position:sticky;left:0;background:#f1faf1;z-index:1">Contratista</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">ENE</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">FEB</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">MAR</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">ABR</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">MAY</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">JUN</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">JUL</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">AGO</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">SEP</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">OCT</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">NOV</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">DIC</th>
-
-          <th style="padding:7px 10px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#A32D2D;text-align:right;min-width:100px">TOTAL ADEUDADO</th>
-
-        </tr>
-
-      </thead>
-
-      <tbody id="eb-tbody"></tbody>
-
-      <tfoot id="eb-tfoot"></tfoot>
-
-    </table>
-
-  </div>
-
-  <div style="margin-top:8px;font-size:10px;color:#aaa">💡 Clic en celda roja = marcar pagado · Clic en celda verde = marcar adeudado · "editar" debajo del valor para cambiar monto · Clic en nombre para renombrar</div>
-
-</div>
-
-<!-- Modal Equipo Base -->
-
-<div id="eb-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:99999;align-items:center;justify-content:center">
-
-  <div style="background:#fff;border-radius:14px;padding:28px 28px 22px;width:340px;max-width:95%;box-shadow:0 24px 60px rgba(0,0,0,0.3)">
-
-    <div id="eb-modal-titulo" style="font-size:15px;font-weight:700;color:#333;margin-bottom:6px"></div>
-
-    <div id="eb-modal-sub" style="font-size:11px;color:#888;margin-bottom:16px"></div>
-
-    <input id="eb-modal-input" type="text" style="width:100%;padding:10px 12px;border:1.5px solid #e0ddd8;border-radius:9px;font-size:14px;font-family:Helvetica,Arial,sans-serif;box-sizing:border-box;outline:none" placeholder="">
-
-    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
-
-      <button onclick="ebModalCancelar()" style="padding:9px 18px;border:1px solid #d0cec8;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-family:Helvetica,Arial,sans-serif">Cancelar</button>
-
-      <button onclick="ebModalAceptar()" style="padding:9px 20px;border:none;border-radius:8px;background:#2E7D32;color:#fff;cursor:pointer;font-size:13px;font-weight:700;font-family:Helvetica,Arial,sans-serif">Guardar</button>
-
-    </div>
-
-  </div>
-
-</div>
-
-<!-- Modal confirmación eliminar Equipo Base -->
-
-<div id="eb-modal-confirm" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:99999;align-items:center;justify-content:center">
-
-  <div style="background:#fff;border-radius:14px;padding:28px;width:320px;max-width:95%;box-shadow:0 24px 60px rgba(0,0,0,0.3)">
-
-    <div style="font-size:15px;font-weight:700;color:#A32D2D;margin-bottom:10px">🗑 Eliminar contratista</div>
-
-    <div id="eb-confirm-msg" style="font-size:13px;color:#555;margin-bottom:20px"></div>
-
-    <div style="display:flex;gap:8px;justify-content:flex-end">
-
-      <button onclick="ebConfirmCancelar()" style="padding:9px 18px;border:1px solid #d0cec8;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-family:Helvetica,Arial,sans-serif">Cancelar</button>
-
-      <button onclick="ebConfirmAceptar()" style="padding:9px 20px;border:none;border-radius:8px;background:#A32D2D;color:#fff;cursor:pointer;font-size:13px;font-weight:700;font-family:Helvetica,Arial,sans-serif">Eliminar</button>
-
-    </div>
-
-  </div>
-
-</div>
-
-<!-- ══════════════════════════════════════════════════════════
-
-     MÓDULO PROYECTO MSD VSR
-
-     ══════════════════════════════════════════════════════════ -->
-
-<div class="card" id="bloque-msd-vsr" style="margin-bottom:12px;border:1.5px solid #7B1FA2">
-
-  <!-- Encabezado -->
-
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
-
-    <div>
-
-      <div style="font-size:11px;font-weight:700;color:#7B1FA2;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">🔬 Proyecto MSD VSR</div>
-
-      <div style="font-size:15px;font-weight:700;color:#54504F">Presupuesto de Costos — Proyecto MSD VSR 2026</div>
-
-      <div style="font-size:11px;color:#888;margin-top:2px">
-
-        Se marca <b style="color:#2E7D32">verde (pagado)</b> automáticamente si el proveedor aparece en Egresos ·
-
-        También puedes hacer clic manual · Celda gris = sin costo ese mes
-
-      </div>
-
-    </div>
-
-    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-
-      <button class="btn" onclick="msdReset()" style="font-size:11px;color:#A32D2D;border-color:#f0ccc8">↺ Reiniciar</button>
-
-      <button onclick="msdToggle()" style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:700;color:#54504F;font-family:Helvetica,Arial,sans-serif;display:flex;align-items:center;gap:5px">
-
-        <span id="ico-msd">▶</span>
-
-      </button>
-
-    </div>
-
-  </div>
-
-  <!-- KPIs -->
-
-  <div id="msd-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
-
-    <div style="background:#f3e5f5;border-radius:10px;padding:11px 13px;border:1px solid #ce93d8">
-
-      <div style="font-size:10px;font-weight:700;color:#7B1FA2;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">✅ Total pagado</div>
-
-      <div id="msd-kpi-pagado" style="font-size:17px;font-weight:700;color:#7B1FA2">$0</div>
-
-    </div>
-
-    <div style="background:#fff5f5;border-radius:10px;padding:11px 13px;border:1px solid #ffcdd2">
-
-      <div style="font-size:10px;font-weight:700;color:#A32D2D;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">⚠️ Total adeudado</div>
-
-      <div id="msd-kpi-adeudado" style="font-size:17px;font-weight:700;color:#A32D2D">$0</div>
-
-    </div>
-
-    <div style="background:#f9f8f5;border-radius:10px;padding:11px 13px;border:1px solid #e0ddd8">
-
-      <div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">📋 Presupuesto total</div>
-
-      <div id="msd-kpi-total" style="font-size:17px;font-weight:700;color:#54504F">$0</div>
-
-    </div>
-
-  </div>
-
-  <!-- Tabla -->
-
-  <div id="panel-msd-vsr" style="overflow-x:auto;display:none">
-
-    <table id="msd-tabla" style="width:100%;border-collapse:collapse;font-size:11px;min-width:900px">
-
-      <thead>
-
-        <tr style="background:#f3e5f5">
-
-          <th style="text-align:left;padding:7px 10px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-transform:uppercase;letter-spacing:.05em;min-width:220px;position:sticky;left:0;background:#f3e5f5;z-index:1">Ítem / Proveedor</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">ENE</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">FEB</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">MAR</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">ABR</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">MAY</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">JUN</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">JUL</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">AGO</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">SEP</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">OCT</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">NOV</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">DIC</th>
-
-          <th style="padding:7px 10px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#A32D2D;text-align:right;min-width:110px">TOTAL ADEUDADO</th>
-
-        </tr>
-
-      </thead>
-
-      <tbody id="msd-tbody"></tbody>
-
-      <tfoot id="msd-tfoot"></tfoot>
-
-    </table>
-
-  </div>
-
-  <div style="margin-top:8px;font-size:10px;color:#aaa">
-
-    🟢 Verde automático = detectado en Egresos · 🔴 Rojo = pendiente · Clic para cambiar estado · "editar" para cambiar valor · Clic en nombre para renombrar
-
-  </div>
-
-</div>
-
-<!-- Modal input MSD VSR -->
-
-<div id="msd-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:99999;align-items:center;justify-content:center">
-
-  <div style="background:#fff;border-radius:14px;padding:28px 28px 22px;width:340px;max-width:95%;box-shadow:0 24px 60px rgba(0,0,0,0.3)">
-
-    <div id="msd-modal-titulo" style="font-size:15px;font-weight:700;color:#7B1FA2;margin-bottom:6px"></div>
-
-    <div id="msd-modal-sub" style="font-size:11px;color:#888;margin-bottom:16px"></div>
-
-    <input id="msd-modal-input" type="text" style="width:100%;padding:10px 12px;border:1.5px solid #e0ddd8;border-radius:9px;font-size:14px;font-family:Helvetica,Arial,sans-serif;box-sizing:border-box;outline:none">
-
-    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
-
-      <button onclick="msdModalCancelar()" style="padding:9px 18px;border:1px solid #d0cec8;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-family:Helvetica,Arial,sans-serif">Cancelar</button>
-
-      <button onclick="msdModalAceptar()" style="padding:9px 20px;border:none;border-radius:8px;background:#7B1FA2;color:#fff;cursor:pointer;font-size:13px;font-weight:700;font-family:Helvetica,Arial,sans-serif">Guardar</button>
-
-    </div>
-
-  </div>
-
-</div>
-
-<!-- Modal confirmación eliminar MSD VSR -->
-
-<div id="msd-modal-confirm" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:99999;align-items:center;justify-content:center">
-
-  <div style="background:#fff;border-radius:14px;padding:28px;width:320px;max-width:95%;box-shadow:0 24px 60px rgba(0,0,0,0.3)">
-
-    <div style="font-size:15px;font-weight:700;color:#A32D2D;margin-bottom:10px">🗑 Eliminar ítem</div>
-
-    <div id="msd-confirm-msg" style="font-size:13px;color:#555;margin-bottom:20px"></div>
-
-    <div style="display:flex;gap:8px;justify-content:flex-end">
-
-      <button onclick="msdConfirmCancelar()" style="padding:9px 18px;border:1px solid #d0cec8;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-family:Helvetica,Arial,sans-serif">Cancelar</button>
-
-      <button onclick="msdConfirmAceptar()" style="padding:9px 20px;border:none;border-radius:8px;background:#A32D2D;color:#fff;cursor:pointer;font-size:13px;font-weight:700;font-family:Helvetica,Arial,sans-serif">Eliminar</button>
-
-    </div>
-
-  </div>
-
-</div>
 
 <div class="card" style="margin-bottom:12px;border:1.5px solid #5DC3DA">
 
@@ -877,6 +541,8 @@ tbody tr:hover td{background:var(--cyan-light);}
 <button class="btn" onclick="abrirCargaFactura()" style="font-size:11px;background:#54504F;color:#fff;border-color:#54504F;font-weight:600">+ Agregar Factura</button>
 
 <label class="btn" style="font-size:11px;cursor:pointer;background:#5DC3DA;color:#fff;border-color:#5DC3DA;font-weight:600">📊 CSV / Excel<input type="file" accept=".csv,.xlsx,.xls" style="display:none" onchange="facturaArchivoSeleccionado(this)"></label>
+
+<button class="btn" onclick="factPdfUploadOpen()" style="font-size:11px;background:#2E7D32;color:#fff;border-color:#2E7D32;font-weight:600">📄 + Factura PDF</button>
 
 <button class="btn" onclick="descargarExcelFacturas()" style="font-size:11px;background:#54504F;color:#fff;border-color:#54504F;font-weight:600">⬇️ Excel</button>
 
@@ -1458,7 +1124,7 @@ function verificarSesion() {
 
 // ══════════════════════════════════════════════════════════════
 
-var GS_API_URL = 'https://script.google.com/a/macros/alzak.com.co/s/AKfycbwUzwQuxZBHI6Wn4rbv-TM6qG7sFT3i7m-_maicGyiv-7NqdcJtoKb2YQ3x1in1uedj/exec';
+var GS_API_URL = 'https://script.google.com/a/macros/alzak.com.co/s/AKfycbzjKCeUYwKRcxn1KWAEXPVLsVrhxM6jxl0QP6ib3mFMKB-TSCSZsOPJZyz0EaJzeWmD/exec';
 
 var GS_SYNC_ACTIVO = true;   // set false para forzar solo localStorage
 
@@ -1658,7 +1324,29 @@ function cargarDatos() {
 
     var g2 = localStorage.getItem(LS_GASTOS);
 
-    if (f)  { var pf=JSON.parse(f);  if(pf&&pf.length)  FACTURAS=pf;    }
+    // Always start with built-in defaults
+    FACTURAS = FACTURAS_DEFAULT.map(function(r){
+      var o = Object.assign({},r);
+      o.estado = typeof estadoFact==='function' ? estadoFact(o) : (o.pagada?'Pagada':'Pendiente');
+      return o;
+    });
+    // Merge any extra invoices saved in localStorage (not in defaults)
+    if (f) {
+      try {
+        var pf = JSON.parse(f);
+        if (pf && pf.length) {
+          var defaultNums = FACTURAS.map(function(x){ return (x.num||'').toUpperCase(); });
+          pf.forEach(function(saved){
+            var n = (saved.num||'').toUpperCase();
+            if (defaultNums.indexOf(n) < 0) {
+              saved.estado = typeof estadoFact==='function' ? estadoFact(saved) : saved.estado;
+              FACTURAS.push(saved);
+              defaultNums.push(n);
+            }
+          });
+        }
+      } catch(e){}
+    }
 
     if (g2) { var pg=JSON.parse(g2); if(pg&&pg.length)  GASTOS_DATA=pg; }
 
@@ -5566,6 +5254,38 @@ function renderBancos() {
 
 // ============================================================
 
+var FACTURAS_DEFAULT = [
+  {id:'fee2286',num:'FEE2286',cliente:'AMGEN Biotecnologica S.A.S',nit:'900.658.497-6',
+   fecha:'2026-01-21',vence:'2026-03-22',ciudad:'',tel:'',oc:'',observacion:'',
+   descripcion:'G.C Estimacion de costos osteoporosis alto riesgo OC 7300956170',
+   bruto:19910400,iva:3782976,retefuente:2190144,reteiva:0,total:21503232,
+   pagada:true,fecha_pago:'2026-03-22'},
+  {id:'fee2287',num:'FEE2287',cliente:'VAXTHERA S.A.S',nit:'901.208.348-0',
+   fecha:'2026-02-26',vence:'2026-03-28',ciudad:'',tel:'',oc:'',observacion:'',
+   descripcion:'Acompanamiento tecnico evaluacion economica Vaxthera 30pct entrega conceptos',
+   bruto:7369134,iva:1400135,retefuente:810605,reteiva:0,total:7958665,
+   pagada:true,fecha_pago:'2026-03-28'},
+  {id:'fee2288',num:'FEE2288',cliente:'BAYER S.A.',nit:'860.001.942-8',
+   fecha:'2026-02-26',vence:'2026-04-12',ciudad:'',tel:'',oc:'',observacion:'',
+   descripcion:'CO-Mapa-Estudio Economico ALZAK 2026 OC 750623367',
+   bruto:91825978,iva:17446936,retefuente:10100858,reteiva:2617040,total:96555016,
+   pagada:true,fecha_pago:'2026-04-12'},
+  {id:'fee2289',num:'FEE2289',cliente:'JANSSEN CILAG S.A',nit:'890.101.553-4',
+   fecha:'2026-04-06',vence:'2026-05-26',ciudad:'',tel:'',oc:'',observacion:'',
+   descripcion:'Revision Modelos Analisis carga Esquizofrenia EV00526580',
+   bruto:4000000,iva:760000,retefuente:440000,reteiva:114000,total:4206000,
+   pagada:false,fecha_pago:null},
+  {id:'fee2290',num:'FEE2290',cliente:'BAYER S.A.',nit:'860.001.942-8',
+   fecha:'2026-04-10',vence:'2026-06-09',ciudad:'',tel:'',oc:'',observacion:'',
+   descripcion:'CO-Mapa-Estudio Economico ALZAK 2026 OC 750623367',
+   bruto:15402178,iva:2926414,retefuente:1694240,reteiva:438962,total:16195390,
+   pagada:false,fecha_pago:null},
+  {id:'fee2291',num:'FEE2291',cliente:'SANOFI AVENTIS DE COLOMBIA SA',nit:'830.010.337-0',
+   fecha:'2026-04-14',vence:'2026-05-14',ciudad:'',tel:'',oc:'',observacion:'',
+   descripcion:'Venta de Servicio de Investigaciones cientificas OC E006154422 MIGO 5003755090 2026',
+   bruto:6320842,iva:1200960,retefuente:695293,reteiva:180144,total:6646365,
+   pagada:false,fecha_pago:null}
+];
 var FACTURAS = [];
 
 var FACT_FILTRO    = 'todas';
@@ -6770,8 +6490,8 @@ function procesarFilasFactura(rows) {
 
     nueva.estado = estadoFact(nueva);
 
+    if (factNumExiste(nueva.num)) { continue; }
     FACTURAS.push(nueva);
-
     imp++;
 
   }
@@ -7750,6 +7470,18 @@ function exportarPDFGastos() {
 
 }
 
+
+// ── Duplicate invoice guard ──────────────────────────────────────────────────
+function factNumExiste(num) {
+  var n = (num||'').trim().toUpperCase();
+  if(!n) return false;
+  return FACTURAS.some(function(f){ return (f.num||'').trim().toUpperCase() === n; });
+}
+function factGuardarYRefrescar() {
+  try { localStorage.setItem(LS_FACTURAS, JSON.stringify(FACTURAS)); } catch(e){}
+  if(typeof actualizarTodo==='function') actualizarTodo();
+  if(typeof fcRender==='function') setTimeout(fcRender, 200);
+}
 function facturaCSVSeleccionado(input) {
 
   var file = input.files[0]; if (!file) return;
@@ -7845,25 +7577,22 @@ function facturaCSVSeleccionado(input) {
         if (!vence) { var dv=new Date(fecha); dv.setDate(dv.getDate()+60); vence=dv.toISOString().slice(0,10); }
 
         var nueva = { id:'csv_'+Date.now()+'_'+i, num:num, cliente:cli||'Sin cliente', nit:nit,
-
           ciudad:'', tel:'', fecha:fecha, vence:vence, descripcion:conc, oc:'', observacion:'',
-
           bruto:bruto||total, iva:iva, retefuente:rete, reteiva:0, total:total,
-
           pagada:est==='pagada'||est==='cobrada'||est==='si'||est==='sí', fecha_pago:null };
 
         nueva.estado = estadoFact(nueva);
 
+        if (factNumExiste(nueva.num)) { errores++; continue; }
         FACTURAS.push(nueva);
-
         importadas++;
 
       }
 
+      try { localStorage.setItem(LS_FACTURAS, JSON.stringify(FACTURAS)); } catch(e){}
       actualizarTodo();
-
+      if(typeof fcRender==='function') setTimeout(fcRender,200);
       input.value = '';
-
       mostrarToast('✅ '+importadas+' factura'+(importadas!==1?'s':'')+' importada'+(importadas!==1?'s':'')+(errores?' · '+errores+' omitida'+(errores!==1?'s':''):''));
 
     } catch(err) {
@@ -8194,8 +7923,11 @@ function confirmarNuevaFactura() {
 
   nueva.estado = estadoFact(nueva);
 
+  if (factNumExiste(nueva.num)) {
+    mostrarToast('⚠️ La factura ' + nueva.num + ' ya existe en el tablero.', '#B45309');
+    return;
+  }
   FACTURAS.push(nueva);
-
   FACTURAS.sort(function(a,b){return new Date(b.fecha)-new Date(a.fecha);});
 
   document.getElementById('modal-carga-fact').remove();
@@ -8576,27 +8308,47 @@ function renderResumenTablero() {
 
   var ivaGen = FACTURAS.reduce(function(a,f){ return a+(parseFloat(f.iva)||0); }, 0);
 
-  // Gravamen 4x1000 — solo desde datos reales del Excel (BCOL_MOVS)
-
+  // Gravamen 4x1000 — fuente 1: extractos Excel (BCOL_MOVS) + fuente 2: conciliación P[]
   var gmf4x1000 = 0;
-
+  var gmf4x1000_conc = 0;
   if (typeof BCOL_MOVS !== 'undefined') {
-
     var GMF_K = ['impto gobierno','4x1000','gmf','gravamen'];
-
     Object.keys(BCOL_MOVS).forEach(function(mes){
-
       (BCOL_MOVS[mes]||[]).forEach(function(mv){
-
         var d=(mv.d||'').toLowerCase();
-
         if(GMF_K.some(function(k){return d.indexOf(k)>=0;})&&mv.deb>0) gmf4x1000+=mv.deb;
-
       });
-
     });
-
   }
+  // Fuente 2: datos conciliación P[] (Ene–Mar 2026) — solo si no hay extracto Excel cargado
+  if (typeof P !== 'undefined' && gmf4x1000 === 0) {
+    var GMF_KC = ['impto','4x1000','gmf','gravamen'];
+    P.forEach(function(per){
+      (per.movs||[]).forEach(function(mv){
+        if(mv.t==='impto'&&mv.v<0) gmf4x1000_conc += Math.abs(mv.v);
+      });
+      if(per.caja && per.caja.movs){
+        per.caja.movs.forEach(function(mv){
+          var d=(mv.d||mv.desc||'').toLowerCase();
+          if(GMF_KC.some(function(k){return d.indexOf(k)>=0;})&&mv.v<0) gmf4x1000_conc += Math.abs(mv.v);
+        });
+      }
+      if(per.bold && per.bold.movs){
+        per.bold.movs.forEach(function(mv){
+          var d=(mv.d||mv.desc||'').toLowerCase();
+          if(GMF_KC.some(function(k){return d.indexOf(k)>=0;})&&mv.v<0) gmf4x1000_conc += Math.abs(mv.v);
+        });
+      }
+      if(per.fid && per.fid.movs){
+        per.fid.movs.forEach(function(mv){
+          var d=(mv.d||mv.desc||'').toLowerCase();
+          if(GMF_KC.some(function(k){return d.indexOf(k)>=0;})&&mv.v<0) gmf4x1000_conc += Math.abs(mv.v);
+        });
+      }
+    });
+    gmf4x1000 = gmf4x1000_conc;
+  }
+  var gmf_fuente = (gmf4x1000_conc === 0 && gmf4x1000 > 0) ? 'Extractos Excel · Q1 2026' : (gmf4x1000_conc > 0 ? 'Conciliación · Ene–Mar 2026' : 'Carga extractos para ver');
 
   var totalBancos = 0;
 
@@ -8658,7 +8410,7 @@ function renderResumenTablero() {
 
     + card('📊','Utilidad ant. imp.',utilidad,  utilidad>=0?'#C8DABB':'#A32D2D', utilidad>=0?'#F5F4F2':'#FEF2F2', 'Margen '+margen+'%', 'Ingresos – Gastos')
 
-    + card('🏛','Gravamen 4x1000', gmf4x1000,'#6EA1BA','#EBF6FA', gmf4x1000>0?'Bancolombia Q1 2026':'Carga extractos para ver','GMF acumulado')
+    + card('🏛','Gravamen 4x1000', gmf4x1000,'#6EA1BA','#EBF6FA', gmf_fuente,'GMF acumulado Ene–Mar 2026')
 
     +'</div>'
 
@@ -9024,11 +8776,41 @@ function calcBalMes(mes) {
 
   // ── ACTIVOS CORRIENTES ────────────────────────────────────
 
-  // Caja y bancos → $0 hasta que Nelson ingrese datos de conciliación bancaria
-
+  // Caja y Bancos → Total Disponible ALZAK desde conciliación bancaria
   var totalBancos = 0;
-
-  // (pendiente: se activará cuando se cargue la conciliación bancaria)
+  try {
+    if (typeof P !== 'undefined' && P.length) {
+      if (!mes) {
+        // Acumulado: saldo final más reciente de cada cuenta
+        var lastSF   = 0; // Bancolombia Ahorros
+        var lastFid  = 0; // Fiducuenta
+        var lastCaja = 0; // Caja Social
+        var lastBold = 0; // Bold CF
+        for (var pi2 = 0; pi2 < P.length; pi2++) {
+          var pe = P[pi2];
+          if (pe.sF   !== undefined) lastSF   = pe.sF;
+          if (pe.fid  && pe.fid.sF  !== undefined) lastFid  = pe.fid.sF;
+          if (pe.caja && pe.caja.sF !== undefined) lastCaja = pe.caja.sF;
+          if (pe.bold && pe.bold.sF !== undefined) lastBold = pe.bold.sF;
+        }
+        totalBancos = lastSF + lastFid + lastCaja + lastBold;
+      } else {
+        // Mes específico: buscar la entrada de P que coincida con el label
+        // El label de P es 'Enero 2026', el mes del balance también
+        for (var pi2 = 0; pi2 < P.length; pi2++) {
+          var pe = P[pi2];
+          if (pe.label === mes) {
+            var sf   = pe.sF   || 0;
+            var sfid = (pe.fid  && pe.fid.sF  !== undefined) ? pe.fid.sF  : 0;
+            var scaj = (pe.caja && pe.caja.sF !== undefined) ? pe.caja.sF : 0;
+            var sbol = (pe.bold && pe.bold.sF !== undefined) ? pe.bold.sF : 0;
+            totalBancos = sf + sfid + scaj + sbol;
+            break;
+          }
+        }
+      }
+    }
+  } catch(e) { totalBancos = 0; }
 
   // 2. CxC clientes → facturas pendientes (automático desde Facturación)
 
@@ -11928,6 +11710,10 @@ function abrirNuevaFactura() { alert('Modulo nueva factura en construccion.'); }
 
   renderHome();
 
+  // Render facturas independently — renderHome() may return early if no bank data
+  if (typeof renderFacturas === 'function') renderFacturas();
+  if (typeof fcRender === 'function') setTimeout(fcRender, 100);
+
 // ============================================================
 
 // LOGIN + USUARIOS
@@ -12101,21 +11887,39 @@ function gsGuardarDatos() {
 }
 
 function gsCargarDatos() {
-
   try {
-
-    var f  = localStorage.getItem(LS_FACTURAS);
-
+    // 1. Siempre carga las facturas base del CSV hardcodeado
+    if (typeof FACTURAS_DEFAULT !== 'undefined' && FACTURAS_DEFAULT.length) {
+      FACTURAS = FACTURAS_DEFAULT.map(function(r){
+        var o = Object.assign({}, r);
+        o.estado = typeof estadoFact === 'function' ? estadoFact(o) : (o.pagada ? 'Pagada' : 'Pendiente');
+        return o;
+      });
+    }
+    // 2. Fusiona cualquier factura extra guardada en localStorage (que no sea default)
+    var f = localStorage.getItem(LS_FACTURAS);
+    if (f) {
+      var pf = JSON.parse(f);
+      if (pf && pf.length) {
+        var baseNums = FACTURAS.map(function(x){ return (x.num||'').toUpperCase(); });
+        pf.forEach(function(saved){
+          var n = (saved.num||'').toUpperCase();
+          if (baseNums.indexOf(n) < 0) {
+            saved.estado = typeof estadoFact === 'function' ? estadoFact(saved) : saved.estado;
+            FACTURAS.push(saved);
+            baseNums.push(n);
+          }
+        });
+      }
+    }
     var g2 = localStorage.getItem(LS_GASTOS);
-
-    if (f)  { var pf=JSON.parse(f);  if(pf&&pf.length)  FACTURAS=pf;    }
-
-    if (g2) { var pg=JSON.parse(g2); if(pg&&pg.length)  GASTOS_DATA=pg; }
-
-  } catch(e){}
-
+    if (g2) { var pg=JSON.parse(g2); if(pg&&pg.length) GASTOS_DATA=pg; }
+  } catch(e){ console.error('gsCargarDatos error:', e); }
   if (typeof gsCargarDesdeSheets === 'function') gsCargarDesdeSheets();
-
+  // Render factura table immediately after loading defaults
+  if (typeof renderFacturas === 'function') setTimeout(renderFacturas, 50);
+  if (typeof renderCarteraHome === 'function') setTimeout(renderCarteraHome, 60);
+  if (typeof fcRender === 'function') setTimeout(fcRender, 150);
 }
 
 })();
@@ -14315,6 +14119,7 @@ function renderBcol() {
     </select>
     <button class="btn" onclick="exportarCSVConc()">↓ CSV</button>
     <button class="btn btn-pri" onclick="window.print()">⎙ Imprimir</button>
+    <button class="btn btn-pri" onclick="pdfUploadOpen()" style="background:#2E7D32;border-color:#2E7D32;">📂 Nuevo mes</button>
   </div>
 </div>
 
@@ -14333,6 +14138,7 @@ function renderBcol() {
 </div>
 <script>
 function tabHome() {
+  if(typeof devolverModulosAHome==="function") devolverModulosAHome();
   var pgs = document.querySelectorAll('.pg');
   for (var i=0; i<pgs.length; i++) pgs[i].classList.remove('on');
   var c = document.getElementById('pg-conc');
@@ -14348,18 +14154,34 @@ function tabHome() {
   if (typeof renderHome === 'function') renderHome();
 }
 function tabConc() {
+  if(typeof devolverModulosAHome==="function") devolverModulosAHome();
   var pgs = document.querySelectorAll('.pg');
   for (var i=0; i<pgs.length; i++) pgs[i].classList.remove('on');
   var c = document.getElementById('pg-conc');
   if (c) c.classList.add('on');
   var tb = document.getElementById('topbar-t');
   if (tb) tb.textContent = 'Conciliacion Bancaria';
-  document.getElementById('tab-home-btn').style.background='rgba(255,255,255,0.12)';
-  document.getElementById('tab-home-btn').style.color='#ccc';
-  document.getElementById('tab-conc-btn').style.background='#5DC3DA';
-  document.getElementById('tab-conc-btn').style.color='#fff';
+  ['tab-home-btn','tab-pres-btn'].forEach(function(id){var b=document.getElementById(id);if(b){b.style.background='rgba(255,255,255,0.12)';b.style.color='#ccc';}});
+  var cb=document.getElementById('tab-conc-btn');if(cb){cb.style.background='#5DC3DA';cb.style.color='#fff';}
   setTimeout(function(){ try{ renderConc(); }catch(e){} }, 60);
 }
+
+function tabPres() {
+  var pgs = document.querySelectorAll('.pg');
+  for (var i=0; i<pgs.length; i++) pgs[i].classList.remove('on');
+  var c = document.getElementById('pg-presupuesto');
+  if (c) c.classList.add('on');
+  var tb = document.getElementById('topbar-t');
+  if (tb) tb.textContent = 'Presupuesto 2026';
+  ['tab-home-btn','tab-conc-btn','tab-pres-btn'].forEach(function(id,idx){
+    var b = document.getElementById(id);
+    if (b) { b.style.background='rgba(255,255,255,0.12)'; b.style.color='#ccc'; }
+  });
+  var pb = document.getElementById('tab-pres-btn');
+  if (pb) { pb.style.background='#5DC3DA'; pb.style.color='#fff'; }
+  setTimeout(function(){ try{ renderPresupuesto(); }catch(e){} try{ pfRender(); }catch(e){} }, 60);
+}
+
 // Intercept tablero's ir() to also hide pg-conc and update tabs
 document.addEventListener('DOMContentLoaded', function() {
   var nav = document.getElementById('tab-nav');
@@ -14367,15 +14189,18 @@ document.addEventListener('DOMContentLoaded', function() {
   var origIr = window.ir;
   if (origIr) {
     window.ir = function(id) {
+      if(typeof devolverModulosAHome==="function") devolverModulosAHome();
       var c = document.getElementById('pg-conc');
       if (c) c.classList.remove('on');
       origIr(id);
-      var hb = document.getElementById('tab-home-btn');
-      var cb = document.getElementById('tab-conc-btn');
-      if (hb && cb) {
-        hb.style.background = '#5DC3DA'; hb.style.color = '#fff';
-        cb.style.background = 'rgba(255,255,255,0.12)'; cb.style.color = '#ccc';
-      }
+      var hb=document.getElementById('tab-home-btn');
+      var cb=document.getElementById('tab-conc-btn');
+      var pb=document.getElementById('tab-pres-btn');
+      var pp=document.getElementById('pg-presupuesto');
+      if(pp) pp.classList.remove('on');
+      if(hb){hb.style.background='#5DC3DA';hb.style.color='#fff';}
+      if(cb){cb.style.background='rgba(255,255,255,0.12)';cb.style.color='#ccc';}
+      if(pb){pb.style.background='rgba(255,255,255,0.12)';pb.style.color='#ccc';}
     };
   }
 });
@@ -15103,6 +14928,2356 @@ function renderConc(){
 }
 // init on demand
 </script>
+
+<div id="pg-presupuesto" class="pg">
+<div style="padding:20px 28px;max-width:1100px;margin:0 auto;">
+
+  <!-- Header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px;">
+    <div>
+      <div style="font-size:16px;font-weight:700;color:#54504F;">📋 Presupuesto 2026</div>
+      <div style="font-size:11px;color:#aaa;margin-top:2px;">ALZAK GROUP SAS · NIT 900.898.741-8</div>
+    </div>
+  </div>
+
+  <!-- Módulos Equipo Base y MSD VSR -->
+  <div id="pres-eb-slot"><div class="card" id="bloque-equipo-base" style="margin-bottom:12px;border:1.5px solid #2E7D32">
+
+  <!-- Encabezado -->
+
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+
+    <div>
+
+      <div style="font-size:11px;font-weight:700;color:#2E7D32;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">👥 Equipo Base</div>
+
+      <div style="font-size:15px;font-weight:700;color:#54504F">Presupuesto de Honorarios — Contratistas OPS</div>
+
+      <div style="font-size:11px;color:#888;margin-top:2px">Haz clic en cada celda para marcar como <b style="color:#2E7D32">pagado</b> (verde) o <b style="color:#A32D2D">adeudado</b> (rojo) · 2026</div>
+
+    </div>
+
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+
+      <button class="btn" onclick="equipoBaseReset()" style="font-size:11px;color:#A32D2D;border-color:#f0ccc8">↺ Reiniciar</button>
+
+      <button onclick="equipoBaseToggle()" id="btn-eb-toggle"
+
+        style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:700;color:#54504F;font-family:Helvetica,Arial,sans-serif;display:flex;align-items:center;gap:5px">
+
+        <span id="ico-eb">▶</span>
+
+      </button>
+
+    </div>
+
+  </div>
+
+  <!-- KPIs resumen -->
+
+  <div id="eb-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
+
+    <div style="background:#f1faf1;border-radius:10px;padding:11px 13px;border:1px solid #c8e6c9">
+
+      <div style="font-size:10px;font-weight:700;color:#2E7D32;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">✅ Total pagado</div>
+
+      <div id="eb-kpi-pagado" style="font-size:17px;font-weight:700;color:#2E7D32">$0</div>
+
+    </div>
+
+    <div style="background:#fff5f5;border-radius:10px;padding:11px 13px;border:1px solid #ffcdd2">
+
+      <div style="font-size:10px;font-weight:700;color:#A32D2D;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">⚠️ Total adeudado</div>
+
+      <div id="eb-kpi-adeudado" style="font-size:17px;font-weight:700;color:#A32D2D">$0</div>
+
+    </div>
+
+    <div style="background:#f9f8f5;border-radius:10px;padding:11px 13px;border:1px solid #e0ddd8">
+
+      <div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">📋 Presupuesto total</div>
+
+      <div id="eb-kpi-total" style="font-size:17px;font-weight:700;color:#54504F">$0</div>
+
+    </div>
+
+  </div>
+
+  <!-- Tabla colapsable -->
+
+  <div id="panel-equipo-base" style="overflow-x:auto;display:none">
+
+    <table id="eb-tabla" style="width:100%;border-collapse:collapse;font-size:11px;min-width:900px">
+
+      <thead>
+
+        <tr style="background:#f1faf1">
+
+          <th style="text-align:left;padding:7px 10px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-transform:uppercase;letter-spacing:.05em;min-width:180px;position:sticky;left:0;background:#f1faf1;z-index:1">Contratista</th>
+
+          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">ENE</th>
+
+          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">FEB</th>
+
+          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">MAR</th>
+
+          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">ABR</th>
+
+          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">MAY</th>
+
+          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">JUN</th>
+
+          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">JUL</th>
+
+          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">AGO</th>
+
+          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">SEP</th>
+
+          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">OCT</th>
+
+          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">NOV</th>
+
+          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">DIC</th>
+
+          <th style="padding:7px 10px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#A32D2D;text-align:right;min-width:100px">TOTAL ADEUDADO</th>
+
+        </tr>
+
+      </thead>
+
+      <tbody id="eb-tbody"></tbody>
+
+      <tfoot id="eb-tfoot"></tfoot>
+
+    </table>
+
+  </div>
+
+  <div style="margin-top:8px;font-size:10px;color:#aaa">💡 Clic en celda roja = marcar pagado · Clic en celda verde = marcar adeudado · "editar" debajo del valor para cambiar monto · Clic en nombre para renombrar</div>
+
+</div>
+
+<!-- Modal Equipo Base -->
+
+<div id="eb-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:99999;align-items:center;justify-content:center">
+
+  <div style="background:#fff;border-radius:14px;padding:28px 28px 22px;width:340px;max-width:95%;box-shadow:0 24px 60px rgba(0,0,0,0.3)">
+
+    <div id="eb-modal-titulo" style="font-size:15px;font-weight:700;color:#333;margin-bottom:6px"></div>
+
+    <div id="eb-modal-sub" style="font-size:11px;color:#888;margin-bottom:16px"></div>
+
+    <input id="eb-modal-input" type="text" style="width:100%;padding:10px 12px;border:1.5px solid #e0ddd8;border-radius:9px;font-size:14px;font-family:Helvetica,Arial,sans-serif;box-sizing:border-box;outline:none" placeholder="">
+
+    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+
+      <button onclick="ebModalCancelar()" style="padding:9px 18px;border:1px solid #d0cec8;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-family:Helvetica,Arial,sans-serif">Cancelar</button>
+
+      <button onclick="ebModalAceptar()" style="padding:9px 20px;border:none;border-radius:8px;background:#2E7D32;color:#fff;cursor:pointer;font-size:13px;font-weight:700;font-family:Helvetica,Arial,sans-serif">Guardar</button>
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Modal confirmación eliminar Equipo Base -->
+
+<div id="eb-modal-confirm" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:99999;align-items:center;justify-content:center">
+
+  <div style="background:#fff;border-radius:14px;padding:28px;width:320px;max-width:95%;box-shadow:0 24px 60px rgba(0,0,0,0.3)">
+
+    <div style="font-size:15px;font-weight:700;color:#A32D2D;margin-bottom:10px">🗑 Eliminar contratista</div>
+
+    <div id="eb-confirm-msg" style="font-size:13px;color:#555;margin-bottom:20px"></div>
+
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+
+      <button onclick="ebConfirmCancelar()" style="padding:9px 18px;border:1px solid #d0cec8;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-family:Helvetica,Arial,sans-serif">Cancelar</button>
+
+      <button onclick="ebConfirmAceptar()" style="padding:9px 20px;border:none;border-radius:8px;background:#A32D2D;color:#fff;cursor:pointer;font-size:13px;font-weight:700;font-family:Helvetica,Arial,sans-serif">Eliminar</button>
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+
+     MÓDULO PROYECTO MSD VSR
+
+     ══════════════════════════════════════════════════════════ -->
+
+<div class="card" id="bloque-msd-vsr" style="margin-bottom:12px;border:1.5px solid #7B1FA2">
+
+  <!-- Encabezado -->
+
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+
+    <div>
+
+      <div style="font-size:11px;font-weight:700;color:#7B1FA2;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">🔬 Proyecto MSD VSR</div>
+
+      <div style="font-size:15px;font-weight:700;color:#54504F">Presupuesto de Costos — Proyecto MSD VSR 2026</div>
+
+      <div style="font-size:11px;color:#888;margin-top:2px">
+
+        Se marca <b style="color:#2E7D32">verde (pagado)</b> automáticamente si el proveedor aparece en Egresos ·
+
+        También puedes hacer clic manual · Celda gris = sin costo ese mes
+
+      </div>
+
+    </div>
+
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+
+      <button class="btn" onclick="msdReset()" style="font-size:11px;color:#A32D2D;border-color:#f0ccc8">↺ Reiniciar</button>
+
+      <button onclick="msdToggle()" style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:700;color:#54504F;font-family:Helvetica,Arial,sans-serif;display:flex;align-items:center;gap:5px">
+
+        <span id="ico-msd">▶</span>
+
+      </button>
+
+    </div>
+
+  </div>
+
+  <!-- KPIs -->
+
+  <div id="msd-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
+
+    <div style="background:#f3e5f5;border-radius:10px;padding:11px 13px;border:1px solid #ce93d8">
+
+      <div style="font-size:10px;font-weight:700;color:#7B1FA2;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">✅ Total pagado</div>
+
+      <div id="msd-kpi-pagado" style="font-size:17px;font-weight:700;color:#7B1FA2">$0</div>
+
+    </div>
+
+    <div style="background:#fff5f5;border-radius:10px;padding:11px 13px;border:1px solid #ffcdd2">
+
+      <div style="font-size:10px;font-weight:700;color:#A32D2D;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">⚠️ Total adeudado</div>
+
+      <div id="msd-kpi-adeudado" style="font-size:17px;font-weight:700;color:#A32D2D">$0</div>
+
+    </div>
+
+    <div style="background:#f9f8f5;border-radius:10px;padding:11px 13px;border:1px solid #e0ddd8">
+
+      <div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">📋 Presupuesto total</div>
+
+      <div id="msd-kpi-total" style="font-size:17px;font-weight:700;color:#54504F">$0</div>
+
+    </div>
+
+  </div>
+
+  <!-- Tabla -->
+
+  <div id="panel-msd-vsr" style="overflow-x:auto;display:none">
+
+    <table id="msd-tabla" style="width:100%;border-collapse:collapse;font-size:11px;min-width:900px">
+
+      <thead>
+
+        <tr style="background:#f3e5f5">
+
+          <th style="text-align:left;padding:7px 10px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-transform:uppercase;letter-spacing:.05em;min-width:220px;position:sticky;left:0;background:#f3e5f5;z-index:1">Ítem / Proveedor</th>
+
+          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">ENE</th>
+
+          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">FEB</th>
+
+          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">MAR</th>
+
+          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">ABR</th>
+
+          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">MAY</th>
+
+          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">JUN</th>
+
+          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">JUL</th>
+
+          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">AGO</th>
+
+          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">SEP</th>
+
+          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">OCT</th>
+
+          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">NOV</th>
+
+          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">DIC</th>
+
+          <th style="padding:7px 10px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#A32D2D;text-align:right;min-width:110px">TOTAL ADEUDADO</th>
+
+        </tr>
+
+      </thead>
+
+      <tbody id="msd-tbody"></tbody>
+
+      <tfoot id="msd-tfoot"></tfoot>
+
+    </table>
+
+  </div>
+
+  <div style="margin-top:8px;font-size:10px;color:#aaa">
+
+    🟢 Verde automático = detectado en Egresos · 🔴 Rojo = pendiente · Clic para cambiar estado · "editar" para cambiar valor · Clic en nombre para renombrar
+
+  </div>
+
+</div>
+
+<!-- Modal input MSD VSR -->
+
+<div id="msd-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:99999;align-items:center;justify-content:center">
+
+  <div style="background:#fff;border-radius:14px;padding:28px 28px 22px;width:340px;max-width:95%;box-shadow:0 24px 60px rgba(0,0,0,0.3)">
+
+    <div id="msd-modal-titulo" style="font-size:15px;font-weight:700;color:#7B1FA2;margin-bottom:6px"></div>
+
+    <div id="msd-modal-sub" style="font-size:11px;color:#888;margin-bottom:16px"></div>
+
+    <input id="msd-modal-input" type="text" style="width:100%;padding:10px 12px;border:1.5px solid #e0ddd8;border-radius:9px;font-size:14px;font-family:Helvetica,Arial,sans-serif;box-sizing:border-box;outline:none">
+
+    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+
+      <button onclick="msdModalCancelar()" style="padding:9px 18px;border:1px solid #d0cec8;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-family:Helvetica,Arial,sans-serif">Cancelar</button>
+
+      <button onclick="msdModalAceptar()" style="padding:9px 20px;border:none;border-radius:8px;background:#7B1FA2;color:#fff;cursor:pointer;font-size:13px;font-weight:700;font-family:Helvetica,Arial,sans-serif">Guardar</button>
+
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Modal confirmación eliminar MSD VSR -->
+
+<div id="msd-modal-confirm" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:99999;align-items:center;justify-content:center">
+
+  <div style="background:#fff;border-radius:14px;padding:28px;width:320px;max-width:95%;box-shadow:0 24px 60px rgba(0,0,0,0.3)">
+
+    <div style="font-size:15px;font-weight:700;color:#A32D2D;margin-bottom:10px">🗑 Eliminar ítem</div>
+
+    <div id="msd-confirm-msg" style="font-size:13px;color:#555;margin-bottom:20px"></div>
+
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+
+      <button onclick="msdConfirmCancelar()" style="padding:9px 18px;border:1px solid #d0cec8;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-family:Helvetica,Arial,sans-serif">Cancelar</button>
+
+      <button onclick="msdConfirmAceptar()" style="padding:9px 20px;border:none;border-radius:8px;background:#A32D2D;color:#fff;cursor:pointer;font-size:13px;font-weight:700;font-family:Helvetica,Arial,sans-serif">Eliminar</button>
+
+    </div>
+
+  </div>
+
+</div>
+
+</div>
+  <div id="pres-msd-slot"></div>
+
+  <!-- Presupuesto por Facturar 2026 -->
+  <div class="card" style="margin-bottom:12px;border:1.5px solid #5DC3DA;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:24px;">📄</div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#5DC3DA;">Matriz de Proyección de Facturación 2026</div>
+          <div style="font-size:11px;color:#aaa;margin-top:1px;">Proyectos a ejecutar · editable · con IVA</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button onclick="pfAddRow()" style="background:#5DC3DA;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">+ Fila</button>
+        <button onclick="pfAddCol()" style="background:#fff;color:#5DC3DA;border:1.5px solid #5DC3DA;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">+ Columna</button>
+        <button onclick="pfExportCSV()" style="background:#fff;color:#555;border:1.5px solid #ddd;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">↓ CSV</button>
+      </div>
+    </div>
+
+    <!-- Resumen por mes -->
+    <div id="pf-resumen" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;"></div>
+
+    <!-- Tabla -->
+    <div style="overflow-x:auto;" id="pf-tabla-wrap">
+      <table id="pf-tabla" style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead id="pf-thead"></thead>
+        <tbody id="pf-tbody"></tbody>
+        <tfoot id="pf-tfoot"></tfoot>
+      </table>
+    </div>
+
+    <!-- Totales -->
+    <div id="pf-totales" style="margin-top:12px;padding:10px 14px;background:#F0F8FF;border-radius:8px;font-size:12px;"></div>
+  </div>
+
+  <!-- ── Flujo de Caja ─────────────────────────────────── -->
+  <div class="card" style="margin-bottom:12px;border:1.5px solid #2E7D32;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:24px;">💰</div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#2E7D32;">Flujo de Caja Mensual 2026</div>
+          <div style="font-size:11px;color:#aaa;margin-top:1px;">Basado en facturas del Tablero · actualización automática</div>
+        </div>
+      </div>
+      <button onclick="fcRender()" style="background:#fff;color:#2E7D32;border:1.5px solid #2E7D32;border-radius:8px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer;">↺ Actualizar</button>
+    </div>
+    <div id="fc-container">
+      <div style="color:#aaa;font-size:12px;padding:10px;">Cargando...</div>
+    </div>
+  </div>
+
+  <!-- ── Facturación Programada ───────────────────────────── -->
+  <div class="card" style="margin-bottom:12px;border:1.5px solid #7C3AED;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:24px;">🗓️</div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#7C3AED;">Facturación Programada</div>
+          <div style="font-size:11px;color:#aaa;margin-top:1px;">Facturas proyectadas · agregan al flujo de caja automáticamente</div>
+        </div>
+      </div>
+      <button onclick="fpAddRow()" style="background:#7C3AED;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">+ Agregar</button>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr style="background:#F5F3FF;">
+            <th style="padding:7px 10px;text-align:left;font-weight:700;color:#7C3AED;border-bottom:2px solid #7C3AED;white-space:nowrap;">N° Fact. Programada</th>
+            <th style="padding:7px 10px;text-align:left;font-weight:700;color:#7C3AED;border-bottom:2px solid #7C3AED;">Cliente</th>
+            <th style="padding:7px 10px;text-align:left;font-weight:700;color:#7C3AED;border-bottom:2px solid #7C3AED;">Concepto</th>
+            <th style="padding:7px 10px;text-align:right;font-weight:700;color:#7C3AED;border-bottom:2px solid #7C3AED;">Valor</th>
+            <th style="padding:7px 10px;text-align:center;font-weight:700;color:#7C3AED;border-bottom:2px solid #7C3AED;">Mes cobro</th>
+            <th style="padding:7px 10px;text-align:center;font-weight:700;color:#7C3AED;border-bottom:2px solid #7C3AED;">Estado</th>
+            <th style="padding:7px 4px;border-bottom:2px solid #7C3AED;"></th>
+          </tr>
+        </thead>
+        <tbody id="fp-tbody"></tbody>
+        <tfoot id="fp-tfoot"></tfoot>
+      </table>
+    </div>
+    <div id="fp-total" style="margin-top:10px;padding:8px 12px;background:#F5F3FF;border-radius:8px;font-size:12px;"></div>
+  </div>
+
+  <script>
+  // ══════════════════════════════════════════════════════
+  //  PRESUPUESTO 2026 — Motor completo
+  // ══════════════════════════════════════════════════════
+
+  var PF_CLIENTES = [
+    'ABBVIE','ALZAK FOUNDATION','BAYER','BIIB','SURA',
+    'JANSSEN','MERCK','MSD','MSD VSR','VAXTHERA',
+    'NOVARTIS','NOVO NORDISK','PFIZER','SANOFI','SERVIER',
+    'AMGEN','ADIUM','GRUNENTHAL','ROCHE','ASTRAZENECA',
+    'BOEHRINGER','LAFRANCOL','TECNOQUÍMICAS'
+  ];
+
+  var PF_ESTADOS = [
+    'ABIERTO','CERRADO','PROXIMO A CERRARSE',
+    'PENDIENTE ENTREGABLES','EN NEGOCIACIÓN','PARA FIRMA DE CONTRATO'
+  ];
+
+  var PF_ESTADO_COLORES = {
+    'ABIERTO':                '#2E7D32',
+    'CERRADO':                '#888',
+    'PROXIMO A CERRARSE':     '#B45309',
+    'PENDIENTE ENTREGABLES':  '#C2410C',
+    'EN NEGOCIACIÓN':         '#0C447C',
+    'PARA FIRMA DE CONTRATO': '#7C3AED'
+  };
+
+  // Columnas base — id, label, tipo, editable
+  var PF_COLS_DEFAULT = [
+    {id:'desc',     label:'Descripción del Proyecto', tipo:'text',   edit:true,  w:'220px'},
+    {id:'cliente',  label:'Cliente',                  tipo:'select', edit:true,  w:'130px'},
+    {id:'idproy',   label:'ID Proyecto',               tipo:'text',   edit:true,  w:'90px'},
+    {id:'valor',    label:'Valor',                     tipo:'money',  edit:true,  w:'120px'},
+    {id:'iva',      label:'IVA (19%)',                 tipo:'calc',   edit:false, w:'110px'},
+    {id:'total',    label:'Total',                     tipo:'calc',   edit:false, w:'120px'},
+    {id:'estado',   label:'Estado',                    tipo:'estado', edit:true,  w:'160px'}
+  ];
+
+  // ── Persistencia ────────────────────────────────────────
+  function pfLoad() {
+    try {
+      var raw = localStorage.getItem('pf2026v2');
+      if (raw) { var d=JSON.parse(raw); if(d && d.rows) return d; }
+    } catch(e){}
+    return {
+      cols: JSON.parse(JSON.stringify(PF_COLS_DEFAULT)),
+      rows: [
+        {desc:'Bayer Propuesta Integral',                    cliente:'BAYER',    idproy:'3524', valor:77010888,  estado:'ABIERTO'},
+        {desc:'Bayer HALE Aflibercept',                      cliente:'BAYER',    idproy:'1925', valor:91825978,  estado:'ABIERTO'},
+        {desc:'MSD VSR Carga Clínica y Económica',           cliente:'MSD',      idproy:'6024', valor:381009037, estado:'ABIERTO'},
+        {desc:'Vaxthera proyectos',                          cliente:'VAXTHERA', idproy:'3825', valor:27000000,  estado:'ABIERTO'},
+        {desc:'Estimación costos osteoporosis',              cliente:'AMGEN',    idproy:'4125', valor:19910400,  estado:'ABIERTO'},
+        {desc:'Charla Epidemiológica - Esquizofrenia J&J',   cliente:'JANSSEN',  idproy:'3625', valor:3874500,   estado:'ABIERTO'},
+        {desc:'Estudio Nirsevimab Guatemala',                cliente:'SANOFI',   idproy:'426',  valor:50300941,  estado:'ABIERTO'},
+        {desc:'Vaxthera Manuscritos Influenza y VPH',        cliente:'VAXTHERA', idproy:'926',  valor:35130000,  estado:'ABIERTO'},
+        {desc:'Charla Osteoporosis Monteria',                cliente:'AMGEN',    idproy:'6226', valor:5205400,   estado:'ABIERTO'},
+        {desc:'Charla Dra Angela Carrasquilla',              cliente:'SANOFI',   idproy:'1026', valor:6320842,   estado:'ABIERTO'}
+      ]
+    };
+  }
+
+  function pfSave(data) {
+    try { localStorage.setItem('pf2026v2', JSON.stringify(data)); } catch(e){}
+  }
+
+  // ── Helpers ──────────────────────────────────────────────
+  function pfFmt(n) {
+    if(!n && n!==0) return '—';
+    return '$ ' + Math.round(n).toLocaleString('es-CO');
+  }
+  function escH(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  }
+  function pfCalcIVA(row)   { return Math.round((row.valor||0)*0.19); }
+  function pfCalcTotal(row) { return Math.round((row.valor||0)*1.19); }
+
+  // ── Render ───────────────────────────────────────────────
+  function pfRender() {
+    var data  = pfLoad();
+    var cols  = data.cols;
+    var rows  = data.rows;
+    var thead = document.getElementById('pf-thead');
+    var tbody = document.getElementById('pf-tbody');
+    var tfoot = document.getElementById('pf-tfoot');
+    if(!thead||!tbody||!tfoot) return;
+
+    // ─ THEAD ─
+    var htr = '<tr style="background:#EBF3FB;">';
+    htr += '<th style="padding:6px 8px;font-size:10px;font-weight:700;color:#0C447C;border-bottom:2px solid #5DC3DA;white-space:nowrap;min-width:30px;">#</th>';
+    cols.forEach(function(col){
+      htr += '<th style="padding:6px 8px;font-size:10px;font-weight:700;color:#0C447C;border-bottom:2px solid #5DC3DA;white-space:nowrap;min-width:'+col.w+';">'
+           + '<div style="display:flex;align-items:center;gap:4px;">'
+           + '<span>'+escH(col.label)+'</span>'
+           + '<button onclick="pfEditColLabel(\''+col.id+'\')" title="Renombrar" style="background:none;border:none;cursor:pointer;font-size:10px;color:#aaa;padding:0;">✏️</button>'
+           + (col.id!=='iva'&&col.id!=='total' ? '<button onclick="pfDelCol(\''+col.id+'\')" title="Quitar columna" style="background:none;border:none;cursor:pointer;font-size:10px;color:#ccc;padding:0;">✕</button>' : '')
+           + '</div></th>';
+    });
+    htr += '<th style="padding:6px 4px;border-bottom:2px solid #5DC3DA;min-width:30px;"></th></tr>';
+    thead.innerHTML = htr;
+
+    // ─ TBODY ─
+    tbody.innerHTML = '';
+    rows.forEach(function(row, ri) {
+      var tr = document.createElement('tr');
+      tr.style.borderBottom = '1px solid #f0eeec';
+      tr.style.background = ri%2===0?'#fff':'#fafbfc';
+
+      // # row number
+      var tdN = document.createElement('td');
+      tdN.style.cssText='padding:5px 8px;font-size:10px;color:#aaa;text-align:center;';
+      tdN.textContent = ri+1;
+      tr.appendChild(tdN);
+
+      cols.forEach(function(col){
+        var td = document.createElement('td');
+        td.style.cssText='padding:5px 6px;';
+        td.innerHTML = pfCellHtml(col, row, ri);
+        tr.appendChild(td);
+      });
+
+      // Eliminar fila
+      var tdDel = document.createElement('td');
+      tdDel.style.cssText='padding:5px 4px;text-align:center;';
+      tdDel.innerHTML='<button onclick="pfDelRow('+ri+')" title="Eliminar fila" style="background:#fee;border:none;border-radius:5px;color:#A32D2D;font-size:12px;cursor:pointer;padding:2px 6px;">✕</button>';
+      tr.appendChild(tdDel);
+      tbody.appendChild(tr);
+    });
+
+    // ─ TFOOT totales ─
+    var sumValor = rows.reduce(function(a,r){return a+(r.valor||0);},0);
+    var sumIVA   = rows.reduce(function(a,r){return a+pfCalcIVA(r);},0);
+    var sumTotal = rows.reduce(function(a,r){return a+pfCalcTotal(r);},0);
+    var ftr = '<tr style="background:#EBF3FB;font-weight:700;">';
+    ftr += '<td style="padding:7px 8px;font-size:11px;color:#0C447C;" colspan="2">TOTAL ('+rows.length+' proyectos)</td>';
+    cols.forEach(function(col, ci){
+      if(ci===0) return; // skip desc (covered by colspan)
+      var val='';
+      if(col.id==='valor') val='<span style="color:#0C447C;">'+pfFmt(sumValor)+'</span>';
+      else if(col.id==='iva') val='<span style="color:#B45309;">'+pfFmt(sumIVA)+'</span>';
+      else if(col.id==='total') val='<span style="color:#2E7D32;font-size:13px;">'+pfFmt(sumTotal)+'</span>';
+      ftr += '<td style="padding:7px 8px;text-align:'+(col.tipo==='money'||col.tipo==='calc'?'right':'left')+';">'+val+'</td>';
+    });
+    ftr += '<td></td></tr>';
+    tfoot.innerHTML = ftr;
+
+    pfRenderResumen(data);
+    pfRenderTotales(sumValor, sumIVA, sumTotal, rows);
+  }
+
+  function pfCellHtml(col, row, ri) {
+    var val = row[col.id];
+    var tipo = col.tipo;
+
+    if(tipo==='calc') {
+      var n = col.id==='iva' ? pfCalcIVA(row) : pfCalcTotal(row);
+      return '<span style="color:'+(col.id==='total'?'#2E7D32':'#B45309')+';font-weight:700;white-space:nowrap;">'+pfFmt(n)+'</span>';
+    }
+    if(!col.edit) return escH(String(val||''));
+
+    if(tipo==='select') {
+      // Cliente dropdown + "Otro" input
+      var enLista = PF_CLIENTES.indexOf(val) >= 0;
+      var selVal  = enLista ? val : '__otro__';
+      var opts = PF_CLIENTES.map(function(c){
+        return '<option value="'+escH(c)+'"'+(c===selVal?' selected':'')+'>'+c+'</option>';
+      }).join('');
+      opts += '<option value="__otro__"'+(!enLista?' selected':'')+'>✏️ Otro...</option>';
+      var inputDisp = enLista ? 'none' : 'inline-block';
+      var inputVal  = enLista ? '' : escH(val||'');
+      return '<div style="display:flex;gap:3px;align-items:center;flex-wrap:wrap;">'
+        +'<select id="pfsel-'+ri+'" onchange="pfSelChange('+ri+',\'cliente\',this)"'
+        +' style="border:1px solid #ddd;border-radius:5px;padding:3px 5px;font-size:11px;max-width:130px;">'+opts+'</select>'
+        +'<input id="pfinp-'+ri+'" value="'+inputVal+'" placeholder="Nombre..."'
+        +' onblur="pfCellEdit('+ri+',\'cliente\',this.value)"'
+        +' style="display:'+inputDisp+';border:1px solid #5DC3DA;border-radius:5px;padding:3px 5px;font-size:11px;width:90px;">'
+        +'</div>';
+    }
+
+    if(tipo==='estado') {
+      var eCol = PF_ESTADO_COLORES[val] || '#888';
+      var opts2 = PF_ESTADOS.map(function(e){
+        return '<option value="'+escH(e)+'"'+(e===val?' selected':'')+'>'+e+'</option>';
+      }).join('');
+      return '<select onchange="pfCellEdit('+ri+',\'estado\',this.value)"'
+        +' style="border:1px solid #ddd;border-radius:5px;padding:3px 5px;font-size:10px;font-weight:700;color:'+eCol+';min-width:130px;">'+opts2+'</select>';
+    }
+
+    if(tipo==='money') {
+      return '<input type="number" value="'+(val||0)+'"'
+        +' onblur="pfCellEdit('+ri+',\''+col.id+'\',+this.value)"'
+        +' style="border:1px solid #ddd;border-radius:5px;padding:3px 6px;font-size:11px;width:100%;min-width:90px;text-align:right;">';
+    }
+
+    // default: text
+    return '<input value="'+escH(String(val||''))+'"'
+      +' onblur="pfCellEdit('+ri+',\''+col.id+'\',this.value)"'
+      +' style="border:1px solid #ddd;border-radius:5px;padding:3px 6px;font-size:11px;width:100%;min-width:80px;">';
+  }
+
+  // ── Resumen por mes ──────────────────────────────────────
+  function pfRenderResumen(data) {
+    var el = document.getElementById('pf-resumen');
+    if(!el) return;
+    var rows = data.rows;
+    var total = rows.reduce(function(a,r){return a+(r.valor||0);},0);
+    var byCliente = {};
+    rows.forEach(function(r){
+      var c = r.cliente||'Sin cliente';
+      byCliente[c] = (byCliente[c]||0) + (r.valor||0);
+    });
+    var html = '<div style="background:#EBF3FB;border-radius:8px;padding:6px 12px;border:1px solid #5DC3DA30;">'
+      +'<div style="font-size:10px;font-weight:700;color:#0C447C;">TOTAL PROYECTADO</div>'
+      +'<div style="font-size:14px;font-weight:700;color:#5DC3DA;">'+pfFmt(total)+'</div>'
+      +'</div>';
+    Object.keys(byCliente).sort().forEach(function(c){
+      html += '<div style="background:#f8f8f8;border-radius:8px;padding:5px 10px;border:1px solid #eee;">'
+        +'<div style="font-size:9px;font-weight:700;color:#888;">'+escH(c)+'</div>'
+        +'<div style="font-size:12px;font-weight:700;color:#333;">'+pfFmt(byCliente[c])+'</div>'
+        +'</div>';
+    });
+    el.innerHTML = html;
+  }
+
+  function pfRenderTotales(sumValor, sumIVA, sumTotal, rows) {
+    var el = document.getElementById('pf-totales');
+    if(!el) return;
+    var byEstado = {};
+    rows.forEach(function(r){
+      var e=r.estado||'Sin estado';
+      byEstado[e]=(byEstado[e]||0)+(r.valor||0);
+    });
+    var html = '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">'
+      +'<div><span style="color:#888;">Valor bruto:</span> <strong style="color:#0C447C;">'+pfFmt(sumValor)+'</strong></div>'
+      +'<div><span style="color:#B45309;">IVA 19%:</span> <strong style="color:#B45309;">'+pfFmt(sumIVA)+'</strong></div>'
+      +'<div><span style="color:#2E7D32;font-weight:700;">Total con IVA:</span> <strong style="color:#2E7D32;font-size:14px;">'+pfFmt(sumTotal)+'</strong></div>'
+      +'</div>'
+      +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">'
+      +Object.keys(byEstado).map(function(e){
+        var c=PF_ESTADO_COLORES[e]||'#888';
+        return '<div style="font-size:11px;"><span style="color:'+c+';font-weight:700;">'+escH(e)+':</span> <span>'+pfFmt(byEstado[e])+'</span></div>';
+      }).join('')
+      +'</div>';
+    el.innerHTML = html;
+  }
+
+  // ── Edición ──────────────────────────────────────────────
+  function pfCellEdit(ri, colId, val) {
+    var data = pfLoad();
+    if(!data.rows[ri]) return;
+    data.rows[ri][colId] = val;
+    pfSave(data);
+    pfRender();
+  }
+
+  function pfSelChange(ri, colId, sel) {
+    var inp = document.getElementById('pfinp-'+ri);
+    if(sel.value === '__otro__') {
+      if(inp){ inp.style.display='inline-block'; inp.focus(); }
+    } else {
+      if(inp) inp.style.display='none';
+      pfCellEdit(ri, colId, sel.value);
+    }
+  }
+
+  // ── Filas ────────────────────────────────────────────────
+  function pfAddRow() {
+    var data = pfLoad();
+    var emptyRow = {desc:'', cliente:'', idproy:'', valor:0, estado:'ABIERTO'};
+    data.cols.forEach(function(c){ if(!(c.id in emptyRow)) emptyRow[c.id]=''; });
+    data.rows.push(emptyRow);
+    pfSave(data);
+    pfRender();
+    // Scroll to bottom of table
+    setTimeout(function(){
+      var wrap = document.getElementById('pf-tabla-wrap');
+      if(wrap) wrap.scrollTop = wrap.scrollHeight;
+    }, 80);
+  }
+
+  function pfDelRow(ri) {
+    if(!confirm('¿Eliminar esta fila?')) return;
+    var data = pfLoad();
+    data.rows.splice(ri,1);
+    pfSave(data);
+    pfRender();
+  }
+
+  // ── Columnas ─────────────────────────────────────────────
+  function pfAddCol() {
+    var label = prompt('Nombre de la nueva columna:');
+    if(!label || !label.trim()) return;
+    var id = 'col_' + Date.now();
+    var data = pfLoad();
+    // Insert before "estado" column
+    var estadoIdx = data.cols.findIndex(function(c){return c.id==='estado';});
+    var newCol = {id:id, label:label.trim(), tipo:'text', edit:true, w:'120px'};
+    if(estadoIdx >= 0) data.cols.splice(estadoIdx, 0, newCol);
+    else data.cols.push(newCol);
+    data.rows.forEach(function(r){ r[id]=''; });
+    pfSave(data);
+    pfRender();
+  }
+
+  function pfDelCol(colId) {
+    var protegidas = ['desc','cliente','idproy','valor','iva','total','estado'];
+    if(protegidas.indexOf(colId)>=0){ alert('Esta columna no se puede eliminar.'); return; }
+    if(!confirm('¿Eliminar esta columna?')) return;
+    var data = pfLoad();
+    data.cols = data.cols.filter(function(c){return c.id!==colId;});
+    pfSave(data);
+    pfRender();
+  }
+
+  function pfEditColLabel(colId) {
+    var data = pfLoad();
+    var col = data.cols.find(function(c){return c.id===colId;});
+    if(!col) return;
+    var nuevo = prompt('Nuevo nombre para la columna:', col.label);
+    if(nuevo && nuevo.trim()) { col.label=nuevo.trim(); pfSave(data); pfRender(); }
+  }
+
+  // ── Exportar CSV ─────────────────────────────────────────
+  function pfExportCSV() {
+    var data = pfLoad();
+    var cols = data.cols;
+    var rows = data.rows;
+    var lines = [cols.map(function(c){return c.label;}).join(',')];
+    rows.forEach(function(r){
+      lines.push(cols.map(function(c){
+        var v = c.tipo==='iva' ? pfCalcIVA(r) : c.tipo==='calc' ? pfCalcTotal(r) : (r[c.id]||'');
+        return '"'+String(v).replace(/"/g,'""')+'"';
+      }).join(','));
+    });
+    var blob = new Blob(['\uFEFF'+lines.join('\n')], {type:'text/csv;charset=utf-8;'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'presupuesto_alzak_2026.csv';
+    a.click();
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){ pfRender(); });
+  var _pfOrigTabPres = typeof tabPres === 'function' ? tabPres : null;
+  </script>
+
+</div>
+</div>
+<script>
+function renderPresupuesto() {
+  // Modulos EB y MSD viven estaticamente en pg-presupuesto
+}
+function devolverModulosAHome() {
+  // Modulos ya no estan en pg-home
+}
+</script>
+
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MÓDULO: Carga de Extracto PDF con IA
+     ═══════════════════════════════════════════════════════════════ -->
+
+<!-- Modal overlay -->
+<div id="pdf-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;width:min(620px,95vw);max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.25);padding:28px 28px 24px;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:#54504F;">📂 Cargar nuevo extracto PDF</div>
+        <div style="font-size:11px;color:#aaa;margin-top:2px;">Claude IA leerá el PDF y extraerá los movimientos automáticamente</div>
+      </div>
+      <button onclick="pdfUploadClose()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#999;">✕</button>
+    </div>
+
+    <!-- Step 1: Selección de cuenta y PDF -->
+    <div id="pdf-step1">
+      <div style="margin-bottom:14px;">
+        <label style="font-size:12px;font-weight:700;color:#555;display:block;margin-bottom:6px;">1 · ¿Qué cuenta es este extracto?</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <button class="pdf-cuenta-btn" onclick="pdfSelectCuenta('bcol')" id="btn-bcol"
+            style="padding:10px 12px;border:2px solid #ddd;border-radius:9px;background:#fff;cursor:pointer;text-align:left;font-size:12px;">
+            <div style="font-weight:700;color:#5DC3DA;">🏦 Cta. Ahorros</div>
+            <div style="color:#888;font-size:10px;margin-top:2px;">Bancolombia · 78349636556</div>
+          </button>
+          <button class="pdf-cuenta-btn" onclick="pdfSelectCuenta('fid')" id="btn-fid"
+            style="padding:10px 12px;border:2px solid #ddd;border-radius:9px;background:#fff;cursor:pointer;text-align:left;font-size:12px;">
+            <div style="font-weight:700;color:#7C3AED;">📊 Fiducuenta</div>
+            <div style="color:#888;font-size:10px;margin-top:2px;">Fiduciaria Bancolombia · 98000001771</div>
+          </button>
+          <button class="pdf-cuenta-btn" onclick="pdfSelectCuenta('bcs')" id="btn-bcs"
+            style="padding:10px 12px;border:2px solid #ddd;border-radius:9px;background:#fff;cursor:pointer;text-align:left;font-size:12px;">
+            <div style="font-weight:700;color:#B45309;">🏧 Cta. Corriente</div>
+            <div style="color:#888;font-size:10px;margin-top:2px;">Banco Caja Social · 21003622970</div>
+          </button>
+          <button class="pdf-cuenta-btn" onclick="pdfSelectCuenta('bold')" id="btn-bold"
+            style="padding:10px 12px;border:2px solid #ddd;border-radius:9px;background:#fff;cursor:pointer;text-align:left;font-size:12px;">
+            <div style="font-weight:700;color:#1a1a1a;">💳 Bold CF</div>
+            <div style="color:#888;font-size:10px;margin-top:2px;">Bold Financiamiento · 1700-1155-2371</div>
+          </button>
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <label style="font-size:12px;font-weight:700;color:#555;display:block;margin-bottom:6px;">2 · Selecciona el PDF del extracto</label>
+        <div id="pdf-drop-zone"
+          onclick="document.getElementById('pdf-file-input').click()"
+          ondragover="event.preventDefault();this.style.background='#EBF3FB';"
+          ondragleave="this.style.background='#fafafa';"
+          ondrop="pdfDropHandler(event)"
+          style="border:2px dashed #5DC3DA;border-radius:10px;padding:24px;text-align:center;cursor:pointer;background:#fafafa;transition:background .2s;">
+          <div style="font-size:28px;margin-bottom:6px;">📄</div>
+          <div style="font-size:12px;color:#555;">Haz clic o arrastra el PDF aquí</div>
+          <div style="font-size:10px;color:#aaa;margin-top:4px;">Extracto bancario mensual · PDF</div>
+        </div>
+        <input type="file" id="pdf-file-input" accept=".pdf" style="display:none;" onchange="pdfFileSelected(this)">
+        <div id="pdf-file-name" style="font-size:11px;color:#2E7D32;margin-top:6px;font-weight:700;"></div>
+      </div>
+
+      <div style="margin-bottom:18px;">
+        <label style="font-size:12px;font-weight:700;color:#555;display:block;margin-bottom:6px;">3 · Mes y año del extracto</label>
+        <div style="display:flex;gap:8px;">
+          <select id="pdf-mes" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:7px;font-size:12px;">
+            <option value="1">Enero</option><option value="2">Febrero</option>
+            <option value="3">Marzo</option><option value="4">Abril</option>
+            <option value="5">Mayo</option><option value="6">Junio</option>
+            <option value="7">Julio</option><option value="8">Agosto</option>
+            <option value="9">Septiembre</option><option value="10">Octubre</option>
+            <option value="11">Noviembre</option><option value="12">Diciembre</option>
+          </select>
+          <select id="pdf-anio" style="flex:1;padding:8px;border:1px solid #ddd;border-radius:7px;font-size:12px;">
+            <option value="2026" selected>2026</option>
+            <option value="2027">2027</option>
+          </select>
+        </div>
+      </div>
+
+      <button onclick="pdfAnalizar()" id="pdf-btn-analizar"
+        style="width:100%;padding:11px;background:#5DC3DA;color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;opacity:.5;" disabled>
+        🤖 Analizar con IA
+      </button>
+    </div>
+
+    <!-- Step 2: Procesando -->
+    <div id="pdf-step2" style="display:none;text-align:center;padding:30px 0;">
+      <div style="font-size:40px;margin-bottom:12px;">⏳</div>
+      <div style="font-size:14px;font-weight:700;color:#54504F;" id="pdf-status-txt">Enviando PDF a Claude IA...</div>
+      <div style="font-size:11px;color:#aaa;margin-top:6px;">Esto puede tomar 15–30 segundos según el tamaño del extracto</div>
+      <div style="margin-top:16px;height:4px;background:#eee;border-radius:2px;overflow:hidden;">
+        <div id="pdf-progress-bar" style="height:100%;background:#5DC3DA;width:0%;transition:width .4s;border-radius:2px;"></div>
+      </div>
+    </div>
+
+    <!-- Step 3: Resultado / Previsualización -->
+    <div id="pdf-step3" style="display:none;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+        <div style="font-size:20px;">✅</div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#2E7D32;">Extracción completada</div>
+          <div style="font-size:11px;color:#aaa;" id="pdf-res-meta"></div>
+        </div>
+      </div>
+
+      <!-- Resumen financiero extraído -->
+      <div id="pdf-res-cards" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;"></div>
+
+      <!-- Tabla de movimientos (primeros 10) -->
+      <div style="font-size:11px;font-weight:700;color:#555;margin-bottom:6px;" id="pdf-movs-label"></div>
+      <div style="overflow-x:auto;max-height:220px;overflow-y:auto;border:1px solid #eee;border-radius:8px;">
+        <table style="width:100%;border-collapse:collapse;font-size:11px;" id="pdf-movs-preview">
+          <thead><tr style="background:#f5f5f5;position:sticky;top:0;">
+            <th style="padding:6px 10px;text-align:left;color:#555;">Fecha</th>
+            <th style="padding:6px 10px;text-align:left;color:#555;">Descripción</th>
+            <th style="padding:6px 10px;text-align:right;color:#555;">Abono</th>
+            <th style="padding:6px 10px;text-align:right;color:#555;">Cargo</th>
+            <th style="padding:6px 10px;text-align:center;color:#555;">Tipo</th>
+          </tr></thead>
+          <tbody id="pdf-movs-tbody"></tbody>
+        </table>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button onclick="pdfRechazar()" style="flex:1;padding:10px;background:#fff;color:#A32D2D;border:1.5px solid #A32D2D;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">
+          ✕ Descartar
+        </button>
+        <button onclick="pdfAceptar()" style="flex:2;padding:10px;background:#2E7D32;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">
+          ✓ Integrar al tablero
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 4: Error -->
+    <div id="pdf-step4" style="display:none;text-align:center;padding:20px 0;">
+      <div style="font-size:36px;margin-bottom:10px;">⚠️</div>
+      <div style="font-size:13px;font-weight:700;color:#A32D2D;" id="pdf-error-txt"></div>
+      <button onclick="pdfReset()" style="margin-top:14px;padding:9px 24px;background:#5DC3DA;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">Intentar de nuevo</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  MÓDULO PDF IA — Carga y análisis de extractos bancarios
+// ══════════════════════════════════════════════════════════════
+
+var _pdfCuentaSel = null;   // 'bcol'|'fid'|'bcs'|'bold'
+var _pdfFile      = null;   // File object
+var _pdfResultado = null;   // Parsed result from AI
+
+var PDF_MESES_ES = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                    'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+// — Abrir / Cerrar modal ————————————————————————————————————————
+function pdfUploadOpen() {
+  pdfReset();
+  var modal = document.getElementById('pdf-modal');
+  modal.style.display = 'flex';
+  // Pre-seleccionar mes actual
+  var m = new Date().getMonth() + 1;
+  var sel = document.getElementById('pdf-mes');
+  if (sel) sel.value = m;
+}
+function pdfUploadClose() {
+  document.getElementById('pdf-modal').style.display = 'none';
+  _pdfFile = null; _pdfCuentaSel = null; _pdfResultado = null;
+}
+function pdfReset() {
+  ['pdf-step1','pdf-step2','pdf-step3','pdf-step4'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) el.style.display = id==='pdf-step1'?'block':'none';
+  });
+  _pdfFile = null; _pdfResultado = null;
+  var fn = document.getElementById('pdf-file-name');
+  if(fn) fn.textContent = '';
+  var btn = document.getElementById('pdf-btn-analizar');
+  if(btn){ btn.disabled=true; btn.style.opacity='.5'; }
+}
+
+// — Selección de cuenta ————————————————————————————————————————
+function pdfSelectCuenta(tipo) {
+  _pdfCuentaSel = tipo;
+  var colores = {bcol:'#5DC3DA',fid:'#7C3AED',bcs:'#B45309',bold:'#1a1a1a'};
+  ['bcol','fid','bcs','bold'].forEach(function(t){
+    var btn = document.getElementById('btn-'+t);
+    if(!btn) return;
+    if(t===tipo){
+      btn.style.borderColor = colores[t];
+      btn.style.background = '#f8fcff';
+      btn.style.boxShadow = '0 0 0 3px '+colores[t]+'33';
+    } else {
+      btn.style.borderColor = '#ddd';
+      btn.style.background = '#fff';
+      btn.style.boxShadow = '';
+    }
+  });
+  pdfCheckReady();
+}
+
+// — Selección de archivo ————————————————————————————————————————
+function pdfDropHandler(e) {
+  e.preventDefault();
+  document.getElementById('pdf-drop-zone').style.background = '#fafafa';
+  var f = e.dataTransfer.files[0];
+  if(f && f.type==='application/pdf') { _pdfFile=f; pdfShowFileName(f.name); pdfCheckReady(); }
+  else alert('Por favor selecciona un archivo PDF.');
+}
+function pdfFileSelected(input) {
+  if(input.files && input.files[0]){
+    _pdfFile = input.files[0];
+    pdfShowFileName(_pdfFile.name);
+    pdfCheckReady();
+  }
+}
+function pdfShowFileName(name) {
+  var el = document.getElementById('pdf-file-name');
+  if(el) el.textContent = '✓ ' + name + ' seleccionado';
+}
+function pdfCheckReady() {
+  var ready = _pdfCuentaSel && _pdfFile;
+  var btn = document.getElementById('pdf-btn-analizar');
+  if(btn){ btn.disabled=!ready; btn.style.opacity=ready?'1':'.5'; }
+}
+
+// — Análisis IA ————————————————————————————————————————————————
+function pdfAnalizar() {
+  if(!_pdfFile || !_pdfCuentaSel) return;
+
+  // Show processing step
+  document.getElementById('pdf-step1').style.display='none';
+  document.getElementById('pdf-step2').style.display='block';
+
+  var mes   = parseInt(document.getElementById('pdf-mes').value);
+  var anio  = parseInt(document.getElementById('pdf-anio').value);
+  var cuenta = _pdfCuentaSel;
+  var cuentaNombre = {bcol:'Bancolombia Ahorros 78349636556',
+                      fid:'Fiducuenta Bancolombia 98000001771',
+                      bcs:'Banco Caja Social 21003622970',
+                      bold:'Bold CF 1700-1155-2371'}[cuenta];
+
+  // Animate progress
+  var pbar = document.getElementById('pdf-progress-bar');
+  var statusTxt = document.getElementById('pdf-status-txt');
+  var prog = 0;
+  var progInterval = setInterval(function(){
+    prog = Math.min(prog + (prog < 60 ? 3 : prog < 85 ? 1 : 0.3), 92);
+    if(pbar) pbar.style.width = prog + '%';
+  }, 400);
+
+  var msgs = ['Enviando PDF a Claude IA...','Leyendo estructura del extracto...','Extrayendo movimientos...','Clasificando transacciones...'];
+  var msgIdx = 0;
+  var msgInterval = setInterval(function(){
+    msgIdx = Math.min(msgIdx+1, msgs.length-1);
+    if(statusTxt) statusTxt.textContent = msgs[msgIdx];
+  }, 5000);
+
+  // Convert PDF to base64
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var base64Data = e.target.result.split(',')[1];
+
+    var prompt = `Eres un asistente contable para ALZAK GROUP SAS (NIT 900.898.741-8, Cartagena, Colombia).
+Se te proporciona el extracto bancario de ${cuentaNombre} correspondiente a ${PDF_MESES_ES[mes]} ${anio}.
+
+INSTRUCCIONES CRÍTICAS:
+- Extrae TODOS los movimientos de la tabla de transacciones
+- Responde ÚNICAMENTE con un objeto JSON válido, sin texto adicional, sin markdown, sin explicaciones
+- El JSON debe tener esta estructura exacta:
+
+{
+  "banco": "nombre del banco",
+  "cuenta": "número de cuenta",
+  "mes": ${mes},
+  "anio": ${anio},
+  "saldo_apertura": número,
+  "saldo_cierre": número,
+  "total_abonos": número,
+  "total_cargos": número,
+  "movimientos": [
+    {
+      "f": "DD/MM",
+      "d": "descripción del movimiento",
+      "v": número (positivo=abono, negativo=cargo),
+      "t": "tipo"
+    }
+  ]
+}
+
+TIPOS válidos para el campo "t":
+- "impto": impuesto 4x1000, GMF, gravamen
+- "transf": transferencia entre cuentas propias
+- "ingreso": ingreso externo real (pago de cliente, contrato)
+- "egreso": pago a tercero, proveedor, servicio
+- "comision": comisión, costo bancario
+- "interes": interés, rendimiento
+- "fondo": movimiento a/desde fondo de inversión (Fiducuenta)
+- "interno": traslado interno ALZAK
+- "otro": cualquier otro tipo
+
+Extrae todos los movimientos del extracto bancario adjunto.`;
+
+    fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        messages: [{
+          role: 'user',
+          content: [
+            {type:'document', source:{type:'base64', media_type:'application/pdf', data:base64Data}},
+            {type:'text', text:prompt}
+          ]
+        }]
+      })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      clearInterval(progInterval); clearInterval(msgInterval);
+      if(pbar) pbar.style.width = '100%';
+
+      var txt = '';
+      if(data.content && data.content.length > 0){
+        data.content.forEach(function(blk){ if(blk.type==='text') txt += blk.text; });
+      }
+
+      // Strip markdown fences if present
+      txt = txt.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
+
+      var resultado;
+      try { resultado = JSON.parse(txt); }
+      catch(e) {
+        // Try extracting JSON object
+        var m = txt.match(/\{[\s\S]*\}/);
+        if(m){ try{ resultado = JSON.parse(m[0]); } catch(e2){ resultado=null; } }
+      }
+
+      if(!resultado || !resultado.movimientos){
+        pdfShowError('No se pudo parsear la respuesta de IA. Respuesta recibida: ' + txt.substring(0,200));
+        return;
+      }
+
+      _pdfResultado = resultado;
+      _pdfResultado._cuenta = cuenta;
+      _pdfResultado._mes = mes;
+      _pdfResultado._anio = anio;
+
+      pdfMostrarResultado(resultado, cuenta, mes, anio);
+    })
+    .catch(function(err){
+      clearInterval(progInterval); clearInterval(msgInterval);
+      pdfShowError('Error de conexión: ' + err.message);
+    });
+  };
+  reader.readAsDataURL(_pdfFile);
+}
+
+// — Mostrar resultado ——————————————————————————————————————————
+function pdfMostrarResultado(res, cuenta, mes, anio) {
+  document.getElementById('pdf-step2').style.display='none';
+  document.getElementById('pdf-step3').style.display='block';
+
+  var meta = document.getElementById('pdf-res-meta');
+  if(meta) meta.textContent = (res.banco||cuenta.toUpperCase()) + ' · ' + PDF_MESES_ES[mes] + ' ' + anio + ' · ' + (res.movimientos||[]).length + ' movimientos';
+
+  // Cards resumen
+  var cards = document.getElementById('pdf-res-cards');
+  if(cards) {
+    var fmtP = function(n){ return '$' + (Math.round(n||0)).toLocaleString('es-CO'); };
+    cards.innerHTML =
+      '<div style="background:#EBF3FB;border-radius:8px;padding:8px 12px;flex:1;min-width:120px;">'+
+        '<div style="font-size:10px;color:#0C447C;font-weight:700;">APERTURA</div>'+
+        '<div style="font-size:13px;font-weight:700;color:#5DC3DA;">'+fmtP(res.saldo_apertura)+'</div>'+
+      '</div>'+
+      '<div style="background:#F0FFF4;border-radius:8px;padding:8px 12px;flex:1;min-width:120px;">'+
+        '<div style="font-size:10px;color:#2E7D32;font-weight:700;">ABONOS</div>'+
+        '<div style="font-size:13px;font-weight:700;color:#2E7D32;">+'+fmtP(res.total_abonos)+'</div>'+
+      '</div>'+
+      '<div style="background:#FFF1F2;border-radius:8px;padding:8px 12px;flex:1;min-width:120px;">'+
+        '<div style="font-size:10px;color:#A32D2D;font-weight:700;">CARGOS</div>'+
+        '<div style="font-size:13px;font-weight:700;color:#A32D2D;">-'+fmtP(res.total_cargos)+'</div>'+
+      '</div>'+
+      '<div style="background:#F5F4F2;border-radius:8px;padding:8px 12px;flex:1;min-width:120px;">'+
+        '<div style="font-size:10px;color:#54504F;font-weight:700;">CIERRE</div>'+
+        '<div style="font-size:13px;font-weight:700;color:#54504F;">'+fmtP(res.saldo_cierre)+'</div>'+
+      '</div>';
+  }
+
+  // Tabla de movimientos
+  var label = document.getElementById('pdf-movs-label');
+  if(label) label.textContent = (res.movimientos||[]).length + ' movimientos detectados (previsualización):';
+
+  var tbody = document.getElementById('pdf-movs-tbody');
+  if(tbody){
+    tbody.innerHTML = '';
+    var movs = res.movimientos || [];
+    var fmtN = function(n){ return n ? '$'+(Math.abs(Math.round(n))).toLocaleString('es-CO') : '—'; };
+    var tipoColors = {impto:'#A32D2D',ingreso:'#2E7D32',egreso:'#A32D2D',comision:'#B45309',transf:'#5DC3DA',fondo:'#7C3AED',interno:'#888',interes:'#2E7D32',otro:'#aaa'};
+    movs.forEach(function(mv){
+      var tr = document.createElement('tr');
+      tr.style.borderBottom = '1px solid #f5f5f5';
+      var esAbono = (mv.v||0) > 0;
+      tr.innerHTML =
+        '<td style="padding:5px 10px;color:#666;">'+escapeHtml(mv.f||'')+'</td>'+
+        '<td style="padding:5px 10px;color:#333;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+escapeHtml(mv.d||'')+'">'+escapeHtml((mv.d||'').substring(0,45))+'</td>'+
+        '<td style="padding:5px 10px;text-align:right;color:#2E7D32;">'+(esAbono?fmtN(mv.v):'—')+'</td>'+
+        '<td style="padding:5px 10px;text-align:right;color:#A32D2D;">'+(!esAbono?fmtN(mv.v):'—')+'</td>'+
+        '<td style="padding:5px 10px;text-align:center;"><span style="font-size:10px;padding:2px 7px;border-radius:10px;background:'+(tipoColors[mv.t]||'#aaa')+'22;color:'+(tipoColors[mv.t]||'#aaa')+';font-weight:700;">'+escapeHtml(mv.t||'otro')+'</span></td>';
+      tbody.appendChild(tr);
+    });
+  }
+}
+
+function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// — Integrar al tablero ————————————————————————————————————————
+function pdfAceptar() {
+  if(!_pdfResultado) return;
+  var res    = _pdfResultado;
+  var cuenta = res._cuenta;
+  var mes    = res._mes;
+  var anio   = res._anio;
+  var label  = PDF_MESES_ES[mes] + ' ' + anio;
+
+  // Build normalized movs array
+  var movs = (res.movimientos||[]).map(function(mv){
+    return {f:mv.f||'', d:mv.d||'', v:Number(mv.v||0), t:mv.t||'otro'};
+  });
+
+  // Check if this period already exists in P[]
+  var existIdx = -1;
+  if(typeof P !== 'undefined'){
+    P.forEach(function(per,i){
+      var lbl = per.label||'';
+      if(lbl.indexOf(PDF_MESES_ES[mes])>=0 && lbl.indexOf(String(anio))>=0) existIdx=i;
+    });
+  }
+
+  if(cuenta === 'bcol') {
+    // Bancolombia Ahorros — create or update P entry
+    if(typeof P !== 'undefined'){
+      if(existIdx >= 0){
+        // Update existing period
+        P[existIdx].movs = movs;
+        P[existIdx].sA   = Number(res.saldo_apertura||0);
+        P[existIdx].tAb  = Number(res.total_abonos||0);
+        P[existIdx].tCar = Number(res.total_cargos||0);
+        P[existIdx].sF   = Number(res.saldo_cierre||0);
+        pdfShowToast('✅ Periodo "'+label+'" actualizado (Bancolombia Ahorros)');
+      } else {
+        // Add new period
+        var newPer = {
+          label: label,
+          desde: anio+'/'+(mes<10?'0':'')+mes+'/01',
+          hasta: anio+'/'+(mes<10?'0':'')+mes+'/28',
+          sA: Number(res.saldo_apertura||0),
+          tAb: Number(res.total_abonos||0),
+          tCar: Number(res.total_cargos||0),
+          sF: Number(res.saldo_cierre||0),
+          movs: movs,
+          fid:{sA:0,sF:0,adiciones:0,retiros:0,rendNetos:0,retencion:0,movs:[]},
+          caja:{sA:0,tCred:0,tDeb:0,sF:0,movs:[]},
+          bold:{sA:0,sF:0,tAb:0,tCar:0,intereses:0,movs:[]}
+        };
+        P.push(newPer);
+        pdfAddPeriodOption(label);
+        pdfShowToast('✅ Nuevo periodo "'+label+'" agregado (Bancolombia Ahorros)');
+      }
+    }
+  } else if(cuenta==='fid' || cuenta==='bcs' || cuenta==='bold'){
+    // Sub-account — update within existing P entry
+    if(typeof P !== 'undefined'){
+      var target = existIdx >= 0 ? P[existIdx] : null;
+      if(!target){
+        // Create minimal P entry for this period
+        target = {
+          label:label, desde:'', hasta:'',
+          sA:0,tAb:0,tCar:0,sF:0, movs:[],
+          fid:{sA:0,sF:0,adiciones:0,retiros:0,rendNetos:0,retencion:0,movs:[]},
+          caja:{sA:0,tCred:0,tDeb:0,sF:0,movs:[]},
+          bold:{sA:0,sF:0,tAb:0,tCar:0,intereses:0,movs:[]}
+        };
+        P.push(target);
+        pdfAddPeriodOption(label);
+      }
+      if(cuenta==='fid'){
+        target.fid.movs=movs; target.fid.sA=Number(res.saldo_apertura||0); target.fid.sF=Number(res.saldo_cierre||0);
+        target.fid.adiciones=Number(res.total_abonos||0); target.fid.retiros=Number(res.total_cargos||0);
+      } else if(cuenta==='bcs'){
+        target.caja.movs=movs; target.caja.sA=Number(res.saldo_apertura||0); target.caja.sF=Number(res.saldo_cierre||0);
+        target.caja.tCred=Number(res.total_abonos||0); target.caja.tDeb=-Number(res.total_cargos||0);
+      } else {
+        target.bold.movs=movs; target.bold.sA=Number(res.saldo_apertura||0); target.bold.sF=Number(res.saldo_cierre||0);
+        target.bold.tAb=Number(res.total_abonos||0); target.bold.tCar=-Number(res.total_cargos||0);
+      }
+      var nombres = {fid:'Fiducuenta',bcs:'Caja Social',bold:'Bold CF'};
+      pdfShowToast('✅ "'+label+'" actualizado ('+nombres[cuenta]+')');
+    }
+  }
+
+  pdfUploadClose();
+  // Refresh conciliation
+  try { renderConc(); } catch(e){}
+}
+
+function pdfAddPeriodOption(label) {
+  var sel = document.getElementById('sel-periodo');
+  if(!sel) return;
+  var idx = (typeof P !== 'undefined') ? P.length - 1 : sel.options.length;
+  var opt = document.createElement('option');
+  opt.value = String(idx);
+  opt.textContent = label;
+  opt.selected = true;
+  sel.appendChild(opt);
+}
+
+function pdfRechazar() { pdfReset(); }
+
+function pdfShowError(msg) {
+  document.getElementById('pdf-step2').style.display='none';
+  document.getElementById('pdf-step4').style.display='block';
+  var el = document.getElementById('pdf-error-txt');
+  if(el) el.textContent = msg;
+}
+
+function pdfShowToast(msg) {
+  var toast = document.createElement('div');
+  toast.textContent = msg;
+  toast.style.cssText = 'position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#2E7D32;color:#fff;padding:10px 22px;border-radius:10px;font-size:13px;font-weight:700;z-index:99999;box-shadow:0 4px 20px rgba(0,0,0,.2);';
+  document.body.appendChild(toast);
+  setTimeout(function(){ toast.style.opacity='0'; toast.style.transition='opacity .4s'; setTimeout(function(){toast.remove();},500); }, 3000);
+}
+
+// Close modal on backdrop click
+document.getElementById('pdf-modal').addEventListener('click', function(e){
+  if(e.target === this) pdfUploadClose();
+});
+</script>
+
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     MÓDULO: Carga PDF Factura con IA
+     ═══════════════════════════════════════════════════════════ -->
+<div id="fact-pdf-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9100;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;width:min(580px,95vw);max-height:88vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.25);padding:26px 26px 22px;">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:#54504F;">📄 Cargar Factura PDF</div>
+        <div style="font-size:11px;color:#aaa;margin-top:2px;">Claude IA extrae los datos automáticamente</div>
+      </div>
+      <button onclick="factPdfClose()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#999;">✕</button>
+    </div>
+
+    <!-- Step 1: Drop zone -->
+    <div id="fpdf-step1">
+      <div id="fpdf-drop"
+        onclick="document.getElementById('fpdf-input').click()"
+        ondragover="event.preventDefault();this.style.background='#EBF3FB';"
+        ondragleave="this.style.background='#fafafa';"
+        ondrop="fpdfDrop(event)"
+        style="border:2px dashed #5DC3DA;border-radius:10px;padding:28px;text-align:center;cursor:pointer;background:#fafafa;">
+        <div style="font-size:32px;margin-bottom:8px;">📄</div>
+        <div style="font-size:13px;color:#555;font-weight:600;">Arrastra o selecciona la factura PDF</div>
+        <div style="font-size:11px;color:#aaa;margin-top:4px;">Factura electrónica DIAN o cualquier formato</div>
+      </div>
+      <input type="file" id="fpdf-input" accept=".pdf" style="display:none;" onchange="fpdfSelected(this)">
+      <div id="fpdf-fname" style="font-size:11px;color:#2E7D32;margin-top:8px;font-weight:700;min-height:16px;"></div>
+
+      <button onclick="fpdfAnalizar()" id="fpdf-btn-go"
+        style="width:100%;margin-top:14px;padding:11px;background:#2E7D32;color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;opacity:.45;" disabled>
+        🤖 Extraer datos con IA
+      </button>
+    </div>
+
+    <!-- Step 2: Processing -->
+    <div id="fpdf-step2" style="display:none;text-align:center;padding:28px 0;">
+      <div style="font-size:38px;margin-bottom:10px;">⏳</div>
+      <div style="font-size:13px;font-weight:700;color:#54504F;" id="fpdf-status">Leyendo factura...</div>
+      <div style="margin-top:14px;height:4px;background:#eee;border-radius:2px;">
+        <div id="fpdf-bar" style="height:100%;background:#2E7D32;width:0%;transition:width .5s;border-radius:2px;"></div>
+      </div>
+    </div>
+
+    <!-- Step 3: Preview & confirm -->
+    <div id="fpdf-step3" style="display:none;">
+      <div id="fpdf-dup-alert" style="display:none;background:#FFF3CD;border:1.5px solid #B45309;border-radius:9px;padding:10px 14px;margin-bottom:12px;">
+        <div style="font-size:13px;font-weight:700;color:#B45309;">⚠️ Esta factura ya existe en el tablero</div>
+        <div style="font-size:11px;color:#7A4F00;margin-top:3px;" id="fpdf-dup-detail"></div>
+      </div>
+      <div id="fpdf-ok-header" style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+        <div style="font-size:20px;">✅</div>
+        <div style="font-size:13px;font-weight:700;color:#2E7D32;">Factura extraída correctamente</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;" id="fpdf-preview"></div>
+      <div style="display:flex;gap:8px;margin-top:4px;">
+        <button onclick="fpdfReset()" style="flex:1;padding:10px;background:#fff;color:#A32D2D;border:1.5px solid #A32D2D;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">✕ Descartar</button>
+        <button onclick="fpdfAceptar()" style="flex:2;padding:10px;background:#2E7D32;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">✓ Agregar al tablero</button>
+      </div>
+    </div>
+
+    <!-- Step 4: Error -->
+    <div id="fpdf-step4" style="display:none;text-align:center;padding:20px 0;">
+      <div style="font-size:34px;margin-bottom:8px;">⚠️</div>
+      <div style="font-size:12px;color:#A32D2D;font-weight:700;" id="fpdf-errtxt"></div>
+      <button onclick="fpdfReset()" style="margin-top:12px;padding:8px 22px;background:#5DC3DA;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">Intentar de nuevo</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── PDF Factura IA ──────────────────────────────────────────────────────────
+var _fpdfFile = null, _fpdfData = null;
+
+function factPdfUploadOpen() {
+  fpdfReset();
+  document.getElementById('fact-pdf-modal').style.display='flex';
+}
+function factPdfClose() {
+  document.getElementById('fact-pdf-modal').style.display='none';
+}
+function fpdfStep(n) {
+  [1,2,3,4].forEach(function(i){
+    var el=document.getElementById('fpdf-step'+i);
+    if(el) el.style.display=(i===n?'block':'none');
+  });
+}
+function fpdfReset() {
+  _fpdfFile=null; _fpdfData=null;
+  fpdfStep(1);
+  var fn=document.getElementById('fpdf-fname'); if(fn) fn.textContent='';
+  var btn=document.getElementById('fpdf-btn-go'); if(btn){btn.disabled=true;btn.style.opacity='.45';}
+  var inp=document.getElementById('fpdf-input'); if(inp) inp.value='';
+}
+function fpdfDrop(e) {
+  e.preventDefault();
+  document.getElementById('fpdf-drop').style.background='#fafafa';
+  var f=e.dataTransfer.files[0];
+  if(f&&f.type==='application/pdf'){_fpdfFile=f;fpdfShowName(f.name);}
+  else alert('Selecciona un PDF');
+}
+function fpdfSelected(inp) {
+  if(inp.files&&inp.files[0]){_fpdfFile=inp.files[0];fpdfShowName(_fpdfFile.name);}
+}
+function fpdfShowName(n) {
+  var el=document.getElementById('fpdf-fname'); if(el) el.textContent='✓ '+n;
+  var btn=document.getElementById('fpdf-btn-go'); if(btn){btn.disabled=false;btn.style.opacity='1';}
+}
+
+function fpdfAnalizar() {
+  if(!_fpdfFile) return;
+  fpdfStep(2);
+  var bar=document.getElementById('fpdf-bar');
+  var st=document.getElementById('fpdf-status');
+  var prog=0, msgs=['Leyendo factura...','Identificando campos...','Extrayendo montos...','Validando datos...'];
+  var mi=0;
+  var pi=setInterval(function(){prog=Math.min(prog+(prog<70?4:0.5),90);if(bar)bar.style.width=prog+'%';},400);
+  var si=setInterval(function(){mi=Math.min(mi+1,msgs.length-1);if(st)st.textContent=msgs[mi];},4000);
+
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var b64=e.target.result.split(',')[1];
+    var prompt=`Eres un asistente contable colombiano. Extrae los datos de esta factura electrónica.
+Responde ÚNICAMENTE con JSON válido sin markdown, con esta estructura exacta:
+{
+  "num": "número de factura (ej: FEE2292)",
+  "fecha": "YYYY-MM-DD",
+  "vence": "YYYY-MM-DD (fecha vencimiento o +60 días si no aparece)",
+  "cliente": "razón social del cliente",
+  "nit": "NIT del cliente",
+  "descripcion": "concepto de la factura",
+  "bruto": número sin IVA,
+  "iva": valor IVA,
+  "retefuente": valor retención en la fuente (0 si no aplica),
+  "reteiva": valor reteIVA (0 si no aplica),
+  "total": valor total a pagar,
+  "estado": "Pendiente"
+}`;
+
+    fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:800,
+        messages:[{role:'user',content:[
+          {type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},
+          {type:'text',text:prompt}
+        ]}]
+      })
+    })
+    .then(function(r){return r.json();})
+    .then(function(d){
+      clearInterval(pi);clearInterval(si);
+      if(bar)bar.style.width='100%';
+      var txt='';
+      (d.content||[]).forEach(function(b){if(b.type==='text')txt+=b.text;});
+      txt=txt.replace(/```json\s*/gi,'').replace(/```/g,'').trim();
+      var obj;
+      try{obj=JSON.parse(txt);}catch(ex){
+        var m=txt.match(/\{[\s\S]*\}/);
+        if(m)try{obj=JSON.parse(m[0]);}catch(ex2){obj=null;}
+      }
+      if(!obj||!obj.num){fpdfShowErr('No se pudo leer la factura: '+txt.substring(0,200));return;}
+      _fpdfData=obj;
+      fpdfMostrar(obj);
+    })
+    .catch(function(err){clearInterval(pi);clearInterval(si);fpdfShowErr('Error: '+err.message);});
+  };
+  reader.readAsDataURL(_fpdfFile);
+}
+
+function fpdfMostrar(d) {
+  fpdfStep(3);
+  // Show duplicate warning inside modal
+  var dupAlert  = document.getElementById('fpdf-dup-alert');
+  var dupDetail = document.getElementById('fpdf-dup-detail');
+  var okHeader  = document.getElementById('fpdf-ok-header');
+  var btnAgregar = document.querySelector('#fpdf-step3 button[onclick="fpdfAceptar()"]');
+  if (d.num && factNumExiste(d.num)) {
+    var existing = FACTURAS.find(function(f){ return (f.num||'').toUpperCase()===(d.num||'').toUpperCase(); });
+    if(dupAlert) dupAlert.style.display='block';
+    if(okHeader) okHeader.style.display='none';
+    if(dupDetail) dupDetail.textContent = 'N° '+d.num+' ya fue registrada'+(existing?' — '+existing.cliente+' · '+existing.fecha:'');
+    if(btnAgregar){ btnAgregar.disabled=true; btnAgregar.style.opacity='0.4'; btnAgregar.textContent='Ya existe en el tablero'; }
+  } else {
+    if(dupAlert) dupAlert.style.display='none';
+    if(okHeader) okHeader.style.display='flex';
+    if(btnAgregar){ btnAgregar.disabled=false; btnAgregar.style.opacity='1'; btnAgregar.textContent='✓ Agregar al tablero'; }
+  }
+  var fmtM=function(n){return n?'$'+(Math.round(n||0)).toLocaleString('es-CO'):'—';};
+  var fields=[
+    ['N° Factura',d.num],['Fecha',d.fecha],['Vencimiento',d.vence],
+    ['Cliente',d.cliente],['NIT',d.nit],
+    ['Bruto',fmtM(d.bruto)],['IVA',fmtM(d.iva)],
+    ['Retefuente',fmtM(d.retefuente)],['ReteIVA',fmtM(d.reteiva)],
+    ['Total',fmtM(d.total)]
+  ];
+  var html='';
+  fields.forEach(function(f){
+    html+='<div style="background:#f8f8f8;border-radius:7px;padding:8px 10px;">'
+      +'<div style="font-size:9px;font-weight:700;color:#aaa;text-transform:uppercase;">'+f[0]+'</div>'
+      +'<div style="font-size:12px;font-weight:700;color:#333;margin-top:2px;">'+escapeHtml(String(f[1]||'—'))+'</div>'
+      +'</div>';
+  });
+  var el=document.getElementById('fpdf-preview'); if(el) el.innerHTML=html;
+}
+
+function fpdfAceptar() {
+  if(!_fpdfData) return;
+  var d=_fpdfData;
+  var nueva={
+    id:'pdf_'+Date.now(), num:d.num, cliente:d.cliente||'Sin cliente', nit:d.nit||'',
+    ciudad:'',tel:'', fecha:d.fecha, vence:d.vence,
+    descripcion:d.descripcion||'', oc:'', observacion:'',
+    bruto:Number(d.bruto||0), iva:Number(d.iva||0),
+    retefuente:Number(d.retefuente||0), reteiva:Number(d.reteiva||0),
+    total:Number(d.total||0), pagada:false, fecha_pago:null
+  };
+  nueva.estado = typeof estadoFact==='function' ? estadoFact(nueva) : 'Pendiente';
+  if (factNumExiste(nueva.num)) {
+    factPdfClose();
+    if(typeof mostrarToast==='function') mostrarToast('⚠️ La factura ' + nueva.num + ' ya existe en el tablero. No se duplicó.', '#B45309');
+    return;
+  }
+  FACTURAS.push(nueva);
+  try { localStorage.setItem(LS_FACTURAS, JSON.stringify(FACTURAS)); } catch(e){}
+  if(typeof actualizarTodo==='function') actualizarTodo();
+  factPdfClose();
+  if(typeof mostrarToast==='function') mostrarToast('✅ Factura '+nueva.num+' agregada al tablero');
+  // Refresh flujo de caja
+  if(typeof fcRender==='function') setTimeout(fcRender,200);
+}
+
+function fpdfShowErr(msg){fpdfStep(4);var el=document.getElementById('fpdf-errtxt');if(el)el.textContent=msg;}
+document.getElementById('fact-pdf-modal').addEventListener('click',function(e){if(e.target===this)factPdfClose();});
+</script>
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     MÓDULO: Flujo de Caja Mensual (pestaña Presupuesto)
+     ═══════════════════════════════════════════════════════════ -->
+<script>
+// ── Flujo de Caja — lee FACTURAS en tiempo real ─────────────────────────────
+var FC_MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+var FC_MESES_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+function fcRender() {
+  var el = document.getElementById('fc-container');
+  if(!el) return;
+
+  var facts = (typeof FACTURAS !== 'undefined') ? FACTURAS : [];
+  if(!facts.length){ el.innerHTML='<div style="color:#aaa;font-size:12px;padding:16px;">Carga facturas en la pestaña 🏠 Tablero para ver el flujo de caja.</div>'; return; }
+
+  var anio = new Date().getFullYear();
+
+  // Build month buckets
+  var buckets = {}; // m (0-11) → {pagado:[], pendiente:[], vencido:[]}
+  for(var m=0;m<12;m++) buckets[m]={pagado:[],pendiente:[],vencido:[]};
+
+  facts.forEach(function(f){
+    var fechaRef = f.pagada && f.fecha_pago ? f.fecha_pago : (f.vence || f.fecha);
+    if(!fechaRef) return;
+    var d = new Date(fechaRef);
+    if(d.getFullYear()!==anio) return;
+    var m = d.getMonth();
+    var cat = f.pagada ? 'pagado' : (new Date(f.vence||f.fecha)<new Date() ? 'vencido' : 'pendiente');
+    buckets[m][cat].push(f);
+  });
+
+  var totalPagado=0, totalPend=0, totalVenc=0;
+  for(var m=0;m<12;m++){
+    buckets[m].pagado.forEach(function(f){totalPagado+=f.total||0;});
+    buckets[m].pendiente.forEach(function(f){totalPend+=f.total||0;});
+    buckets[m].vencido.forEach(function(f){totalVenc+=f.total||0;});
+  }
+
+  var fmtM = function(n){ return n?'$'+(Math.round(n)).toLocaleString('es-CO'):'—'; };
+  var hoy = new Date();
+  var mesActual = hoy.getMonth();
+
+  // ── KPI cards ──
+  var html = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">'
+    +'<div style="background:#F0FFF4;border-radius:9px;padding:10px 14px;flex:1;min-width:130px;border:1px solid #bbf7d0;">'
+      +'<div style="font-size:10px;font-weight:700;color:#2E7D32;">✅ RECAUDADO '+anio+'</div>'
+      +'<div style="font-size:16px;font-weight:700;color:#2E7D32;margin-top:3px;">'+fmtM(totalPagado)+'</div>'
+    +'</div>'
+    +'<div style="background:#FFF7ED;border-radius:9px;padding:10px 14px;flex:1;min-width:130px;border:1px solid #fed7aa;">'
+      +'<div style="font-size:10px;font-weight:700;color:#B45309;">⏳ POR RECAUDAR</div>'
+      +'<div style="font-size:16px;font-weight:700;color:#B45309;margin-top:3px;">'+fmtM(totalPend)+'</div>'
+    +'</div>'
+    +(totalVenc?'<div style="background:#FFF1F2;border-radius:9px;padding:10px 14px;flex:1;min-width:130px;border:1px solid #fecdd3;">'
+      +'<div style="font-size:10px;font-weight:700;color:#A32D2D;">🔴 VENCIDO</div>'
+      +'<div style="font-size:16px;font-weight:700;color:#A32D2D;margin-top:3px;">'+fmtM(totalVenc)+'</div>'
+    +'</div>':'')
+    +'<div style="background:#EBF3FB;border-radius:9px;padding:10px 14px;flex:1;min-width:130px;border:1px solid #bfdbfe;">'
+      +'<div style="font-size:10px;font-weight:700;color:#0C447C;">📊 TOTAL FACTURADO</div>'
+      +'<div style="font-size:16px;font-weight:700;color:#0C447C;margin-top:3px;">'+fmtM(totalPagado+totalPend+totalVenc)+'</div>'
+    +'</div>'
+    +'</div>';
+
+  // ── Month grid ──
+  html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:11px;">';
+  html += '<thead><tr style="background:#EBF3FB;">'
+    +'<th style="padding:7px 10px;text-align:left;font-weight:700;color:#0C447C;border-bottom:2px solid #5DC3DA;white-space:nowrap;">Mes</th>'
+    +'<th style="padding:7px 10px;text-align:right;font-weight:700;color:#2E7D32;border-bottom:2px solid #5DC3DA;">✅ Recaudado</th>'
+    +'<th style="padding:7px 10px;text-align:right;font-weight:700;color:#B45309;border-bottom:2px solid #5DC3DA;">⏳ Por cobrar</th>'
+    +'<th style="padding:7px 10px;text-align:right;font-weight:700;color:#A32D2D;border-bottom:2px solid #5DC3DA;">🔴 Vencido</th>'
+    +'<th style="padding:7px 10px;text-align:right;font-weight:700;color:#0C447C;border-bottom:2px solid #5DC3DA;">Total mes</th>'
+    +'<th style="padding:7px 10px;text-align:left;font-weight:700;color:#555;border-bottom:2px solid #5DC3DA;">Facturas</th>'
+    +'</tr></thead><tbody>';
+
+  var acum = 0;
+  for(var m=0;m<12;m++){
+    var pg = buckets[m].pagado.reduce(function(a,f){return a+(f.total||0);},0);
+    var pe = buckets[m].pendiente.reduce(function(a,f){return a+(f.total||0);},0);
+    var vn = buckets[m].vencido.reduce(function(a,f){return a+(f.total||0);},0);
+    var tot = pg+pe+vn;
+    if(tot===0 && m > mesActual+1) continue; // skip empty future months
+    acum += pg;
+    var esMes = m===mesActual;
+    var rowBg = esMes ? '#FFFBEB' : (m<mesActual?'#fafffe':'#fff');
+    var allFacts = buckets[m].pagado.concat(buckets[m].pendiente).concat(buckets[m].vencido);
+    var factTags = allFacts.slice(0,4).map(function(f){
+      var col = f.pagada?'#2E7D32':(new Date(f.vence||f.fecha)<new Date()?'#A32D2D':'#B45309');
+      var cli  = escapeHtml((f.cliente||'').length>30?(f.cliente||'').substring(0,30)+'…':f.cliente||'');
+      var desc = escapeHtml((f.descripcion||'').length>55?(f.descripcion||'').substring(0,55)+'…':f.descripcion||'');
+      var fmtV = '$'+(Math.round(f.total||0)).toLocaleString('es-CO');
+      var tip  = cli+(desc?'&#10;'+desc:'')+'&#10;'+fmtV+(f.vence?'&#10;Vence: '+f.vence:'');
+      return '<span title="'+tip+'" style="display:inline-block;background:'+col+'18;color:'+col+';border-radius:4px;padding:2px 7px;margin:1px;font-size:9px;font-weight:700;cursor:default;border:1px solid '+col+'33;">'+escapeHtml(f.num||'')+'</span>';
+    }).join('')+(allFacts.length>4?'<span style="color:#aaa;font-size:9px;"> +'+(allFacts.length-4)+' más</span>':'');
+
+    html += '<tr style="background:'+rowBg+';border-bottom:1px solid #f0eeec;"'+(esMes?' class="fc-mes-actual"':'')+'>'
+      +'<td style="padding:7px 10px;font-weight:'+(esMes?'700':'500')+';color:#333;white-space:nowrap;">'
+        +(esMes?'▶ ':'')+'<strong>'+FC_MESES_FULL[m]+'</strong></td>'
+      +'<td style="padding:7px 10px;text-align:right;font-weight:700;color:#2E7D32;">'+(pg?fmtM(pg):'—')+'</td>'
+      +'<td style="padding:7px 10px;text-align:right;font-weight:700;color:#B45309;">'+(pe?fmtM(pe):'—')+'</td>'
+      +'<td style="padding:7px 10px;text-align:right;font-weight:700;color:#A32D2D;">'+(vn?fmtM(vn):'—')+'</td>'
+      +'<td style="padding:7px 10px;text-align:right;font-weight:700;color:#0C447C;">'+(tot?fmtM(tot):'—')+'</td>'
+      +'<td style="padding:7px 10px;">'+factTags+'</td>'
+      +'</tr>';
+  }
+
+  // Totals row
+  html += '<tr style="background:#EBF3FB;font-weight:700;">'
+    +'<td style="padding:8px 10px;color:#0C447C;">TOTAL '+anio+'</td>'
+    +'<td style="padding:8px 10px;text-align:right;color:#2E7D32;">'+fmtM(totalPagado)+'</td>'
+    +'<td style="padding:8px 10px;text-align:right;color:#B45309;">'+fmtM(totalPend)+'</td>'
+    +'<td style="padding:8px 10px;text-align:right;color:#A32D2D;">'+fmtM(totalVenc)+'</td>'
+    +'<td style="padding:8px 10px;text-align:right;color:#0C447C;font-size:13px;">'+fmtM(totalPagado+totalPend+totalVenc)+'</td>'
+    +'<td></td></tr>';
+
+  html += '</tbody></table></div>';
+
+  // ── Detalle por cliente ──
+  var byCliente={};
+  facts.forEach(function(f){
+    var d=new Date(f.pagada&&f.fecha_pago?f.fecha_pago:(f.vence||f.fecha));
+    if(d.getFullYear()!==anio) return;
+    var c=f.cliente||'Sin cliente';
+    if(!byCliente[c]) byCliente[c]={pg:0,pe:0,tot:0};
+    if(f.pagada) byCliente[c].pg+=f.total||0;
+    else byCliente[c].pe+=f.total||0;
+    byCliente[c].tot+=(f.total||0);
+  });
+  var clientes=Object.keys(byCliente).sort(function(a,b){return byCliente[b].tot-byCliente[a].tot;});
+  if(clientes.length){
+    html+='<div style="margin-top:14px;">'
+      +'<div style="font-size:11px;font-weight:700;color:#555;margin-bottom:8px;">📊 Por cliente</div>'
+      +'<div style="display:flex;gap:7px;flex-wrap:wrap;">';
+    clientes.forEach(function(c){
+      var d=byCliente[c];
+      var pct=d.tot?Math.round(d.pg/d.tot*100):0;
+      html+='<div style="background:#f8f8f8;border-radius:8px;padding:8px 12px;min-width:150px;flex:1;border:1px solid #eee;">'
+        +'<div style="font-size:9px;font-weight:700;color:#888;">'+escapeHtml(c)+'</div>'
+        +'<div style="font-size:13px;font-weight:700;color:#333;margin:2px 0;">'+fmtM(d.tot)+'</div>'
+        +'<div style="height:4px;background:#eee;border-radius:2px;margin-bottom:3px;">'
+          +'<div style="height:100%;width:'+pct+'%;background:#2E7D32;border-radius:2px;"></div>'
+        +'</div>'
+        +'<div style="font-size:9px;color:#888;">Rec: '+fmtM(d.pg)+' · Pend: '+fmtM(d.pe)+'</div>'
+        +'</div>';
+    });
+    html+='</div></div>';
+  }
+
+  el.innerHTML = html;
+}
+
+// Hook: refresh flujo on tab switch and on data change
+document.addEventListener('DOMContentLoaded', function(){
+  // Patch tabPres to refresh flujo
+  var _origTabPres = window.tabPres;
+  window.tabPres = function(){
+    if(_origTabPres) _origTabPres.apply(this,arguments);
+    setTimeout(function(){ try{pfRender();}catch(e){} try{fcRender();}catch(e){} },80);
+  };
+});
+</script>
+
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  FACTURACIÓN PROGRAMADA — Motor
+// ══════════════════════════════════════════════════════════════
+var FP_MESES_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                     'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+var FP_ESTADOS = ['Programada','Enviada al cliente','Aprobada','Facturada'];
+var FP_COLORES = {
+  'Programada':        '#7C3AED',
+  'Enviada al cliente':'#0C447C',
+  'Aprobada':          '#2E7D32',
+  'Facturada':         '#5DC3DA'
+};
+
+function fpLoad() {
+  try {
+    var raw = localStorage.getItem('alzak_fp2026');
+    if (raw) { var d=JSON.parse(raw); if(d&&d.length) return d; }
+  } catch(e){}
+  return [];
+}
+function fpSave(data) {
+  try { localStorage.setItem('alzak_fp2026', JSON.stringify(data)); } catch(e){}
+}
+function fpFmt(n) { return '$'+(Math.round(n||0)).toLocaleString('es-CO'); }
+function fpEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+function fpRender() {
+  var data  = fpLoad();
+  var tbody = document.getElementById('fp-tbody');
+  var tfoot = document.getElementById('fp-tfoot');
+  var total = document.getElementById('fp-total');
+  if(!tbody) return;
+
+  tbody.innerHTML = '';
+  var clienteOpts = (typeof PF_CLIENTES !== 'undefined' ? PF_CLIENTES : [
+    'ABBVIE','ALZAK FOUNDATION','BAYER','BIIB','SURA','JANSSEN','MERCK',
+    'MSD','MSD VSR','VAXTHERA','NOVARTIS','NOVO NORDISK','PFIZER','SANOFI',
+    'SERVIER','AMGEN','ADIUM','GRUNENTHAL','ROCHE','ASTRAZENECA'
+  ]);
+
+  data.forEach(function(row, i) {
+    var tr  = document.createElement('tr');
+    tr.style.borderBottom = '1px solid #f0eeec';
+    tr.style.background   = i%2===0?'#fff':'#FDFAFF';
+    var eCol = FP_COLORES[row.estado] || '#888';
+
+    // N° programada
+    var td1 = document.createElement('td'); td1.style.padding='5px 8px';
+    td1.innerHTML = '<input value="'+fpEsc(row.num||'')+'" placeholder="FEE-PROG-001"'
+      +' onblur="fpEdit('+i+',\'num\',this.value)"'
+      +' style="border:1px solid #ddd;border-radius:5px;padding:3px 7px;font-size:11px;width:110px;">';
+    tr.appendChild(td1);
+
+    // Cliente
+    var td2 = document.createElement('td'); td2.style.padding='5px 8px';
+    var cliOpts = clienteOpts.map(function(c){
+      return '<option value="'+fpEsc(c)+'"'+(c===row.cliente?' selected':'')+'>'+c+'</option>';
+    }).join('');
+    var isOtro = clienteOpts.indexOf(row.cliente) < 0 && row.cliente;
+    cliOpts += '<option value="__otro__"'+(isOtro?' selected':'')+'>✏️ Otro...</option>';
+    td2.innerHTML = '<div style="display:flex;gap:3px;">'
+      +'<select id="fpsel-'+i+'" onchange="fpSelCli('+i+',this)"'
+      +' style="border:1px solid #ddd;border-radius:5px;padding:3px 5px;font-size:11px;max-width:130px;">'+cliOpts+'</select>'
+      +'<input id="fpinp-'+i+'" value="'+(isOtro?fpEsc(row.cliente):'')+'" placeholder="Otro cliente"'
+      +' onblur="fpEdit('+i+',\'cliente\',this.value)"'
+      +' style="display:'+(isOtro?'inline-block':'none')+';border:1px solid #7C3AED;border-radius:5px;padding:3px 5px;font-size:11px;width:90px;">'
+      +'</div>';
+    tr.appendChild(td2);
+
+    // Concepto
+    var td3 = document.createElement('td'); td3.style.padding='5px 8px';
+    td3.innerHTML = '<input value="'+fpEsc(row.concepto||'')+'" placeholder="Descripción del servicio"'
+      +' onblur="fpEdit('+i+',\'concepto\',this.value)"'
+      +' style="border:1px solid #ddd;border-radius:5px;padding:3px 7px;font-size:11px;width:190px;">';
+    tr.appendChild(td3);
+
+    // Valor
+    var td4 = document.createElement('td'); td4.style.cssText='padding:5px 8px;text-align:right;';
+    td4.innerHTML = '<input type="number" value="'+(row.valor||0)+'"'
+      +' onblur="fpEdit('+i+',\'valor\',+this.value)"'
+      +' style="border:1px solid #ddd;border-radius:5px;padding:3px 7px;font-size:11px;width:110px;text-align:right;">';
+    tr.appendChild(td4);
+
+    // Mes
+    var td5 = document.createElement('td'); td5.style.cssText='padding:5px 8px;text-align:center;';
+    td5.innerHTML = '<select onchange="fpEdit('+i+',\'mes\',+this.value)"'
+      +' style="border:1px solid #ddd;border-radius:5px;padding:3px 5px;font-size:11px;">'
+      +FP_MESES_FULL.map(function(m,mi){
+        return '<option value="'+(mi+1)+'"'+(row.mes===(mi+1)?' selected':'')+'>'+m+'</option>';
+      }).join('')+'</select>';
+    tr.appendChild(td5);
+
+    // Estado
+    var td6 = document.createElement('td'); td6.style.cssText='padding:5px 8px;text-align:center;';
+    td6.innerHTML = '<select onchange="fpEdit('+i+',\'estado\',this.value)"'
+      +' style="border:1px solid #ddd;border-radius:5px;padding:3px 5px;font-size:10px;font-weight:700;color:'+eCol+';">'
+      +FP_ESTADOS.map(function(e){
+        return '<option value="'+e+'"'+(row.estado===e?' selected':'')+'>'+e+'</option>';
+      }).join('')+'</select>';
+    tr.appendChild(td6);
+
+    // Delete
+    var td7 = document.createElement('td'); td7.style.cssText='padding:5px 4px;text-align:center;';
+    td7.innerHTML='<button onclick="fpDel('+i+')" style="background:#fee;border:none;border-radius:5px;'
+      +'color:#A32D2D;font-size:12px;cursor:pointer;padding:2px 6px;">✕</button>';
+    tr.appendChild(td7);
+    tbody.appendChild(tr);
+  });
+
+  // Totals footer
+  var sumValor = data.reduce(function(a,r){return a+(r.valor||0);},0);
+  tfoot.innerHTML = sumValor ? '<tr style="background:#F5F3FF;font-weight:700;">'
+    +'<td colspan="3" style="padding:7px 10px;color:#7C3AED;">TOTAL PROGRAMADO</td>'
+    +'<td style="padding:7px 10px;text-align:right;color:#7C3AED;font-size:13px;">'+fpFmt(sumValor)+'</td>'
+    +'<td colspan="3"></td></tr>' : '';
+
+  // Summary by month
+  var byMes = {};
+  data.forEach(function(r){ byMes[r.mes]=(byMes[r.mes]||0)+(r.valor||0); });
+  var totalEl = document.getElementById('fp-total');
+  if(totalEl && sumValor) {
+    var html = '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
+      +'<span style="color:#888;font-weight:700;">Proyección mensual:</span>';
+    for(var m=1;m<=12;m++){
+      if(!byMes[m]) continue;
+      html+='<span style="background:#7C3AED18;color:#7C3AED;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700;">'
+        +FP_MESES_FULL[m-1]+': '+fpFmt(byMes[m])+'</span>';
+    }
+    html+='</div>';
+    totalEl.innerHTML = html;
+  } else if(totalEl) {
+    totalEl.innerHTML = '<span style="color:#aaa;font-size:11px;">Sin facturas programadas aún. Usa "+ Agregar" para proyectar ingresos futuros.</span>';
+  }
+
+  // Also refresh the flujo de caja to include programmed invoices
+  if(typeof fcRender==='function') setTimeout(fcRender, 50);
+}
+
+function fpEdit(i, key, val) {
+  var data = fpLoad();
+  if(data[i]) { data[i][key]=val; fpSave(data); fpRender(); }
+}
+function fpSelCli(i, sel) {
+  var inp = document.getElementById('fpinp-'+i);
+  if(sel.value==='__otro__') {
+    if(inp){inp.style.display='inline-block';inp.focus();}
+  } else {
+    if(inp) inp.style.display='none';
+    fpEdit(i,'cliente',sel.value);
+  }
+}
+function fpDel(i) {
+  if(!confirm('¿Eliminar esta factura programada?')) return;
+  var data=fpLoad(); data.splice(i,1); fpSave(data); fpRender();
+}
+function fpAddRow() {
+  var data = fpLoad();
+  var n = data.length+1;
+  data.push({
+    num:'FEE-PROG-'+String(n).padStart(3,'0'),
+    cliente:'', concepto:'', valor:0,
+    mes: new Date().getMonth()+2<=12 ? new Date().getMonth()+2 : 1,
+    estado:'Programada'
+  });
+  fpSave(data); fpRender();
+}
+
+// ── Patch fcRender to also include programmed invoices ─────────────────────
+var _fcRenderOrig = fcRender;
+fcRender = function() {
+  _fcRenderOrig();
+  // After main render, inject programmed invoices into the month table
+  fpInjectIntoFlujo();
+};
+
+function fpInjectIntoFlujo() {
+  var data = fpLoad();
+  if(!data || !data.length) return;
+  var anio = new Date().getFullYear();
+  // For each programmed invoice, find its month row and add a purple badge
+  data.forEach(function(fp){
+    if(!fp.mes) return;
+    var mesName = FP_MESES_FULL[fp.mes-1];
+    // Find tbody rows matching this month
+    var tbl = document.querySelector('#fc-container table tbody');
+    if(!tbl) return;
+    var rows = tbl.querySelectorAll('tr');
+    rows.forEach(function(row){
+      var firstTd = row.querySelector('td');
+      if(firstTd && firstTd.textContent.replace('▶','').trim()===mesName) {
+        // Find the facturas cell (last real td before end)
+        var tds = row.querySelectorAll('td');
+        var tagsTd = tds[tds.length-1];
+        if(tagsTd && tagsTd.id !== 'fp-injected-'+fp.mes) {
+          var badge = document.createElement('span');
+          badge.title = fpEsc(fp.cliente||'')+(fp.concepto?'\n'+fp.concepto:'')
+            +'\n'+fpFmt(fp.valor)+' · '+fp.estado;
+          badge.style.cssText='display:inline-block;background:#7C3AED18;color:#7C3AED;'
+            +'border-radius:4px;padding:2px 7px;margin:1px;font-size:9px;font-weight:700;'
+            +'border:1px solid #7C3AED33;cursor:default;';
+          badge.textContent = fp.num||'PROG';
+          tagsTd.appendChild(badge);
+        }
+      }
+    });
+  });
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', function(){
+  setTimeout(fpRender, 200);
+});
+</script>
+
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  SISTEMA DE RESPALDO — Exportar / Importar JSON completo
+// ══════════════════════════════════════════════════════════════
+
+var ALZAK_BACKUP_KEYS = [
+  // Facturas y gastos
+  'alzak_facturas',
+  'alzak_gastos',
+  // Presupuesto (matriz proyección)
+  'pf2026v2',
+  // Facturación programada
+  'alzak_fp2026',
+  // Equipo Base y MSD estados de pago
+  'eb_estado_2026',
+  'msd_estado_2026',
+  // Balance config
+  'alzak_bal_config',
+  // API key (opcional — se excluye si el usuario prefiere)
+];
+
+function alzakExportarDatos() {
+  var backup = {
+    version:   2,
+    app:       'ALZAK GROUP SAS — Tablero Contable',
+    exportado: new Date().toISOString(),
+    datos:     {}
+  };
+
+  // 1. localStorage keys
+  ALZAK_BACKUP_KEYS.forEach(function(key) {
+    try {
+      var val = localStorage.getItem(key);
+      if (val) backup.datos[key] = JSON.parse(val);
+    } catch(e) {
+      try { backup.datos[key] = localStorage.getItem(key); } catch(e2){}
+    }
+  });
+
+  // 2. FACTURAS en memoria (incluye defaults si no están en localStorage)
+  if (typeof FACTURAS !== 'undefined' && FACTURAS.length) {
+    backup.datos['alzak_facturas'] = FACTURAS;
+  }
+
+  // 3. GASTOS_DATA en memoria
+  if (typeof GASTOS_DATA !== 'undefined' && GASTOS_DATA.length) {
+    backup.datos['alzak_gastos'] = GASTOS_DATA;
+  }
+
+  var fecha    = new Date().toISOString().slice(0,10);
+  var filename = 'ALZAK_backup_' + fecha + '.json';
+  var json     = JSON.stringify(backup, null, 2);
+  var blob     = new Blob([json], {type: 'application/json'});
+  var a        = document.createElement('a');
+  a.href       = URL.createObjectURL(blob);
+  a.download   = filename;
+  a.click();
+
+  // Update last backup timestamp
+  try { localStorage.setItem('alzak_last_backup', new Date().toISOString()); } catch(e){}
+
+  if (typeof mostrarToast === 'function') {
+    mostrarToast('✅ Backup guardado: ' + filename);
+  }
+}
+
+function alzakImportarDatos(input) {
+  var file = input.files[0];
+  if (!file) return;
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var backup = JSON.parse(e.target.result);
+
+      // Validate it's an ALZAK backup
+      if (!backup.datos || !backup.app || !backup.app.includes('ALZAK')) {
+        alert('❌ Este archivo no es un backup válido de ALZAK.');
+        return;
+      }
+
+      var fecha    = backup.exportado ? new Date(backup.exportado).toLocaleDateString('es-CO') : 'desconocida';
+      var nFacts   = backup.datos['alzak_facturas'] ? backup.datos['alzak_facturas'].length : 0;
+      var nGastos  = backup.datos['alzak_gastos']   ? backup.datos['alzak_gastos'].length   : 0;
+      var nPresup  = backup.datos['pf2026v2']        ? backup.datos['pf2026v2'].rows ? backup.datos['pf2026v2'].rows.length : 0 : 0;
+      var nFP      = backup.datos['alzak_fp2026']    ? backup.datos['alzak_fp2026'].length    : 0;
+
+      var msg = 'Restaurar backup de ALZAK?\n\n'
+        + '  Fecha: ' + fecha + '\n'
+        + '  Facturas: ' + nFacts + '\n'
+        + '  Gastos: ' + nGastos + '\n'
+        + '  Proyectos: ' + nPresup + '\n'
+        + '  Fact. programadas: ' + nFP + '\n\n'
+        + 'Esto reemplazara los datos actuales.';
+
+      if (!confirm(msg)) { input.value=''; return; }
+
+      // Restore each key
+      Object.keys(backup.datos).forEach(function(key) {
+        try {
+          var val = backup.datos[key];
+          localStorage.setItem(key, typeof val === 'string' ? val : JSON.stringify(val));
+        } catch(e) { console.error('Error restoring key', key, e); }
+      });
+
+      // Reload in-memory data
+      if (backup.datos['alzak_facturas'] && typeof FACTURAS !== 'undefined') {
+        FACTURAS = backup.datos['alzak_facturas'];
+        FACTURAS.forEach(function(f){
+          f.estado = typeof estadoFact==='function' ? estadoFact(f) : f.estado;
+        });
+      }
+      if (backup.datos['alzak_gastos'] && typeof GASTOS_DATA !== 'undefined') {
+        GASTOS_DATA = backup.datos['alzak_gastos'];
+      }
+
+      // Refresh UI
+      try { if(typeof actualizarTodo==='function') actualizarTodo(); } catch(e){}
+      try { if(typeof renderFacturas==='function') renderFacturas(); } catch(e){}
+      try { if(typeof renderHome==='function') renderHome(); } catch(e){}
+      try { if(typeof renderBalance==='function') renderBalance(); } catch(e){}
+      try { if(typeof pfRender==='function') pfRender(); } catch(e){}
+      try { if(typeof fpRender==='function') fpRender(); } catch(e){}
+      try { if(typeof fcRender==='function') setTimeout(fcRender,200); } catch(e){}
+
+      input.value = '';
+      try { localStorage.setItem('alzak_last_backup', new Date().toISOString()); } catch(e){}
+
+      if (typeof mostrarToast==='function') {
+        mostrarToast('✅ Backup restaurado correctamente — ' + nFacts + ' facturas cargadas');
+      }
+
+    } catch(err) {
+      alert('❌ Error leyendo el archivo: ' + err.message);
+      input.value = '';
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ── Auto-reminder: alert if no backup in 7+ days ──────────────────────────
+(function() {
+  try {
+    var last = localStorage.getItem('alzak_last_backup');
+    if (!last) {
+      // First time — set timestamp silently
+      localStorage.setItem('alzak_last_backup', new Date().toISOString());
+      return;
+    }
+    var dias = Math.floor((Date.now() - new Date(last).getTime()) / (1000*60*60*24));
+    if (dias >= 7) {
+      setTimeout(function(){
+        var banner = document.createElement('div');
+        banner.innerHTML = '⚠️ Han pasado <strong>' + dias + ' días</strong> sin hacer un backup. '
+          + '<button onclick="alzakExportarDatos();this.parentElement.remove()" '
+          + 'style="background:#5DC3DA;color:#fff;border:none;border-radius:6px;padding:3px 10px;'
+          + 'font-size:11px;font-weight:700;cursor:pointer;margin-left:8px;">💾 Exportar ahora</button>'
+          + '<button onclick="this.parentElement.remove()" '
+          + 'style="background:none;border:none;color:#888;cursor:pointer;margin-left:4px;font-size:13px;">✕</button>';
+        banner.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#FFF3CD;'
+          + 'border:1.5px solid #B45309;border-radius:10px;padding:12px 16px;'
+          + 'font-size:12px;color:#7A4F00;z-index:8000;box-shadow:0 4px 20px rgba(0,0,0,.15);'
+          + 'max-width:340px;line-height:1.5;';
+        document.body.appendChild(banner);
+      }, 2000);
+    }
+  } catch(e){}
+})();
+</script>
+
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  BACKUP → GOOGLE DRIVE (via Apps Script)
+// ══════════════════════════════════════════════════════════════
+
+var ALZAK_GS_URL = 'https://script.google.com/a/macros/alzak.com.co/s/AKfycbzjKCeUYwKRcxn1KWAEXPVLsVrhxM6jxl0QP6ib3mFMKB-TSCSZsOPJZyz0EaJzeWmD/exec';
+
+// ── Override alzakExportarDatos to ALSO save to Drive ─────────────────────
+var _alzakExportarOrig = typeof alzakExportarDatos === 'function' ? alzakExportarDatos : null;
+
+alzakExportarDatos = function() {
+  // 1. Download local JSON (original behavior)
+  if (_alzakExportarOrig) _alzakExportarOrig();
+
+  // 2. Also save to Google Drive via Apps Script
+  alzakGuardarEnDrive();
+};
+
+function alzakGuardarEnDrive(silencioso) {
+  // Collect all data
+  var datos = {};
+  var keys = ['alzak_facturas','alzak_gastos','pf2026v2','alzak_fp2026',
+              'eb_estado_2026','msd_estado_2026','alzak_bal_config'];
+  keys.forEach(function(k){
+    try {
+      var v = localStorage.getItem(k);
+      if(v) datos[k] = JSON.parse(v);
+    } catch(e){}
+  });
+  if (typeof FACTURAS !== 'undefined' && FACTURAS.length) datos['alzak_facturas'] = FACTURAS;
+  if (typeof GASTOS_DATA !== 'undefined' && GASTOS_DATA.length) datos['alzak_gastos'] = GASTOS_DATA;
+
+  var fecha  = new Date().toISOString().slice(0,10);
+  var label  = 'Backup ' + fecha + ' — ' + (typeof FACTURAS !== 'undefined' ? FACTURAS.length : 0) + ' facturas';
+
+  // Show saving indicator
+  var indicator = null;
+  if (!silencioso) {
+    indicator = document.createElement('div');
+    indicator.id = 'drive-saving';
+    indicator.style.cssText = 'position:fixed;bottom:20px;left:20px;background:#0C447C;'
+      +'color:#fff;padding:10px 16px;border-radius:9px;font-size:12px;font-weight:700;'
+      +'z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.2);display:flex;align-items:center;gap:8px;';
+    indicator.innerHTML = '<span style="animation:spin 1s linear infinite;display:inline-block;">⏳</span>'
+      +' Guardando en Google Drive...';
+    document.body.appendChild(indicator);
+  }
+
+  // Apps Script CORS: use no-cors for POST (fire-and-forget)
+  // Then verify by reading the _backup_latest sheet via GET
+  fetch(ALZAK_GS_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    body: JSON.stringify({tab:'_backup', label:label, datos:datos}),
+    headers: {'Content-Type':'text/plain'}
+  })
+  .then(function() {
+    if(indicator) indicator.remove();
+    try { localStorage.setItem('alzak_last_backup', new Date().toISOString()); } catch(e){}
+    if(!silencioso && typeof mostrarToast==='function') {
+      mostrarToast('✅ Guardado en Google Drive');
+    }
+    alzakActualizarListaBackups();
+  })
+  .catch(function(err){
+    if(indicator) indicator.remove();
+    console.error('Drive backup fetch error:', err);
+    if(!silencioso && typeof mostrarToast==='function')
+      mostrarToast('⚠️ Error de conexion con Drive. Verifica el Apps Script.', '#B45309');
+  });
+}
+
+// ── Restore from Drive ────────────────────────────────────────────────────
+function alzakRestaurarDesdeDrive() {
+  var btn = document.getElementById('drive-restore-btn');
+  if(btn) { btn.disabled=true; btn.textContent='Cargando...'; }
+
+  fetch(ALZAK_GS_URL + '?tab=_restore_latest', {mode:'cors'})
+  .then(function(r){ return r.json(); })
+  .then(function(res){
+    if(btn) { btn.disabled=false; btn.textContent='☁️ Restaurar desde Drive'; }
+    if(!res.ok) { alert('No hay backup en Drive: ' + (res.error||'')); return; }
+
+    var datos   = res.datos || {};
+    var nFacts  = datos['alzak_facturas'] ? datos['alzak_facturas'].length : 0;
+    var nGastos = datos['alzak_gastos']   ? datos['alzak_gastos'].length   : 0;
+    var fecha   = res.fecha || 'desconocida';
+
+    if(!confirm('Restaurar backup de Drive? Fecha: '+fecha+' | Facturas: '+nFacts+' | Gastos: '+nGastos+'. Esto reemplazara los datos actuales.')) return; return;
+
+    // Restore localStorage
+    Object.keys(datos).forEach(function(k){
+      try { localStorage.setItem(k, JSON.stringify(datos[k])); } catch(e){}
+    });
+    // Reload in-memory
+    if(datos['alzak_facturas'] && typeof FACTURAS!=='undefined') {
+      FACTURAS = datos['alzak_facturas'];
+      FACTURAS.forEach(function(f){ f.estado = typeof estadoFact==='function'?estadoFact(f):f.estado; });
+    }
+    if(datos['alzak_gastos'] && typeof GASTOS_DATA!=='undefined') GASTOS_DATA=datos['alzak_gastos'];
+    // Refresh UI
+    try{if(typeof actualizarTodo==='function')actualizarTodo();}catch(e){}
+    try{if(typeof renderFacturas==='function')renderFacturas();}catch(e){}
+    try{if(typeof renderHome==='function')renderHome();}catch(e){}
+    try{if(typeof renderBalance==='function')renderBalance();}catch(e){}
+    try{if(typeof pfRender==='function')pfRender();}catch(e){}
+    try{if(typeof fpRender==='function')fpRender();}catch(e){}
+    try{if(typeof fcRender==='function')setTimeout(fcRender,200);}catch(e){}
+    if(typeof mostrarToast==='function') mostrarToast('✅ Datos restaurados desde Drive — '+nFacts+' facturas');
+    alzakActualizarListaBackups();
+  })
+  .catch(function(err){ 
+    if(btn) { btn.disabled=false; btn.textContent='☁️ Restaurar desde Drive'; }
+    alert('Error conectando con Drive: '+err.message); 
+  });
+}
+
+// ── List of backups from Drive ────────────────────────────────────────────
+function alzakActualizarListaBackups() {
+  var list = document.getElementById('drive-backup-list');
+  if(!list) return;
+  list.innerHTML = '<div style="color:#aaa;font-size:11px;padding:8px;">Cargando historial...</div>';
+
+  fetch(ALZAK_GS_URL + '?tab=_backups_index', {mode:'cors'})
+  .then(function(r){ return r.json(); })
+  .then(function(res){
+    if(!res.ok || !res.data || !res.data.length) {
+      list.innerHTML = '<div style="color:#aaa;font-size:11px;padding:8px;">Sin backups guardados aún.</div>';
+      return;
+    }
+    var rows = res.data.slice().reverse(); // newest first
+    list.innerHTML = rows.map(function(r, i){
+      var kb = r.size ? Math.round(r.size/1024)+'KB' : '';
+      return '<div style="display:flex;align-items:center;justify-content:space-between;'
+        +'padding:6px 10px;border-bottom:1px solid #f0eeec;font-size:11px;">'
+        +'<div>'
+          +'<div style="font-weight:700;color:#333;">'+escapeHtml(r.label||r.fecha)+'</div>'
+          +'<div style="color:#aaa;font-size:10px;">'+escapeHtml(r.fecha||'')+(kb?' · '+kb:'')+'</div>'
+        +'</div>'
+        +(i===0?'<span style="background:#2E7D32;color:#fff;font-size:9px;padding:2px 7px;border-radius:10px;font-weight:700;">ÚLTIMO</span>':'')
+        +'</div>';
+    }).join('');
+  })
+  .catch(function(){ list.innerHTML = '<div style="color:#aaa;font-size:11px;padding:8px;">No se pudo conectar con Drive.</div>'; });
+}
+
+// ── Drive Backup Panel (modal) ────────────────────────────────────────────
+
+function alzakCerrarPanelDrive() {
+  var m = document.getElementById('drive-panel-modal');
+  if(m) m.style.display='none';
+}
+function alzakAbrirPanelDrive() {
+  var modal = document.getElementById('drive-panel-modal');
+  if(modal) { modal.style.display='flex'; alzakActualizarListaBackups(); return; }
+
+  modal = document.createElement('div');
+  modal.id = 'drive-panel-modal';
+  modal.style.cssText = 'display:flex;position:fixed;inset:0;background:rgba(0,0,0,.5);'
+    +'z-index:9200;align-items:center;justify-content:center;';
+  modal.innerHTML =
+    '<div style="background:#fff;border-radius:14px;width:min(500px,94vw);max-height:85vh;'
+    +'overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.25);padding:26px;">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">'
+        +'<div>'
+          +'<div style="font-size:15px;font-weight:700;color:#54504F;">☁️ Google Drive — Backups</div>'
+          +'<div style="font-size:11px;color:#aaa;margin-top:2px;">Historial de copias de seguridad en tu Sheet ALZAK_API</div>'
+        +'</div>'
+        +'<button onclick="alzakCerrarPanelDrive()" '
+        +'style="background:none;border:none;font-size:20px;cursor:pointer;color:#999;">✕</button>'
+      +'</div>'
+      // Action buttons
+      +'<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">'
+        +'<button onclick="alzakGuardarEnDrive()" '
+        +'style="flex:1;padding:10px;background:#2E7D32;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">'
+        +'💾 Guardar ahora en Drive</button>'
+        +'<button id="drive-restore-btn" onclick="alzakRestaurarDesdeDrive()" '
+        +'style="flex:1;padding:10px;background:#0C447C;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">'
+        +'☁️ Restaurar desde Drive</button>'
+      +'</div>'
+      // Info box
+      +'<div style="background:#EBF3FB;border-radius:8px;padding:10px 12px;font-size:11px;color:#0C447C;margin-bottom:14px;">'
+        +'<strong>Donde se guarda:</strong> Google Sheet ALZAK_API → pestaña <strong>_backups</strong><br>'
+        +'Maximo 30 backups · el mas antiguo se elimina automaticamente<br>'
+        +'<span style="color:#B45309;">⚠️ Requiere: Apps Script → Implementar → Acceso: <strong>Cualquier persona</strong></span>'
+      +'</div>'
+      // Backup list
+      +'<div style="font-size:11px;font-weight:700;color:#555;margin-bottom:6px;">Historial de backups:</div>'
+      +'<div id="drive-backup-list" style="border:1px solid #eee;border-radius:8px;max-height:220px;overflow-y:auto;">'
+        +'<div style="color:#aaa;font-size:11px;padding:8px;">Cargando...</div>'
+      +'</div>'
+    +'</div>';
+
+  modal.addEventListener('click', function(e){ if(e.target===modal) modal.style.display='none'; });
+  document.body.appendChild(modal);
+  alzakActualizarListaBackups();
+}
+
+// ── Add Drive button to header (next to Exportar) ────────────────────────
+document.addEventListener('DOMContentLoaded', function(){
+  // Find the Exportar button and add Drive button after it
+  var btns = document.querySelectorAll('button');
+  btns.forEach(function(btn){
+    if(btn.textContent.trim()==='📦 Exportar') {
+      var driveBtn = document.createElement('button');
+      driveBtn.onclick = alzakAbrirPanelDrive;
+      driveBtn.title = 'Guardar y gestionar backups en Google Drive';
+      driveBtn.style.cssText = 'margin-left:4px;background:rgba(46,125,50,0.35);border:none;'
+        +'color:#4CAF50;padding:4px 12px;border-radius:6px;cursor:pointer;'
+        +'font-size:11px;font-family:Helvetica,Arial,sans-serif;font-weight:700;';
+      driveBtn.textContent = '☁️ Drive';
+      btn.parentNode.insertBefore(driveBtn, btn.nextSibling);
+    }
+  });
+
+  // Auto-backup disabled until Apps Script is updated
+  // setTimeout(function(){ alzakGuardarEnDrive(true); }, 3000);
+});
+
+// CSS spin animation
+var styleEl = document.createElement('style');
+styleEl.textContent = '@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}';
+document.head.appendChild(styleEl);
+</script>
+
 </body>
 
 </html>

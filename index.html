@@ -488,7 +488,7 @@ tbody tr:hover td{background:var(--cyan-light);}
 
   <div style="display:flex;align-items:center;gap:14px">
 
-    <div style="display:flex;align-items:center;gap:14px">    <div style="font-size:11px;color:rgba(255,255,255,0.4)" id="header-fecha"></div>    <div id="header-usuario" style="display:none;font-size:11px;color:rgba(255,255,255,0.5)">      <span id="header-user-nombre"></span>      <button onclick="abrirConfigAPI()" style="margin-left:10px;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:10px;font-family:Helvetica,Arial,sans-serif">🔑 API</button><button onclick="guardarDatos();mostrarToast('💾 Datos guardados')" style="margin-left:6px;background:rgba(29,158,117,0.3);border:none;color:#4DD9A8;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-family:Helvetica,Arial,sans-serif;font-weight:700">💾 Guardar</button><button onclick="alzakExportarDatos()" title="Descargar copia de seguridad completa" style="margin-left:6px;background:rgba(93,195,218,0.3);border:none;color:#5DC3DA;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-family:Helvetica,Arial,sans-serif;font-weight:700">📦 Exportar</button><label title="Restaurar desde copia de seguridad" style="margin-left:4px;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);padding:4px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-family:Helvetica,Arial,sans-serif;font-weight:700">📂 Importar<input type="file" accept=".json" style="display:none" onchange="alzakImportarDatos(this)"></label><button onclick="cerrarSesion()" style="margin-left:6px;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.5);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:10px;font-family:Helvetica,Arial,sans-serif">Salir</button>    </div>  </div>
+    <div style="display:flex;align-items:center;gap:14px">    <div style="font-size:11px;color:rgba(255,255,255,0.4)" id="header-fecha"></div>    <div id="header-usuario" style="display:none;font-size:11px;color:rgba(255,255,255,0.5)">      <span id="header-user-nombre"></span>      <button onclick="abrirConfigAPI()" style="margin-left:10px;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:10px;font-family:Helvetica,Arial,sans-serif">🔑 API</button><button onclick="guardarDatos();mostrarToast('💾 Datos guardados')" style="margin-left:6px;background:rgba(29,158,117,0.3);border:none;color:#4DD9A8;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-family:Helvetica,Arial,sans-serif;font-weight:700">💾 Guardar</button><div id="sync-indicator" style="display:none;align-items:center;gap:5px;margin-left:8px;background:rgba(46,125,50,0.25);padding:3px 10px;border-radius:6px;font-size:10px;color:#4DD9A8;font-weight:700;">⟳ Sincronizando...</div><button onclick="alzakExportarDatos()" title="Descargar copia de seguridad completa" style="margin-left:6px;background:rgba(93,195,218,0.3);border:none;color:#5DC3DA;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-family:Helvetica,Arial,sans-serif;font-weight:700">📦 Exportar</button><label title="Restaurar desde copia de seguridad" style="margin-left:4px;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);padding:4px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-family:Helvetica,Arial,sans-serif;font-weight:700">📂 Importar<input type="file" accept=".json" style="display:none" onchange="alzakImportarDatos(this)"></label><button onclick="cerrarSesion()" style="margin-left:6px;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.5);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:10px;font-family:Helvetica,Arial,sans-serif">Salir</button>    </div>  </div>
 
     <div id="header-usuario" style="font-size:11px;color:rgba(255,255,255,0.5);display:none">
 
@@ -994,7 +994,10 @@ var CLIENTES_ALZAK = [
 
 // ============================================================
 
-var USUARIOS = [{user:'admin', pass:'AG2026$$', rol:'admin', nombre:'Administrador ALZAK'}];
+var USUARIOS = [
+  {user:'admin',     pass:'AG2026$$',  rol:'admin',     nombre:'Administrador ALZAK'},
+  {user:'asistente', pass:'ALZAK2026', rol:'asistente', nombre:'Asistente ALZAK'}
+];
 
 var SESSION_KEY  = 'alzak_session';
 
@@ -1045,6 +1048,9 @@ function hacerLogin() {
   usuarioActual = found;
 
   try { localStorage.setItem(SESSION_KEY, JSON.stringify({user:found.user, pass:found.pass, rol:found.rol, nombre:found.nombre})); } catch(e){}
+
+  // Registrar acceso con IP, ubicación y notificar por correo
+  alzakRegistrarAcceso(found);
 
   cerrarLogin();
 
@@ -1379,6 +1385,12 @@ function gsCargarDesdeSheets() {
       if (typeof renderCarteraHome === 'function') renderCarteraHome();
 
       if (typeof renderHome === 'function') renderHome();
+
+      if (typeof fcRender === 'function') setTimeout(fcRender, 100);
+
+      // Hide sync indicator
+      var ind = document.getElementById('sync-indicator');
+      if(ind) ind.style.display='none';
 
     }
 
@@ -11915,11 +11927,18 @@ function gsCargarDatos() {
     var g2 = localStorage.getItem(LS_GASTOS);
     if (g2) { var pg=JSON.parse(g2); if(pg&&pg.length) GASTOS_DATA=pg; }
   } catch(e){ console.error('gsCargarDatos error:', e); }
+  // Load from Google Sheets (overwrites localStorage with latest shared data)
   if (typeof gsCargarDesdeSheets === 'function') gsCargarDesdeSheets();
-  // Render factura table immediately after loading defaults
+  // Render immediately with local data while Sheet loads in background
   if (typeof renderFacturas === 'function') setTimeout(renderFacturas, 50);
   if (typeof renderCarteraHome === 'function') setTimeout(renderCarteraHome, 60);
   if (typeof fcRender === 'function') setTimeout(fcRender, 150);
+  // Show sync indicator
+  setTimeout(function(){
+    var ind = document.getElementById('sync-indicator');
+    if(ind) ind.style.display='flex';
+    setTimeout(function(){ if(ind) ind.style.display='none'; }, 3000);
+  }, 100);
 }
 
 })();
@@ -17276,6 +17295,290 @@ document.addEventListener('DOMContentLoaded', function(){
 var styleEl = document.createElement('style');
 styleEl.textContent = '@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}';
 document.head.appendChild(styleEl);
+</script>
+
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  SINCRONIZACIÓN INTELIGENTE — Merge sin pisarse
+//  Lógica: al abrir = jala Sheet; al guardar = sube Sheet
+//  Si trabajan en momentos distintos, nunca se pierden datos
+// ══════════════════════════════════════════════════════════════
+
+// ── Al abrir: jala Sheet PRIMERO, luego renderiza ─────────────
+document.addEventListener('DOMContentLoaded', function(){
+  setTimeout(function(){
+    alzakSyncDesdeSheet();
+  }, 1500); // pequeño delay para que el UI cargue primero
+});
+
+function alzakSyncDesdeSheet() {
+  if(!window.GS_SYNC_ACTIVO) return;
+  var ind = document.getElementById('sync-indicator');
+  if(ind){ ind.style.display='flex'; ind.textContent='⟳ Cargando datos compartidos...'; }
+
+  // Fetch facturas desde Sheet
+  if(typeof gsGet === 'function') {
+    gsGet('facturas', function(rows){
+      if(rows && rows.length > 1) {
+        var objs = typeof rowsToObjs==='function' ? rowsToObjs(rows) : [];
+        if(objs.length) {
+          // Merge: keep all unique by num
+          var sheetNums = objs.map(function(f){ return (f.num||f.N_Factura||'').toUpperCase(); });
+          // Add local-only invoices not in Sheet
+          var localOnly = FACTURAS.filter(function(f){
+            var n = (f.num||'').toUpperCase();
+            return n && sheetNums.indexOf(n) < 0;
+          });
+          FACTURAS = objs.map(function(f){
+            f.estado = typeof estadoFact==='function' ? estadoFact(f) : f.estado;
+            return f;
+          }).concat(localOnly);
+          try{ localStorage.setItem('alzak_facturas', JSON.stringify(FACTURAS)); }catch(e){}
+          if(typeof renderFacturas==='function') renderFacturas();
+          if(typeof renderCarteraHome==='function') renderCarteraHome();
+          if(typeof fcRender==='function') setTimeout(fcRender, 100);
+        }
+      }
+      if(ind){ ind.textContent='✓ Datos sincronizados'; setTimeout(function(){ ind.style.display='none'; }, 2000); }
+    });
+
+    // Fetch gastos
+    gsGet('gastos', function(rows){
+      if(rows && rows.length > 1) {
+        var objs = typeof rowsToObjs==='function' ? rowsToObjs(rows) : [];
+        if(objs.length) {
+          GASTOS_DATA = objs;
+          try{ localStorage.setItem('alzak_gastos', JSON.stringify(GASTOS_DATA)); }catch(e){}
+          if(typeof actualizarTodo==='function') actualizarTodo();
+        }
+      }
+    });
+
+    // Fetch presupuesto
+    gsGet('pf2026', function(rows){
+      if(rows && rows.length > 1) {
+        try{
+          var json = rows[1] && rows[1][0];
+          if(json) {
+            localStorage.setItem('pf2026v2', json);
+            if(typeof pfRender==='function') pfRender();
+          }
+        }catch(e){}
+      }
+    });
+  }
+}
+
+// ── Al guardar: sube TODO al Sheet incluyendo presupuesto ─────
+var _origGuardarDatos = typeof guardarDatos === 'function' ? guardarDatos : null;
+guardarDatos = function() {
+  // 1. Guardar local (original)
+  if(_origGuardarDatos) _origGuardarDatos();
+
+  // 2. Subir presupuesto al Sheet (facturas y gastos ya los sube gsGuardarDatos)
+  if(window.GS_SYNC_ACTIVO && typeof gsPost === 'function') {
+    try {
+      var pfData = localStorage.getItem('pf2026v2');
+      if(pfData) gsPost('pf2026', 'set', [['json'],[pfData]]);
+    } catch(e){}
+
+    try {
+      var fpData = localStorage.getItem('alzak_fp2026');
+      if(fpData) gsPost('fp2026', 'set', [['json'],[fpData]]);
+    } catch(e){}
+  }
+
+  // 3. También guardar backup Drive silenciosamente
+  if(typeof alzakGuardarEnDrive === 'function') {
+    setTimeout(function(){ alzakGuardarEnDrive(true); }, 1000);
+  }
+};
+
+// ── Aviso al cerrar si hay cambios sin sincronizar ────────────
+window.addEventListener('beforeunload', function(e) {
+  if(window.GS_SYNC_ACTIVO && window.GS_SYNC_PENDING) {
+    e.preventDefault();
+    e.returnValue = 'Hay cambios sin guardar en el servidor. ¿Seguro que quieres salir?';
+  }
+});
+</script>
+
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  AUDITORÍA DE ACCESOS — IP + Ubicación + Correo automático
+// ══════════════════════════════════════════════════════════════
+
+function alzakRegistrarAcceso(usuario) {
+  var ahora     = new Date();
+  var fechaStr  = ahora.toLocaleDateString('es-CO', {day:'2-digit',month:'long',year:'numeric'});
+  var horaStr   = ahora.toLocaleTimeString('es-CO', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  var userAgent = navigator.userAgent;
+  var plataforma = navigator.platform || 'Desconocido';
+
+  // 1. Obtener IP pública y datos de ubicación aproximada
+  fetch('https://ipapi.co/json/')
+    .then(function(r){ return r.json(); })
+    .then(function(geo){
+      var registro = {
+        fecha:     fechaStr,
+        hora:      horaStr,
+        usuario:   usuario.user,
+        nombre:    usuario.nombre,
+        rol:       usuario.rol,
+        ip:        geo.ip        || 'No disponible',
+        ciudad:    geo.city      || 'Desconocida',
+        region:    geo.region    || '',
+        pais:      geo.country_name || '',
+        org:       geo.org       || '',
+        lat:       geo.latitude  || '',
+        lon:       geo.longitude || '',
+        dispositivo: plataforma,
+        navegador: userAgent.substring(0, 80)
+      };
+
+      // 2. Guardar en Sheet (pestaña _accesos)
+      alzakGuardarAccesoSheet(registro);
+
+      // 3. Enviar correo solo si NO es el admin (o siempre si quieres)
+      if (usuario.rol !== 'admin') {
+        alzakNotificarAcceso(registro);
+      }
+
+      // 4. Guardar localmente como historial
+      try {
+        var hist = JSON.parse(localStorage.getItem('alzak_accesos') || '[]');
+        hist.unshift(registro);
+        if(hist.length > 50) hist = hist.slice(0, 50);
+        localStorage.setItem('alzak_accesos', JSON.stringify(hist));
+      } catch(e){}
+    })
+    .catch(function() {
+      // Sin geo — guardar igual con datos básicos
+      var registro = {
+        fecha: fechaStr, hora: horaStr,
+        usuario: usuario.user, nombre: usuario.nombre, rol: usuario.rol,
+        ip: 'No disponible', ciudad: 'No disponible',
+        region: '', pais: '', org: '', lat: '', lon: '',
+        dispositivo: plataforma, navegador: userAgent.substring(0, 80)
+      };
+      alzakGuardarAccesoSheet(registro);
+      if(usuario.rol !== 'admin') alzakNotificarAcceso(registro);
+    });
+}
+
+function alzakGuardarAccesoSheet(r) {
+  if(!window.GS_SYNC_ACTIVO || typeof gsPost !== 'function') return;
+  var fila = [[
+    r.fecha, r.hora, r.usuario, r.nombre, r.rol,
+    r.ip, r.ciudad, r.region, r.pais,
+    r.lat, r.lon, r.org, r.dispositivo, r.navegador
+  ]];
+  gsPost('_accesos', 'append', fila);
+}
+
+function alzakNotificarAcceso(r) {
+  // Envía al Apps Script para que mande el correo
+  if(!window.GS_API_URL) return;
+  var mapUrl = (r.lat && r.lon)
+    ? 'https://maps.google.com/?q=' + r.lat + ',' + r.lon
+    : 'No disponible';
+
+  fetch(GS_API_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    body: JSON.stringify({
+      tab: '_notificar_acceso',
+      usuario:   r.usuario,
+      nombre:    r.nombre,
+      fecha:     r.fecha,
+      hora:      r.hora,
+      ip:        r.ip,
+      ciudad:    r.ciudad + (r.region ? ', ' + r.region : '') + (r.pais ? ' · ' + r.pais : ''),
+      org:       r.org,
+      mapa:      mapUrl,
+      navegador: r.navegador
+    }),
+    headers: {'Content-Type': 'text/plain'}
+  }).catch(function(){});
+}
+
+// ── Ver historial de accesos (para el admin) ──────────────────
+function alzakCerrarAccesos() {
+  var m = document.querySelector('div[id="accesos-modal"]');
+  if(m) m.remove();
+}
+function alzakVerAccesos() {
+  var hist = JSON.parse(localStorage.getItem('alzak_accesos') || '[]');
+  if(!hist.length) { alert('No hay accesos registrados localmente todavía.'); return; }
+
+  var modal = document.createElement('div');
+  modal.id = 'accesos-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9500;'
+    +'display:flex;align-items:center;justify-content:center;';
+
+  var rows = hist.slice(0,20).map(function(r){
+    var mapLink = (r.lat && r.lon)
+      ? '<a href="https://maps.google.com/?q='+r.lat+','+r.lon+'" target="_blank" '
+        +'style="color:#5DC3DA;">📍 Ver mapa</a>'
+      : '—';
+    return '<tr style="border-bottom:1px solid #f0eeec;">'
+      +'<td style="padding:6px 10px;font-size:11px;white-space:nowrap;">'+r.fecha+' '+r.hora+'</td>'
+      +'<td style="padding:6px 10px;font-size:11px;font-weight:700;color:#5DC3DA;">'+r.usuario+'</td>'
+      +'<td style="padding:6px 10px;font-size:11px;">'+r.ip+'</td>'
+      +'<td style="padding:6px 10px;font-size:11px;">'+r.ciudad+'</td>'
+      +'<td style="padding:6px 10px;font-size:11px;">'+mapLink+'</td>'
+      +'</tr>';
+  }).join('');
+
+  modal.innerHTML =
+    '<div style="background:#fff;border-radius:14px;width:min(800px,95vw);max-height:85vh;'
+    +'overflow-y:auto;padding:24px;box-shadow:0 8px 40px rgba(0,0,0,.25);">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
+        +'<div>'
+          +'<div style="font-size:15px;font-weight:700;color:#54504F;">🔐 Historial de accesos</div>'
+          +'<div style="font-size:11px;color:#aaa;">Últimos 20 ingresos al tablero</div>'
+        +'</div>'
+        +'<button onclick="alzakCerrarAccesos()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#999;">&#x2715;</button>'
+        +'style="background:none;border:none;font-size:20px;cursor:pointer;color:#999;">✕</button>'
+      +'</div>'
+      +'<div style="overflow-x:auto;">'
+        +'<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+          +'<thead><tr style="background:#EBF3FB;">'
+            +'<th style="padding:7px 10px;text-align:left;color:#0C447C;border-bottom:2px solid #5DC3DA;">Fecha y hora</th>'
+            +'<th style="padding:7px 10px;text-align:left;color:#0C447C;border-bottom:2px solid #5DC3DA;">Usuario</th>'
+            +'<th style="padding:7px 10px;text-align:left;color:#0C447C;border-bottom:2px solid #5DC3DA;">IP</th>'
+            +'<th style="padding:7px 10px;text-align:left;color:#0C447C;border-bottom:2px solid #5DC3DA;">Ciudad</th>'
+            +'<th style="padding:7px 10px;text-align:left;color:#0C447C;border-bottom:2px solid #5DC3DA;">Ubicación</th>'
+          +'</tr></thead>'
+          +'<tbody>'+rows+'</tbody>'
+        +'</table>'
+      +'</div>'
+    +'</div>';
+
+  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+// ── Agregar botón de accesos en header (solo para admin) ──────
+document.addEventListener('DOMContentLoaded', function(){
+  setTimeout(function(){
+    if(typeof usuarioActual !== 'undefined' && usuarioActual && usuarioActual.rol === 'admin') {
+      var exportBtn = document.querySelector('button[onclick="alzakExportarDatos()"]');
+      if(exportBtn) {
+        var accBtn = document.createElement('button');
+        accBtn.onclick = alzakVerAccesos;
+        accBtn.title = 'Ver historial de accesos';
+        accBtn.style.cssText = 'margin-left:4px;background:rgba(255,255,255,0.1);border:none;'
+          +'color:rgba(255,255,255,0.6);padding:4px 10px;border-radius:6px;cursor:pointer;'
+          +'font-size:11px;font-family:Helvetica,Arial,sans-serif;font-weight:700;';
+        accBtn.textContent = '🔐 Accesos';
+        exportBtn.parentNode.insertBefore(accBtn, exportBtn.nextSibling);
+      }
+    }
+  }, 1000);
+});
 </script>
 
 </body>

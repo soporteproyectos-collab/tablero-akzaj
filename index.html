@@ -17615,6 +17615,48 @@ document.addEventListener('DOMContentLoaded', function(){
 });
 </script>
 
+
+<script>
+// ── Auto-sync cada 2 minutos — ambos ven cambios sin recargar ──
+(function(){
+  var SYNC_INTERVAL = 2 * 60 * 1000; // 2 minutos
+  var lastSync = Date.now();
+
+  function autoSync() {
+    if(!window.GS_SYNC_ACTIVO) return;
+    if(typeof alzakSyncDesdeSheet === 'function') {
+      alzakSyncDesdeSheet();
+      lastSync = Date.now();
+    }
+  }
+
+  // Run every 2 minutes
+  setInterval(autoSync, SYNC_INTERVAL);
+
+  // Also sync when user comes back to the tab (visibility change)
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'visible') {
+      var elapsed = Date.now() - lastSync;
+      if(elapsed > 30000) { // si pasaron más de 30 segundos
+        autoSync();
+      }
+    }
+  });
+
+  // Show last sync time in header
+  setInterval(function(){
+    var ind = document.getElementById('sync-indicator');
+    if(ind && ind.style.display === 'none') {
+      var mins = Math.floor((Date.now()-lastSync)/60000);
+      if(mins >= 1) {
+        var btn = document.querySelector('button[onclick="alzakAbrirPanelDrive()"]');
+        if(btn) btn.title = 'Última sincronización: hace ' + mins + ' min';
+      }
+    }
+  }, 10000);
+})();
+</script>
+
 </body>
 
 </html>

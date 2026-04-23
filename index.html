@@ -1057,6 +1057,10 @@ function hacerLogin() {
 }
 
 function cerrarLogin() {
+  // Run sync after login so data loads from Sheet
+  setTimeout(function(){
+    if(typeof alzakSyncDesdeSheet==='function') alzakSyncDesdeSheet();
+  }, 1000);
 
   var ls = document.getElementById('login-screen');
 
@@ -17316,10 +17320,10 @@ document.head.appendChild(styleEl);
 // ══════════════════════════════════════════════════════════════
 
 // ── Al abrir: jala Sheet PRIMERO, luego renderiza ─────────────
+// Sync runs after login via cerrarLogin hook
 document.addEventListener('DOMContentLoaded', function(){
-  setTimeout(function(){
-    alzakSyncDesdeSheet();
-  }, 1500); // pequeño delay para que el UI cargue primero
+  // expose globally for manual calls
+  window.alzakSyncDesdeSheet = alzakSyncDesdeSheet;
 });
 
 function alzakSyncDesdeSheet() {

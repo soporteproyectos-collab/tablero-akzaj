@@ -1057,10 +1057,40 @@ function hacerLogin() {
 }
 
 function cerrarLogin() {
-  // Run sync after login so data loads from Sheet
+  // Sync from Sheet after login — inline to avoid scope issues
   setTimeout(function(){
-    if(typeof alzakSyncDesdeSheet==='function') alzakSyncDesdeSheet();
-  }, 1000);
+    if(!window.GS_SYNC_ACTIVO || typeof gsGet !== 'function') return;
+    var ind = document.getElementById('sync-indicator');
+    if(ind){ ind.style.display='flex'; ind.textContent='⟳ Sincronizando...'; }
+    // fp2026 — Facturación Programada
+    gsGet('fp2026', function(rows){
+      if(rows && rows.length > 1) {
+        try{ var j=rows[1]&&rows[1][0]; if(j){ localStorage.setItem('alzak_fp2026',j); if(typeof fpRender==='function') fpRender(); } }catch(e){}
+      }
+    });
+    // pf2026 — Presupuesto matriz
+    gsGet('pf2026', function(rows){
+      if(rows && rows.length > 1) {
+        try{ var j=rows[1]&&rows[1][0]; if(j){ localStorage.setItem('pf2026v2',j); if(typeof pfRender==='function') pfRender(); } }catch(e){}
+      }
+    });
+    // facturas
+    gsGet('facturas', function(rows){
+      if(rows && rows.length > 1 && typeof rowsToObjs==='function') {
+        var objs=rowsToObjs(rows);
+        if(objs.length){
+          var nums=objs.map(function(f){return(f.num||'').toUpperCase();});
+          var local=FACTURAS.filter(function(f){return f.num&&nums.indexOf(f.num.toUpperCase())<0;});
+          FACTURAS=objs.concat(local);
+          FACTURAS.forEach(function(f){f.estado=typeof estadoFact==='function'?estadoFact(f):f.estado;});
+          try{localStorage.setItem('alzak_facturas',JSON.stringify(FACTURAS));}catch(e){}
+          if(typeof renderFacturas==='function') renderFacturas();
+          if(typeof fcRender==='function') setTimeout(fcRender,100);
+        }
+      }
+      if(ind) ind.style.display='none';
+    });
+  }, 800);
 
   var ls = document.getElementById('login-screen');
 

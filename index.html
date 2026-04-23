@@ -15449,6 +15449,10 @@ function renderConc(){
 
   function pfSave(data) {
     try { localStorage.setItem('pf2026v2', JSON.stringify(data)); } catch(e){}
+    // Sync to Sheet
+    if(window.GS_SYNC_ACTIVO && typeof gsPost === 'function') {
+      try { gsPost('pf2026', 'set', [['json'],[JSON.stringify(data)]]); } catch(e){}
+    }
   }
 
   // ── Helpers ──────────────────────────────────────────────
@@ -16708,6 +16712,12 @@ function fpLoad() {
 }
 function fpSave(data) {
   try { localStorage.setItem('alzak_fp2026', JSON.stringify(data)); } catch(e){}
+  // Sync to Sheet so the other user sees it
+  if(window.GS_SYNC_ACTIVO && typeof gsPost === 'function') {
+    try {
+      gsPost('fp2026', 'set', [['json'],[JSON.stringify(data)]]);
+    } catch(e){}
+  }
 }
 function fpFmt(n) { return '$'+(Math.round(n||0)).toLocaleString('es-CO'); }
 function fpEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
@@ -17355,7 +17365,7 @@ function alzakSyncDesdeSheet() {
       }
     });
 
-    // Fetch presupuesto
+    // Fetch presupuesto (matriz proyección)
     gsGet('pf2026', function(rows){
       if(rows && rows.length > 1) {
         try{
@@ -17364,6 +17374,30 @@ function alzakSyncDesdeSheet() {
             localStorage.setItem('pf2026v2', json);
             if(typeof pfRender==='function') pfRender();
           }
+        }catch(e){}
+      }
+    });
+
+    // Fetch facturación programada (fp2026) ← NUEVO
+    gsGet('fp2026', function(rows){
+      if(rows && rows.length > 1) {
+        try{
+          var json = rows[1] && rows[1][0];
+          if(json) {
+            localStorage.setItem('alzak_fp2026', json);
+            if(typeof fpRender==='function') fpRender();
+          }
+        }catch(e){}
+      }
+    });
+
+    // Fetch estados Equipo Base
+    gsGet('eb_estado', function(rows){
+      if(rows && rows.length > 1) {
+        try{
+          var obj = {};
+          rows.slice(1).forEach(function(r){ if(r[0]) obj[r[0]]=r[1]; });
+          localStorage.setItem('eb_estado_2026', JSON.stringify(obj));
         }catch(e){}
       }
     });

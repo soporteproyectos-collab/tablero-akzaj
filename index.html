@@ -187,7 +187,7 @@ select:focus{outline:none;border-color:var(--cyan);}
 /* LAYOUT */
 .scroll-area{padding:22px 28px;max-width:1400px;margin:0 auto;}
 .section{background:var(--white);border-radius:10px;border:1.5px solid var(--gray-light);overflow:hidden;margin-bottom:18px;}
-.section-head{display:flex;align-items:center;gap:10px;padding:13px 20px;border-bottom:1.5px solid var(--gray-light);flex-wrap:wrap;}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 20px;border-bottom:1.5px solid var(--gray-light);flex-wrap:nowrap;}
 .section-head.s-global {background:var(--teal);      border-color:var(--teal);}
 .section-head.s-ahorros{background:var(--cyan-light); border-color:var(--cyan-mid);}
 .section-head.s-fondo  {background:var(--purple-bg);  border-color:var(--purple-mid);}
@@ -362,66 +362,39 @@ tbody tr:hover td{background:var(--cyan-light);}
 <body>
 
 <div id="login-screen" style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#0d1117 0%,#1a1f2e 40%,#0d1117 100%);">
-
-  <!-- Animated background dots -->
   <style>
-    @keyframes fadeInUp {
-      from { opacity:0; transform:translateY(24px); }
-      to   { opacity:1; transform:translateY(0); }
-    }
-    .login-card { animation: fadeInUp 0.5s ease; }
-    .gsi-btn-wrap { display:flex; justify-content:center; margin:24px 0 8px; }
-    .login-divider { display:flex;align-items:center;gap:12px;margin:20px 0; }
-    .login-divider span { flex:1;height:1px;background:#e5e7eb; }
-    .login-divider p { font-size:11px;color:#9ca3af;white-space:nowrap; }
+    @keyframes fadeInUp {from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+    .login-card{animation:fadeInUp 0.5s ease}
   </style>
-
   <div class="login-card" style="background:#fff;border-radius:20px;padding:40px 44px;width:420px;max-width:94vw;box-shadow:0 32px 80px rgba(0,0,0,.5);">
-
-    <!-- Logo -->
-    <div style="text-align:center;margin-bottom:32px;">
+    <div style="text-align:center;margin-bottom:28px;">
       <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJkAAABFCAMAAABufrTcAAAAXVBMVEVMaXFUUE9dw9pUUE9dw9pUUE9dw9pUUE9UUE9UUE9UUE9UUE9dw9pdw9pUUE9dw9pUUE9UUE9dw9pdw9pdw9pdw9pUUE9dw9pdw9pUUE9dw9pUUE9dw9pUUE9dw9qB9seNAAAAHXRSTlMA7u7du0R3u3dmzBERRJmIMyIimd1miKozqsxVVdoHr78AAAAJcEhZcwAAC4gAAAuIAeWOKUkAAASLSURBVGiB7ZnZlqM6DEWFCZMZwxDIYP3/Z94lMcQ2Zqi6/VAPnIdeaUMVO0eSJVNw6dKlS5cuXfqfyrt/6WCQ/Lvf1WJtrYSIeLNvi5RbhXmbr+72T8ZKqUhfuEsl02OwDrE8Q/aIbPlEaj0iUepxRFZ59tdxq0UU2QmylVJPKeVV5rKvlGfbYZElSsVnwDpExPA3ZJIse5trCa3ZzzXJHso7l4o3IhO/IHsQhB05TkZvhywtVjZvKMdWIKJZnmfI3srOaypM5VOILU80slQquaoQt24YlojY/pSs4iSzMypSMVnpb5FVnnqeKEpgy0RWo23aMVnKSWaHJVBeelcr0xayxFsX7pYaSv7GBjkmK1yZDgUtFasoz2TxKs7bqnnDYNPyn5DRs9TTXr1zeNm0wEFWKC+wf2RTzbjJ3iySI7LKscWyZRyryDaNySj3zxUlsGVjY8rJNK1FHZClvmOLZbO47ALi1guQyHzf9V02VWIzXnohzh9PkEXrJAfe4KaeI61uSmSecn6bDWViNqozTdsni11bLDeryajEMo2jmfwELfz61KLe13fJOFjSBbz45JvoYwWMaKdqIBMY5pNot/329T2yO2+x63089VQcTHqYu/BUm4HnzoK16PmGlr6+RyZXm8L38YZi41I0940zaC12ea6btrSoHTL3FssRTIJAN+3bopYeMKIdtoEOX9r/Mr2vb5Mlzi2WL+iplxp9/ds3x6Z2NDa2Zq/UTdsk4y/tu7Yl34ySYZo5axyiddZ8wS3qs0/m7uPAlpnzxV2fKo357OnuH5pu1kym9/UtsudmBkf2st7XzZm2OEDLLcsAhm9f3yCLNyMR2CPZ2FoDF9mEtjk/3uzZf+zr/Q7ZRh+HcWJcLy2lYp+d4r12kK/OS3pfJzJx0zXXm5Krs100Toz2b9P6+uq8udep+rVlY4tqwLUH45xkLtElxw7nL6FfkdFwq84eoS5dunTp0qW/oUDuTSPc+7i1JfaIw2pQTINmxq31+CUlzLeLgzsqOitEjpOjQRZtvFMdsCvb+VElTSqOGeGXZE+aBFJV0SwgK4g9qfw7jQFeAFEBoBLwE3qzlPgQqIgGQXpdPk2vNTYvnQxED/WNz9Od4MNOiPgaILshigF6UQr4tHQ9Q9Hq7yochkxuBCqAQkKsgtSLwX9DLL9k5BmTxRBF8KSj9jS8vOiBpmevBmoRgmigx/ojamhaaHAYsIReoIC2hRLzDEX2Wv0NQpecHvHg2S+NfSCgp1fE4CC7Q+yD9+Zl4AlPiFyEsOSZGA852EOLfVnzuQJxgLIno3r8wDA6RdHscTgRTSJ7L2SQFjKiD6mDTC1kA5ZZOw3G7NkHu3pKtazsUWTNmE0lNiWTZefJKEKplPBWFYVpIpNM8qTorj2TT17mk3MD5XSWZrIBQ2hfkGNJGRdi3WEHN5E19GkkA/GCEodjMkh8ehfIx1Z5n8novUhA/0YjWTxVAN9Q+UsFfASKZjahpIoI9QoIAUJBFTAI7IUYyT5cGifIfi4vZof/oMjQU38zunTp0qVLf0oA8B/GsoA79/xQqwAAAABJRU5ErkJggg==" alt="ALZAK" style="height:42px;width:auto;margin:0 auto 14px;display:block;">
-      <div style="font-size:15px;font-weight:700;color:#111827;letter-spacing:-.3px;">Tablero Contable</div>
-      <div style="font-size:11px;color:#9ca3af;margin-top:3px;letter-spacing:.3px;">ALZAK GROUP SAS · NIT 900.898.741-8</div>
+      <div style="font-size:15px;font-weight:700;color:#111827;">Tablero Contable</div>
+      <div style="font-size:11px;color:#9ca3af;margin-top:3px;">ALZAK GROUP SAS · NIT 900.898.741-8</div>
     </div>
-
-    <!-- Google Sign-In section -->
-    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:20px 20px 16px;">
-      <div style="font-size:12px;color:#6b7280;text-align:center;margin-bottom:14px;font-weight:500;">
-        Acceso exclusivo para cuentas <strong style="color:#111827;">@alzak.com.co</strong>
-      </div>
-
-      <!-- Google button container -->
-      <div id="g_id_onload"
-           data-client_id="83679371971-b45il3ln1m7iirfjrjvlgu9q809buaak.apps.googleusercontent.com"
-           data-callback="onGoogleLogin"
-           data-auto_prompt="false">
-      </div>
-      <div class="gsi-btn-wrap">
-        <div class="g_id_signin"
-             data-type="standard"
-             data-size="large"
-             data-theme="outline"
-             data-text="signin_with"
-             data-shape="rectangular"
-             data-logo_alignment="left"
-             data-width="320">
-        </div>
-      </div>
-
-      <!-- Error message -->
-      <div id="login-error-google" style="display:none;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:8px;padding:10px 14px;font-size:12px;margin-top:10px;text-align:center;line-height:1.5;">
-      </div>
+    <div style="margin-bottom:14px;">
+      <label style="font-size:11px;font-weight:700;color:#555;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Usuario</label>
+      <input id="login-user" type="text" placeholder="admin" autocomplete="username"
+        style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;outline:none;box-sizing:border-box;"
+        onkeydown="if(event.key==='Enter')hacerLogin()">
     </div>
-
-    <!-- Security note -->
-    <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:20px;">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-      <span style="font-size:10px;color:#9ca3af;">Protegido con Google 2FA · Acceso restringido</span>
+    <div style="margin-bottom:20px;">
+      <label style="font-size:11px;font-weight:700;color:#555;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Contraseña</label>
+      <input id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password"
+        style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;outline:none;box-sizing:border-box;"
+        onkeydown="if(event.key==='Enter')hacerLogin()">
     </div>
-
+    <div id="login-error" style="display:none;background:#FEE2E2;color:#991B1B;border-radius:8px;padding:10px 14px;font-size:12px;margin-bottom:14px;">
+      Usuario o contraseña incorrectos.
+    </div>
+    <button onclick="hacerLogin()"
+      style="width:100%;padding:12px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">
+      Ingresar →
+    </button>
+    <div style="text-align:center;margin-top:16px;font-size:10px;color:#9ca3af;">
+      🔐 Google Auth activo en producción
+    </div>
   </div>
-
 </div>
 
 <div id="content">
@@ -582,6 +555,41 @@ tbody tr:hover td{background:var(--cyan-light);}
 
 <div id="dash-gastos-bloque" style="margin-bottom:12px">
 
+<div class="card" style="border:1.5px solid #0C447C;margin-bottom:12px;">
+
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+
+<div>
+<div style="font-size:10px;font-weight:700;color:#0C447C;letter-spacing:.06em;margin-bottom:2px">📋 Facturas y Cuentas de Cobro</div>
+<div style="font-size:15px;font-weight:700;color:#54504F">Facturas radicadas a ALZAK — Contratistas y Proveedores</div>
+<div style="font-size:11px;color:#888;margin-top:2px">Lo que nos cobran · obligaciones adquiridas · independiente de caja</div>
+</div>
+
+<div style="display:flex;gap:6px;flex-wrap:wrap">
+<button class="btn" onclick="document.getElementById('fr-file-csv').click()" style="font-size:12px;padding:7px 14px;background:#0C447C;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;">📊 CSV / Excel</button>
+<input id="fr-file-csv" type="file" accept=".csv,.xlsx,.xls" style="display:none" onchange="frCargarCSV(this)">
+<button onclick="frLimpiar()" style="font-size:12px;padding:7px 14px;background:#A32D2D;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;">🗑 Borrar todo</button>
+</div>
+</div>
+
+<!-- KPIs simples -->
+<div id="fr-kpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;"></div>
+
+<!-- Filtros — solo mes y búsqueda -->
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">
+<select id="fr-fil-mes" onchange="frRender()" style="padding:5px 8px;border:1px solid #ddd;border-radius:6px;font-size:11px;">
+<option value="">Todos los meses</option>
+</select>
+<input id="fr-buscar" type="text" placeholder="Buscar proveedor o concepto..." onkeyup="frRender()"
+  style="flex:1;min-width:200px;padding:5px 10px;border:1px solid #ddd;border-radius:6px;font-size:11px;">
+<span id="fr-count" style="font-size:11px;color:#888;"></span>
+</div>
+
+<!-- Dos grupos -->
+<div id="fr-tabla" style="overflow-x:auto;"></div>
+
+</div>
+
 <div class="card" style="border:1.5px solid #993C1D">
 
 <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
@@ -590,9 +598,9 @@ tbody tr:hover td{background:var(--cyan-light);}
 
 <div style="font-size:11px;font-weight:700;color:#993C1D;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">💸 Egresos</div>
 
-<div style="font-size:15px;font-weight:700;color:#54504F">Gastos — Proveedores y operación</div>
+<div style="font-size:15px;font-weight:700;color:#54504F">Egresos de Caja — Pagos realizados</div>
 
-<div style="font-size:11px;color:#888;margin-top:2px">Facturas de proveedores · Q1 2026</div>
+<div style="font-size:11px;color:#888;margin-top:2px">Pagos reales de caja · salidas bancarias confirmadas · Q1 2026</div>
 
 </div>
 
@@ -966,7 +974,12 @@ var CLIENTES_ALZAK = [
 
 // ============================================================
 
-// Google Auth — lista blanca de correos autorizados
+// MODO PREVIEW — login temporal con usuario/contraseña
+// Google Auth se reactiva en producción
+var USUARIOS = [
+  {user:'admin',     pass:'AG2026$$',  rol:'admin',     nombre:'Administrador ALZAK'},
+  {user:'asistente', pass:'ALZAK2026', rol:'asistente', nombre:'Asistente ALZAK'}
+];
 var GOOGLE_ROLES = {
   'soporteproyectos@alzak.com.co': {rol:'admin',      nombre:'Administrador'},
   'njalvis@alzak.com.co':          {rol:'gerente',     nombre:'Gerente General'},
@@ -974,7 +987,6 @@ var GOOGLE_ROLES = {
   'administrativo@alzak.com.co':   {rol:'asistente',   nombre:'Asistente'}
 };
 var ALLOWED_DOMAIN = 'alzak.com.co';
-// Solo los 4 correos anteriores pueden entrar — cualquier otro es bloqueado
 
 var SESSION_KEY  = 'alzak_session';
 
@@ -14202,14 +14214,32 @@ function renderBcol() {
 
 <div class="scroll-area">
   <div class="section"><div class="section-head s-global"><span class="sec-badge sb-global">Resumen global</span><span class="sec-title on-teal" id="g-title"></span><span class="sec-sub on-teal" id="g-periodo"></span></div><div class="section-body" id="body-global" style="background:var(--teal)"></div></div>
-  <div class="section"><div class="section-head s-ahorros"><span class="sec-badge sb-ahorros">Cta. Ahorros</span><span class="sec-title on-cyan">78349636556 · Bancolombia · Sucursal Mall Plaza del Castillo</span><span class="sec-sub" id="ah-per"></span><label style="margin-left:auto;cursor:pointer;background:#5BC8CD;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:10px;font-weight:700;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;box-shadow:0 1px 4px rgba(0,0,0,.25);">📄 Extracto PDF<input type="file" accept=".pdf" style="display:none" onchange="concPdfLoad(this,'ahorros')"></label></div><div class="section-body" id="body-ahorros"></div></div>
-  <div class="section"><div class="section-head s-fondo"><span class="sec-badge sb-fondo">Fiducuenta</span><span class="sec-title on-purple">98000001771 · Fondo de Inversión Colectiva · Fiduciaria Bancolombia</span><span class="sec-sub" id="fid-per"></span><label style="margin-left:auto;cursor:pointer;background:#6950B8;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:10px;font-weight:700;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;box-shadow:0 1px 4px rgba(0,0,0,.25);">📄 Extracto PDF<input type="file" accept=".pdf" style="display:none" onchange="concPdfLoad(thiconcPdfLoad(this,'fondo')><div class="section-body" id="body-fondo"></div></div>
-  <div class="section"><div class="section-head s-caja"><span class="sec-badge sb-caja">Cta. Corriente</span><span class="sec-title on-orange">21003622970 · Banco Caja Social · Cartagena</span><span class="sec-sub" id="cj-per"></span><label style="margin-left:auto;cursor:pointer;background:#C2410C;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:10px;font-weight:700;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;box-shadow:0 1px 4px rgba(0,0,0,.25);">📄 Extracto PDF<input type="file" accept=".pdf" style="display:none" onchange="concPdfLoad(this,'<built-in funcconcPdfLoad(this,'caja')ion-body" id="body-caja"></div></div>
-  <div class="section"><div class="section-head s-bold"><span class="sec-badge sb-bold">Bold CF</span><span class="sec-title on-navy">1700-1155-2371 · Bold Compañía de Financiamiento · Depósito Ordinario</span><span class="sec-sub" id="bl-per"></span><label style="margin-left:auto;cursor:pointer;background:#1E3A5F;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:10px;font-weight:700;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;box-shadow:0 1px 4px rgba(0,0,0,.25);">📄 Extracto PDF<input type="file" accept=".pdf" style="display:none" onchange="concPdfLoad(this,'<built-in function id>')"></labeconcPdfLoad(this,'bold')-bold"></div></div>
+  <div class="section"><div class="section-head s-ahorros"><div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;"><span class="sec-badge sb-ahorros">Cta. Ahorros</span><span class="sec-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">78349636556 · Bancolombia · Sucursal Mall Plaza del Castillo</span></div><span id="ah-per" style="font-size:10px;color:#aaa;white-space:nowrap;padding:0 10px;flex-shrink:0;"></span><label style="cursor:pointer;background:#5BC8CD;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:10px;font-weight:700;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;box-shadow:0 1px 4px rgba(0,0,0,.25);flex-shrink:0;">📄 Extracto PDF<input type="file" accept=".pdf" style="display:none" onchange="concPdfLoad(this,'ahorros')"></label></div><div class="section-body" id="body-ahorros"></div></div>
+  <div class="section"><div class="section-head s-fondo"><div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;"><span class="sec-badge sb-fondo">Fiducuenta</span><span class="sec-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">98000001771 · Fondo de Inversión Colectiva · Fiduciaria Bancolombia</span></div><span id="fid-per" style="font-size:10px;color:#aaa;white-space:nowrap;padding:0 10px;flex-shrink:0;"></span><label style="cursor:pointer;background:#6950B8;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:10px;font-weight:700;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;box-shadow:0 1px 4px rgba(0,0,0,.25);flex-shrink:0;">📄 Extracto PDF<input type="file" accept=".pdf" style="display:none" onchange="concPdfLoad(this,'fondo')"></label></div>
+  <div class="section-body" id="body-fondo"></div></div>
+</div>
+
+<div class="section"><div class="section-head s-caja"><div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;"><span class="sec-badge sb-caja">Cta. Corriente</span><span class="sec-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">21003622970 · Banco Caja Social · Cartagena</span></div><span id="cj-per" style="font-size:10px;color:#aaa;white-space:nowrap;padding:0 10px;flex-shrink:0;"></span><label style="cursor:pointer;background:#C2410C;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:10px;font-weight:700;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;box-shadow:0 1px 4px rgba(0,0,0,.25);flex-shrink:0;">📄 Extracto PDF<input type="file" accept=".pdf" style="display:none" onchange="concPdfLoad(this,'caja')"></label></div><div class="section-body" id="body-caja"></div></div>
+
+<div class="section"><div class="section-head s-bold"><div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;"><span class="sec-badge sb-bold">Bold CF</span><span class="sec-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">1700-1155-2371 · Bold Compañía de Financiamiento · Depósito Ordinario</span></div><span id="bl-per" style="font-size:10px;color:#aaa;white-space:nowrap;padding:0 10px;flex-shrink:0;"></span><label style="cursor:pointer;background:#1E3A5F;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:10px;font-weight:700;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;box-shadow:0 1px 4px rgba(0,0,0,.25);flex-shrink:0;">📄 Extracto PDF<input type="file" accept=".pdf" style="display:none" onchange="concPdfLoad(this,'bold')"></label></div><div class="section-body" id="body-bold"></div></div>
+
+<!-- ══ TC BCS VISA ══════════════════════════════════════════════════ --> ══════════════════════════════════════════════════ -->
+<div class="section-card" style="margin:10px 0;">
+  <div class="section-head" style="background:#FEF2F2;border-color:#FECACA;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 20px;">
+    <div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;">
+      <span class="sec-badge" style="background:#DC2626;color:#fff;flex-shrink:0;">TC VISA</span>
+      <span class="sec-title" style="color:#991B1B;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">4704-3710-5418-6529 · Tarjeta de Crédito BCS · Cupo $4.000.000</span>
+    </div>
+    <span id="tc-per" style="font-size:10px;color:#aaa;white-space:nowrap;padding:0 10px;flex-shrink:0;"></span>
+    <label style="cursor:pointer;background:#DC2626;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:10px;font-weight:700;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;box-shadow:0 1px 4px rgba(0,0,0,.25);flex-shrink:0;">📄 Extracto PDF<input type="file" accept=".pdf" style="display:none" onchange="concPdfLoad(this,'tc')"></label>
+  </div>
+  <div class="section-body" id="body-tc">
+    <div style="color:#aaa;font-size:12px;padding:10px;">Cargando...</div>
+  </div>
 </div>
 
 <div class="footer">
-  <span>ALZAK GROUP SAS · Bancolombia 78349636556 · Fiducuenta 98000001771 · Caja Social 21003622970 · Bold CF 1700-1155-2371</span>
+  <span>ALZAK GROUP SAS · Bancolombia 78349636556 · Fiducuenta 98000001771 · Caja Social 21003622970 · Bold CF 1700-1155-2371 · TC BCS VISA 4704-3710-5418-6529</span>
   <span id="fecha-gen"></span>
 </div>
 </div>
@@ -14631,6 +14661,85 @@ const P=[
  caja:{sA:72169980.84,sF:15648594.84,tAb:0,tCar:56521386,movs:[]},
  bold:{sA:19657053.36,sF:36614121.45,tAb:20068865.69,tCar:3111797.60,intereses:68865.69,movs:[]}
 }];
+
+// ── Tarjeta de Credito BCS — datos por periodo ───────────────────────────
+const TC_DATA = [
+  {label:'Diciembre 2025',desde:'2025/11/27',hasta:'2025/12/26',saldoAnterior:2630837,compras:3811430,otrosCargos:15247,pagos:6221894,saldoCierre:96385,diferidos:137734,cupo:4000000},
+  {label:'Enero 2026', desde:'2025/12/27', hasta:'2026/01/30',
+   saldoAnterior:235620, compras:4232649, otrosCargos:16933, pagos:2654548,
+   saldoCierre:278313, diferidos:1545046, cupo:4000000,
+   movimientos:[
+    {f:'26/12',d:'MERCADO PAGO*MERCADOLI',v:-169000,t:'compra'},
+    {f:'27/12',d:'MERCADO PAGO*MERCADOLI',v:-276384,t:'compra'},
+    {f:'30/12',d:'MERCADO PAGO*MERCADOLI',v:-96000,t:'compra'},
+    {f:'01/01',d:'DIGITALOCEAN.COM',v:-45536,t:'compra'},
+    {f:'01/01',d:'GOOGLE Workspace alzak.co',v:-318751,t:'compra'},
+    {f:'01/01',d:'GOOGLE Workspace alzakfou',v:-270938,t:'compra'},
+    {f:'02/01',d:'RESTAURANTE VIDA',v:-265609,t:'compra'},
+    {f:'04/01',d:'DORIAUTOS CARTAGENA 2',v:-520000,t:'compra'},
+    {f:'05/01',d:'CREPES Y WAFFLES MALL PLAZA',v:-130400,t:'compra'},
+    {f:'06/01',d:'POSIT SOFTWARE PBC',v:-225892,t:'compra'},
+    {f:'10/01',d:'DLO*GODADDYCOM',v:-90780,t:'compra'},
+    {f:'13/01',d:'MERCADO PAGO*MERCADOPA',v:-185000,t:'compra'},
+    {f:'14/01',d:'Mi Pago Amigo',v:2654548,t:'pago'},
+    {f:'15/01',d:'DLO*MICROSOFT',v:-459999,t:'compra'},
+    {f:'15/01',d:'MERCADO PAGO*MERCADOLI',v:-200032,t:'compra'},
+    {f:'15/01',d:'INFORMATICA Y GESTION',v:-101919,t:'compra'},
+    {f:'19/01',d:'GOOGLE Google One',v:-8900,t:'compra'},
+    {f:'22/01',d:'Lucid Software Inc.',v:-40918,t:'compra'},
+    {f:'22/01',d:'MICROSOFT',v:-54681,t:'compra'},
+    {f:'26/01',d:'Q35 ISIMO CRESPO',v:-250040,t:'compra'},
+    {f:'29/01',d:'LATAM AIRLINES COLOMBIA',v:-133590,t:'compra'},
+    {f:'29/01',d:'MERCADO PAGO*A4A',v:-159900,t:'compra'},
+    {f:'29/01',d:'AVIANCA SA',v:-228380,t:'compra'},
+  ]},
+  {label:'Febrero 2026', desde:'2026/01/31', hasta:'2026/02/27',
+   saldoAnterior:1830654, compras:3379816, otrosCargos:13518, pagos:3351186,
+   saldoCierre:325994, diferidos:1539347, cupo:4000000,
+   movimientos:[
+    {f:'30/01',d:'MERCADO PAGO*CUEROSVEL',v:-601860,t:'compra'},
+    {f:'01/02',d:'DIGITALOCEAN.COM',v:-48221,t:'compra'},
+    {f:'01/02',d:'Google Workspace alzakfou',v:-264030,t:'compra'},
+    {f:'01/02',d:'Google Workspace alzak.co',v:-308590,t:'compra'},
+    {f:'02/02',d:'Mi Pago Amigo',v:2483335,t:'pago'},
+    {f:'06/02',d:'POSIT SOFTWARE PBC',v:-217201,t:'compra'},
+    {f:'09/02',d:'OPENAI CHATGPT SUBSCR',v:-74573,t:'compra'},
+    {f:'19/02',d:'UBER RIDES x3',v:-102495,t:'compra'},
+    {f:'19/02',d:'GOOGLE Google One',v:-8900,t:'compra'},
+    {f:'20/02',d:'Mi Pago Amigo',v:867851,t:'pago'},
+    {f:'22/02',d:'Microsoft',v:-54870,t:'compra'},
+    {f:'23/02',d:'LATAM AIRLINES COLOMBIA',v:-546820,t:'compra'},
+    {f:'23/02',d:'AEROREPUBLICA WINGO',v:-764713,t:'compra'},
+    {f:'25/02',d:'MISTURA CARTAGENA',v:-387543,t:'compra'},
+  ]},
+  {label:'Marzo 2026', desde:'2026/02/28', hasta:'2026/03/31',
+   saldoAnterior:1872802, compras:5540129, otrosCargos:22158, pagos:6975496,
+   saldoCierre:84105, diferidos:373657, cupo:4000000,
+   movimientos:[
+    {f:'27/02',d:'UBER RIDES x2',v:-79947,t:'compra'},
+    {f:'27/02',d:'MERCADO PAGO*MERCADOLI',v:-136702,t:'compra'},
+    {f:'27/02',d:'PYU*TOTTO',v:-159800,t:'compra'},
+    {f:'01/03',d:'DIGITALOCEAN.COM',v:-47064,t:'compra'},
+    {f:'01/03',d:'GOOGLE Workspace alzak',v:-286013,t:'compra'},
+    {f:'01/03',d:'Google Workspace alzakfou',v:-276366,t:'compra'},
+    {f:'02/03',d:'MERCADO PAGO*MERCADOLI',v:-93750,t:'compra'},
+    {f:'02/03',d:'MP*ASOCIACION300 x2',v:-370000,t:'compra'},
+    {f:'06/03',d:'POSIT SOFTWARE PBC',v:-223547,t:'compra'},
+    {f:'09/03',d:'MERCADO PAGO*MERCADOLI',v:-108708,t:'compra'},
+    {f:'09/03',d:'OPENAI CHATGPT SUBSCR',v:-76112,t:'compra'},
+    {f:'13/03',d:'HOSTINGER*DL',v:-310800,t:'compra'},
+    {f:'14/03',d:'Mi Pago Amigo',v:3000000,t:'pago'},
+    {f:'16/03',d:'MERCADO PAGO*STANLEYCO',v:-187600,t:'compra'},
+    {f:'18/03',d:'IKEA ECOMMERCE',v:-629860,t:'compra'},
+    {f:'18/03',d:'ISPOR',v:-1659326,t:'compra'},
+    {f:'19/03',d:'LATAM AIRLINES COLOMBIA',v:-427872,t:'compra'},
+    {f:'19/03',d:'GOOGLE Google One',v:-8900,t:'compra'},
+    {f:'21/03',d:'Mi Pago Amigo',v:3975496,t:'pago'},
+    {f:'22/03',d:'MICROSOFT',v:-54822,t:'compra'},
+    {f:'26/03',d:'MERCADO PAGO x2',v:-370000,t:'compra'},
+    {f:'26/03',d:'Adobe.com',v:-32940,t:'compra'},
+  ]},
+];
 
 /* ══════════════ TIPOS ══════════════ */
 const TM={ingreso:{l:'Ingreso externo',c:'pg'},interno:{l:'Traslado interno',c:'pc'},fondo:{l:'↔ Fiducuenta',c:'pp'},transf:{l:'Transferencia',c:'pc'},egreso:{l:'Egreso/Pago',c:'pa'},interes:{l:'Intereses',c:'pg'},impto:{l:'4x1000/GMF',c:'pr'},comision:{l:'Comisión',c:'pr'},devol:{l:'Devolución ACH',c:'pz'},traslado:{l:'Traslado banco',c:'pot'}};
@@ -15448,7 +15557,9 @@ function renderConc(){
             <th style="padding:7px 10px;text-align:left;font-weight:700;color:#7C3AED;border-bottom:2px solid #7C3AED;">Cliente</th>
             <th style="padding:7px 10px;text-align:left;font-weight:700;color:#7C3AED;border-bottom:2px solid #7C3AED;">Concepto</th>
             <th style="padding:7px 10px;text-align:right;font-weight:700;color:#7C3AED;border-bottom:2px solid #7C3AED;">Valor</th>
-            <th style="padding:7px 10px;text-align:center;font-weight:700;color:#7C3AED;border-bottom:2px solid #7C3AED;">Mes cobro</th>
+            <th style="padding:7px 10px;text-align:center;font-weight:700;color:#7C3AED;border-bottom:2px solid #7C3AED;">Fecha fact.</th>
+            <th style="padding:7px 10px;text-align:center;font-weight:700;color:#7C3AED;border-bottom:2px solid #7C3AED;">Días pago</th>
+            <th style="padding:7px 10px;text-align:center;font-weight:700;color:#7C3AED;border-bottom:2px solid #7C3AED;">Cobro est.</th>
             <th style="padding:7px 10px;text-align:center;font-weight:700;color:#7C3AED;border-bottom:2px solid #7C3AED;">Estado</th>
             <th style="padding:7px 4px;border-bottom:2px solid #7C3AED;"></th>
           </tr>
@@ -16853,14 +16964,44 @@ function fpRender() {
       +' style="border:1px solid #ddd;border-radius:5px;padding:3px 7px;font-size:11px;width:110px;text-align:right;">';
     tr.appendChild(td4);
 
-    // Mes
-    var td5 = document.createElement('td'); td5.style.cssText='padding:5px 8px;text-align:center;';
-    td5.innerHTML = '<select onchange="fpEdit('+i+',\'mes\',+this.value)"'
+
+
+    // Fecha facturación
+    var td5b = document.createElement('td'); td5b.style.cssText='padding:5px 8px;text-align:center;';
+    td5b.innerHTML = '<input type="date" value="'+(row.fechaFact||'')+'"'
+      +' onchange="fpEdit('+i+',\'fechaFact\',this.value)"'
+      +' style="border:1px solid #ddd;border-radius:5px;padding:3px 5px;font-size:11px;width:120px;">';
+    tr.appendChild(td5b);
+
+    // Días de pago del cliente
+    var td5c = document.createElement('td'); td5c.style.cssText='padding:5px 8px;text-align:center;';
+    td5c.innerHTML = '<select onchange="fpEdit('+i+',\'diasPago\',+this.value)"'
       +' style="border:1px solid #ddd;border-radius:5px;padding:3px 5px;font-size:11px;">'
-      +FP_MESES_FULL.map(function(m,mi){
-        return '<option value="'+(mi+1)+'"'+(row.mes===(mi+1)?' selected':'')+'>'+m+'</option>';
-      }).join('')+'</select>';
-    tr.appendChild(td5);
+      +'<option value="0"'+((!row.diasPago||row.diasPago===0)?' selected':'')+'>Al facturar</option>'
+      +'<option value="15"'+(row.diasPago===15?' selected':'')+'>15 días</option>'
+      +'<option value="30"'+(row.diasPago===30?' selected':'')+'>30 días</option>'
+      +'<option value="45"'+(row.diasPago===45?' selected':'')+'>45 días</option>'
+      +'<option value="60"'+(row.diasPago===60?' selected':'')+'>60 días</option>'
+      +'<option value="90"'+(row.diasPago===90?' selected':'')+'>90 días</option>'
+      +'</select>';
+    tr.appendChild(td5c);
+
+    // Fecha estimada de cobro (calculada)
+    var td5d = document.createElement('td'); td5d.style.cssText='padding:5px 8px;text-align:center;';
+    var fechaCobro = '';
+    var fechaCobroStr = '—';
+    if (row.fechaFact) {
+      var d = new Date(row.fechaFact);
+      d.setDate(d.getDate() + (row.diasPago || 0));
+      fechaCobro = d;
+      var meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+      fechaCobroStr = d.getDate() + ' ' + meses[d.getMonth()] + ' ' + d.getFullYear();
+    }
+    var diasRestantes = fechaCobro ? Math.round((fechaCobro - new Date()) / (1000*60*60*24)) : null;
+    var cobroColor = diasRestantes === null ? '#888' : diasRestantes < 0 ? '#A32D2D' : diasRestantes <= 15 ? '#B45309' : '#2E7D32';
+    td5d.innerHTML = '<span style="font-size:11px;font-weight:700;color:'+cobroColor+';">'+fechaCobroStr+'</span>'
+      +(diasRestantes !== null ? '<br><span style="font-size:9px;color:'+cobroColor+';">'+(diasRestantes < 0 ? 'Vencido '+Math.abs(diasRestantes)+'d' : 'En '+diasRestantes+'d')+'</span>' : '');
+    tr.appendChild(td5d);
 
     // Estado
     var td6 = document.createElement('td'); td6.style.cssText='padding:5px 8px;text-align:center;';
@@ -16888,7 +17029,15 @@ function fpRender() {
 
   // Summary by month
   var byMes = {};
-  data.forEach(function(r){ byMes[r.mes]=(byMes[r.mes]||0)+(r.valor||0); });
+  data.forEach(function(r){
+    var mesKey = r.mes; // fallback
+    if (r.fechaFact) {
+      var d = new Date(r.fechaFact);
+      d.setDate(d.getDate() + (r.diasPago || 0));
+      mesKey = d.getMonth() + 1;
+    }
+    byMes[mesKey] = (byMes[mesKey]||0) + (r.valor||0);
+  });
   var totalEl = document.getElementById('fp-total');
   if(totalEl && sumValor) {
     var html = '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
@@ -16928,10 +17077,15 @@ function fpDel(i) {
 function fpAddRow() {
   var data = fpLoad();
   var n = data.length+1;
+  var nextMes = new Date();
+  nextMes.setMonth(nextMes.getMonth()+1);
+  var fechaDefault = nextMes.toISOString().split('T')[0];
   data.push({
     num:'FEE-PROG-'+String(n).padStart(3,'0'),
     cliente:'', concepto:'', valor:0,
     mes: new Date().getMonth()+2<=12 ? new Date().getMonth()+2 : 1,
+    fechaFact: fechaDefault,
+    diasPago: 30,
     estado:'Programada'
   });
   fpSave(data); fpRender();
@@ -16948,11 +17102,20 @@ fcRender = function() {
 function fpInjectIntoFlujo() {
   var data = fpLoad();
   if(!data || !data.length) return;
-  var anio = new Date().getFullYear();
-  // For each programmed invoice, find its month row and add a purple badge
+  // For each programmed invoice, calculate cobro month from fechaFact + diasPago
   data.forEach(function(fp){
-    if(!fp.mes) return;
-    var mesName = FP_MESES_FULL[fp.mes-1];
+    // Calculate cobro date
+    var mesName = '';
+    if (fp.fechaFact) {
+      var d = new Date(fp.fechaFact);
+      d.setDate(d.getDate() + (fp.diasPago || 0));
+      mesName = FP_MESES_FULL[d.getMonth()] + ' ' + d.getFullYear();
+      // Strip year for table matching
+      mesName = FP_MESES_FULL[d.getMonth()];
+    } else if (fp.mes) {
+      mesName = FP_MESES_FULL[fp.mes-1];
+    }
+    if (!mesName) return;
     // Find tbody rows matching this month
     var tbl = document.querySelector('#fc-container table tbody');
     if(!tbl) return;
@@ -18056,6 +18219,517 @@ function concPdfAgregar() {
 
   // Close modal
   alzakCerrarConcModal();
+}
+</script>
+
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  TC BCS VISA — Renderizado y Balance
+// ══════════════════════════════════════════════════════════════
+
+function alzakToggleTC() {
+  var p = document.getElementById('tc-movs-panel');
+  var a = document.getElementById('tc-arrow');
+  if (!p) return;
+  if (p.style.display === 'none') {
+    p.style.display = 'block';
+    if(a) a.innerHTML = '&#9650;';
+  } else {
+    p.style.display = 'none';
+    if(a) a.innerHTML = '&#9660;';
+  }
+}
+function renderTC() {
+  var el = document.getElementById('body-tc');
+  var perEl = document.getElementById('tc-per');
+  if (!el) return;
+
+  // Get current period from selector
+  var sel = document.getElementById('sel-periodo');
+  var idx = sel ? parseInt(sel.value) : (typeof P !== 'undefined' ? P.length-1 : 0);
+  var p = P && P[idx] ? P[idx] : null;
+  var label = p ? p.label : '';
+
+  // Find matching TC data
+  var tc = null;
+  if (typeof TC_DATA !== 'undefined') {
+    tc = TC_DATA.find(function(t){ return t.label === label; });
+    if (!tc) tc = TC_DATA[TC_DATA.length-1]; // fallback to latest
+  }
+
+  if (!tc) {
+    el.innerHTML = '<div style="color:#aaa;font-size:12px;padding:10px;">Sin datos de tarjeta para este periodo.</div>';
+    return;
+  }
+
+  if (perEl) perEl.textContent = tc.desde + ' al ' + tc.hasta;
+
+  var fc2 = function(n){ return '$' + Math.abs(Math.round(n||0)).toLocaleString('es-CO'); };
+  var cupoUsado = tc.cupo - (tc.cupo - tc.saldoCierre - (tc.diferidos||0));
+  var pctCupo = Math.round((tc.saldoCierre / tc.cupo) * 100);
+  var pctDif  = Math.round((tc.diferidos / tc.cupo) * 100);
+
+  el.innerHTML =
+    // Alert header
+    '<div class="alert" style="background:#FEF2F2;border-left:3px solid #DC2626;color:#7F1D1D;">' +
+      '<strong>Saldo adeudado al ' + tc.hasta + ':</strong> ' + fc2(tc.saldoCierre) +
+      ' &nbsp;|&nbsp; Diferidos pendientes: ' + fc2(tc.diferidos) +
+      ' &nbsp;|&nbsp; Cupo disponible: ' + fc2(tc.cupo - tc.saldoCierre) +
+    '</div>' +
+
+    // KPI row
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0;">' +
+      '<div class="met" style="border-left:3px solid #DC2626;">' +
+        '<div class="met-l">SALDO ANTERIOR</div>' +
+        '<div class="met-v" style="color:#DC2626;">' + fc2(tc.saldoAnterior) + '</div>' +
+      '</div>' +
+      '<div class="met" style="border-left:3px solid #DC2626;">' +
+        '<div class="met-l">COMPRAS DEL MES</div>' +
+        '<div class="met-v" style="color:#DC2626;">+' + fc2(tc.compras) + '</div>' +
+      '</div>' +
+      '<div class="met" style="border-left:3px solid #2E7D32;">' +
+        '<div class="met-l">PAGOS Y ABONOS</div>' +
+        '<div class="met-v" style="color:#2E7D32;">-' + fc2(tc.pagos) + '</div>' +
+      '</div>' +
+      '<div class="met" style="border-left:3px solid #DC2626;">' +
+        '<div class="met-l">SALDO CIERRE</div>' +
+        '<div class="met-v" style="color:#DC2626;">' + fc2(tc.saldoCierre) + '</div>' +
+      '</div>' +
+    '</div>' +
+
+    // Cupo bar
+    '<div style="margin:8px 0 4px;font-size:11px;color:#666;font-weight:700;">USO DEL CUPO</div>' +
+    '<div style="background:#f5f5f5;border-radius:6px;height:12px;overflow:hidden;margin-bottom:6px;">' +
+      '<div style="background:#DC2626;height:100%;width:' + Math.min(pctCupo,100) + '%;border-radius:6px;transition:width .3s;"></div>' +
+    '</div>' +
+    '<div style="display:flex;justify-content:space-between;font-size:10px;color:#888;margin-bottom:12px;">' +
+      '<span>Saldo: ' + fc2(tc.saldoCierre) + ' (' + pctCupo + '%)</span>' +
+      '<span>Cupo total: ' + fc2(tc.cupo) + '</span>' +
+    '</div>' +
+
+    // Diferidos info
+    '<div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;padding:10px 14px;font-size:12px;color:#7C2D12;">' +
+      '<strong>Diferidos pendientes (cuotas futuras):</strong> ' + fc2(tc.diferidos) + '<br>' +
+      '<span style="font-size:11px;color:#9a3412;">Estas cuotas saldrán de la cuenta corriente BCS en los próximos meses.</span>' +
+    '</div>';
+
+  // Movement table
+  var tcMovs = tc.movimientos || [];
+  if (tcMovs.length) {
+    var movHtml = tcMovs.map(function(m){
+      var isAbono = m.v > 0;
+      var col = isAbono ? '#2E7D32' : '#DC2626';
+      var bg  = isAbono ? '#DCFCE7' : '#FEE2E2';
+      var tipo = isAbono ? 'Pago/Abono' : (m.t==='impto'?'GMF 4x1000':'Compra');
+      return '<tr style="border-bottom:1px solid #fde8e8;">'
+        + '<td style="padding:5px 8px;color:#888;font-size:11px;white-space:nowrap;">' + (m.f||'') + '</td>'
+        + '<td style="padding:5px 8px;font-size:11px;">' + (m.d||'') + '</td>'
+        + '<td style="padding:5px 8px;"><span style="background:' + bg + ';color:' + col + ';border-radius:4px;padding:2px 6px;font-size:10px;font-weight:700;">' + tipo + '</span></td>'
+        + '<td style="text-align:right;padding:5px 8px;font-weight:700;color:' + col + ';font-size:12px;">' + (m.v>=0?'+':'') + fc2(m.v) + '</td>'
+        + '</tr>';
+    }).join('');
+
+    el.innerHTML += '<div style="margin-top:10px;">'
+      + '<button onclick="alzakToggleTC()" '
+      + 'style="width:100%;display:flex;align-items:center;justify-content:space-between;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:10px 14px;cursor:pointer;font-family:inherit;">'
+      + '<span style="font-size:12px;font-weight:700;color:#991B1B;">&#9679; Movimientos TC BCS &nbsp;<span style="background:#DC2626;color:#fff;border-radius:10px;padding:1px 8px;font-size:10px;">' + tcMovs.length + ' mov.</span></span>'
+      + '<span id="tc-arrow" style="color:#DC2626;font-size:12px;">&#9660;</span>'
+      + '</button>'
+      + '<div id="tc-movs-panel" style="display:none;border:1px solid #FECACA;border-radius:0 0 8px 8px;overflow:hidden;">'
+      + '<div style="overflow-x:auto;">'
+      + '<table style="width:100%;border-collapse:collapse;">'
+      + '<thead><tr style="background:#FEF2F2;">'
+      + '<th style="padding:6px 8px;text-align:left;font-size:10px;color:#991B1B;">Fecha</th>'
+      + '<th style="padding:6px 8px;text-align:left;font-size:10px;color:#991B1B;">Descripcion</th>'
+      + '<th style="padding:6px 8px;text-align:left;font-size:10px;color:#991B1B;">Tipo</th>'
+      + '<th style="padding:6px 8px;text-align:right;font-size:10px;color:#991B1B;">Valor</th>'
+      + '</tr></thead>'
+      + '<tbody>' + movHtml + '</tbody>'
+      + '</table></div></div></div>';
+  }
+
+  // Update balance with TC as liability
+  if (typeof renderBalance === 'function') setTimeout(renderBalance, 100);
+}
+
+// ── Hook into renderConc to also render TC ────────────────────────────────
+var _origRenderConc = typeof renderConc === 'function' ? renderConc : null;
+renderConc = function() {
+  if (_origRenderConc) _origRenderConc();
+  setTimeout(renderTC, 100);
+};
+
+// ── Inject TC into Balance General Pasivos ────────────────────────────────
+var _origRenderBalance = typeof renderBalance === 'function' ? renderBalance : null;
+renderBalance = function() {
+  if (_origRenderBalance) _origRenderBalance();
+  // Inject TC pasivo into balance tabla
+  setTimeout(function() {
+    var tabla = document.getElementById('bal-tabla');
+    if (!tabla) return;
+
+    // Get current period
+    var sel = document.getElementById('sel-periodo');
+    var idx = sel ? parseInt(sel.value) : (P ? P.length-1 : 0);
+    var p = P && P[idx] ? P[idx] : null;
+    var label = p ? p.label : '';
+
+    var tc = null;
+    if (typeof TC_DATA !== 'undefined') {
+      tc = TC_DATA.find(function(t){ return t.label === label; });
+      if (!tc && !label) tc = TC_DATA[TC_DATA.length-1];
+    }
+    if (!tc || !tc.saldoCierre) return;
+
+    var fc2 = function(n){ return '$' + Math.abs(Math.round(n||0)).toLocaleString('es-CO'); };
+
+    // Find "Cuentas por pagar" row and insert TC after it
+    var rows = tabla.querySelectorAll('tr');
+    rows.forEach(function(row) {
+      if (row.textContent.indexOf('Cuentas por pagar') > -1 && row.textContent.indexOf('Honorarios') > -1) {
+        var tcRow = document.createElement('tr');
+        tcRow.style.cssText = 'border-bottom:1px solid #f0eeec;';
+        tcRow.innerHTML =
+          '<td style="padding:5px 14px 5px 46px;font-size:12px;color:#DC2626;">' +
+            'Tarjeta de Crédito BCS <span style="font-size:10px;color:#aaa;">·  4704-3710-5418-6529</span>' +
+          '</td>' +
+          '<td style="padding:5px 14px;text-align:right;font-size:12px;color:#DC2626;font-weight:700;">' +
+            '-' + fc2(tc.saldoCierre) +
+          '</td>';
+        row.parentNode.insertBefore(tcRow, row.nextSibling);
+
+        // Also add diferidos if > 0
+        if (tc.diferidos > 0) {
+          var difRow = document.createElement('tr');
+          difRow.style.cssText = 'border-bottom:1px solid #f0eeec;background:#FFF7ED;';
+          difRow.innerHTML =
+            '<td style="padding:5px 14px 5px 46px;font-size:11px;color:#9a3412;">' +
+              'Diferidos TC BCS <span style="font-size:10px;color:#aaa;">· cuotas pendientes</span>' +
+            '</td>' +
+            '<td style="padding:5px 14px;text-align:right;font-size:11px;color:#9a3412;">' +
+              '-' + fc2(tc.diferidos) +
+            '</td>';
+          tcRow.parentNode.insertBefore(difRow, tcRow.nextSibling);
+        }
+      }
+    });
+  }, 200);
+};
+
+// ── Add TC config to concPdfLoad ──────────────────────────────────────────
+if (typeof CONC_ACCOUNT_CONFIG !== 'undefined') {
+  CONC_ACCOUNT_CONFIG['tc'] = {
+    nombre:  'Tarjeta de Credito BCS',
+    cuenta:  '4704-3710-5418-6529',
+    banco:   'Banco Caja Social',
+    tipo:    'credito',
+    moneda:  'COP',
+    prompt:  'Extracto de tarjeta de credito BCS VISA. Extrae: saldo anterior, total compras del mes, otros cargos, total pagos y abonos, saldo pendiente al cierre, diferidos del mes (cuotas facturadas). Los GMF TC EMPRESARIAL son cargos de 4x1000. Mi Pago Amigo son pagos a la tarjeta (abonos). NO son ingresos, son pagos del titular.'
+  };
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', function(){
+  setTimeout(renderTC, 500);
+});
+</script>
+
+
+<script>
+// ══════════════════════════════════════════════════════════════
+//  FACTURAS RADICADAS A ALZAK — Motor
+// ══════════════════════════════════════════════════════════════
+
+var FR_DATA = []; // loaded from CSV/Excel
+
+var FR_CATS_FACTURAS = [
+  'Nomina y Honorarios',
+  'Procesamiento Electronico de Datos',
+  'Capacitacion e Investigacion',
+  'Servicios Generales',
+  'Arrendamientos y Administracion',
+  'Gastos Legales y Notariales',
+  'Gastos de Personal y Dotaciones',
+  'Equipos de Oficina',
+  'Mobiliario y Enseres',
+  'Materiales y Construccion',
+  'Mantenimiento y Reparaciones',
+  'Compras de Oficina',
+  'Servicios Publicos',
+  'Seguros',
+  'Prestamos',
+  'Obligacion Tributaria DIAN',
+];
+
+function frFmt(n) { return '$' + Math.round(Math.abs(n||0)).toLocaleString('es-CO'); }
+function frEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+
+function frParseCSV(text) {
+  // Proper CSV parser handling quoted fields with commas
+  var rows = [];
+  var lines = text.replace(/\r/g, '').split('\n');
+  for (var i=0; i<lines.length; i++) {
+    var line = lines[i];
+    if (!line.trim()) continue;
+    var row = [];
+    var cur = '';
+    var inQ = false;
+    for (var c=0; c<line.length; c++) {
+      var ch = line[c];
+      if (ch === '"') {
+        if (inQ && line[c+1] === '"') { cur += '"'; c++; }
+        else inQ = !inQ;
+      } else if (ch === ',' && !inQ) {
+        row.push(cur.trim()); cur = '';
+      } else {
+        cur += ch;
+      }
+    }
+    row.push(cur.trim());
+    rows.push(row);
+  }
+  return rows;
+}
+
+function frCargarCSV(input) {
+  var file = input.files[0];
+  if (!file) return;
+  input.value = '';
+  var ext = file.name.split('.').pop().toLowerCase();
+
+  if (ext === 'csv') {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      FR_DATA = [];
+      var rows = frParseCSV(e.target.result);
+      if (rows.length < 2) { alert('CSV sin datos'); return; }
+      var headers = rows[0];
+      for (var i=1; i<rows.length; i++) {
+        if (!rows[i] || !rows[i].length) continue;
+        var obj = {};
+        headers.forEach(function(h,j){ obj[h] = (rows[i][j]||'').toString().trim(); });
+        if (obj['Fecha'] && obj['Categoria'] && obj['Categoria'] !== 'Categoria') FR_DATA.push(obj);
+      }
+      frPostLoad();
+    };
+    reader.readAsText(file, 'UTF-8');
+  } else {
+    // Excel — use SheetJS
+    var reader2 = new FileReader();
+    reader2.onload = function(e) {
+      try {
+        var data = new Uint8Array(e.target.result);
+        var wb = XLSX.read(data, {type:'array'});
+        // Find the Consolidado sheet
+        var shName = wb.SheetNames.find(function(n){ return n.toLowerCase().includes('consolidado'); }) || wb.SheetNames[0];
+        var ws = wb.Sheets[shName];
+        var rows = XLSX.utils.sheet_to_json(ws, {defval:'', header:1});
+        // Find header row
+        var headerIdx = rows.findIndex(function(r){ return r[0]==='Fecha' || r[1]==='Categoria'; });
+        if (headerIdx < 0) headerIdx = 1;
+        var headers = rows[headerIdx];
+        FR_DATA = [];
+        for (var i=headerIdx+1; i<rows.length; i++) {
+          var row = rows[i];
+          if (!row[0] || !row[1]) continue;
+          var fecha = String(row[0]);
+          if (fecha.includes('—') || fecha.includes('TOTAL') || fecha.includes('PUC')) continue;
+          var obj = {};
+          headers.forEach(function(h,j){ obj[h] = row[j] !== undefined ? String(row[j]) : ''; });
+          if (obj['Categoria'] && obj['Categoria'] !== 'Categoria') FR_DATA.push(obj);
+        }
+        frPostLoad();
+      } catch(err) {
+        alert('Error leyendo Excel: ' + err.message);
+      }
+    };
+    reader2.readAsArrayBuffer(file);
+  }
+}
+
+function frPostLoad() {
+  // Note: not persisted to localStorage — load CSV each session
+  frActualizarFiltros();
+  frRender();
+  if (typeof mostrarToast === 'function') mostrarToast('✅ ' + FR_DATA.length + ' facturas radicadas cargadas');
+}
+
+function frLimpiar() {
+  FR_DATA = [];
+  try { localStorage.removeItem('alzak_fr_data'); } catch(e){}
+  var mes = document.getElementById('fr-fil-mes');
+  var bus = document.getElementById('fr-buscar');
+  var cnt = document.getElementById('fr-count');
+  if (mes) mes.innerHTML = '<option value="">Todos los meses</option>';
+  if (bus) bus.value = '';
+  if (cnt) cnt.textContent = '';
+  frRender();
+  if (typeof mostrarToast === 'function') mostrarToast('✅ Facturas radicadas eliminadas');
+}
+
+function frActualizarFiltros() {
+  var meses = [...new Set(FR_DATA.map(function(r){ return r['Fecha'] ? r['Fecha'].substring(3,10) : ''; }).filter(Boolean))].sort();
+  var cats  = [...new Set(FR_DATA.map(function(r){ return r['Categoria']||''; }).filter(Boolean))].sort();
+
+  var selMes = document.getElementById('fr-fil-mes');
+  var selCat = document.getElementById('fr-fil-cat');
+  if (selMes) {
+    selMes.innerHTML = '<option value="">Todos los meses</option>'
+      + meses.map(function(m){ return '<option value="'+m+'">'+m+'</option>'; }).join('');
+  }
+  if (selCat) {
+    selCat.innerHTML = '<option value="">Todas las categorías</option>'
+      + cats.map(function(c){ return '<option value="'+frEsc(c)+'">'+c+'</option>'; }).join('');
+  }
+}
+
+// Categorias por grupo
+var FR_CATS_HONORARIOS = ['Nomina y Honorarios'];
+var FR_CATS_DIAN_OBLIG = ['Obligacion Tributaria DIAN'];
+// Todo lo demas = Facturas radicadas de proveedores
+
+function frEsHonorario(r) {
+  return FR_CATS_HONORARIOS.indexOf(r['Categoria']||'') >= 0;
+}
+function frEsDIAN(r) {
+  var cat = r['Categoria'] || '';
+  var prov = (r['Proveedor / Beneficiario'] || '').toLowerCase();
+  return FR_CATS_DIAN_OBLIG.indexOf(cat) >= 0 || prov.includes('dian');
+}
+
+function frGetFiltered() {
+  var mes = (document.getElementById('fr-fil-mes')||{}).value || '';
+  var bus = ((document.getElementById('fr-buscar')||{}).value || '').toLowerCase();
+  return FR_DATA.filter(function(r) {
+    if (mes && !(r['Fecha']||'').includes(mes)) return false;
+    if (bus) {
+      var h = ((r['Proveedor / Beneficiario']||'') + ' ' + (r['Concepto']||'')).toLowerCase();
+      if (!h.includes(bus)) return false;
+    }
+    return true;
+  });
+}
+
+function frToggleGrupo(key) {
+  var panel = document.getElementById('fr-panel-' + key);
+  var arrow = document.getElementById('fr-arrow-' + key);
+  if (!panel) return;
+  var isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  if (arrow) arrow.innerHTML = isOpen ? '&#9660;' : '&#9650;';
+  if (typeof _frOpen !== 'undefined') _frOpen[key] = !isOpen;
+}
+
+function frRender() {
+  var tabla = document.getElementById('fr-tabla');
+  var kpis  = document.getElementById('fr-kpis');
+  var count = document.getElementById('fr-count');
+  if (!tabla) return;
+
+  var filtered = frGetFiltered();
+  if (count) count.textContent = filtered.length + ' registros';
+
+  if (!filtered.length) {
+    tabla.innerHTML = '<div style="color:#aaa;font-size:12px;padding:20px;text-align:center;">'
+      + (FR_DATA.length ? 'Sin resultados.' : 'Carga el CSV/Excel con el botón 📊 CSV / Excel')
+      + '</div>';
+    if (kpis) kpis.innerHTML = '';
+    return;
+  }
+
+  // Split into 3 groups
+  var honorarios = filtered.filter(frEsHonorario);
+  var dianOblig  = filtered.filter(function(r){ return !frEsHonorario(r) && frEsDIAN(r); });
+  var facturas   = filtered.filter(function(r){ return !frEsHonorario(r) && !frEsDIAN(r); });
+
+  var totalHon  = honorarios.reduce(function(a,r){ return a+(parseFloat(String(r['Total (COP)']).replace(/[^0-9.]/g,''))||0);},0);
+  var totalDian = dianOblig.reduce(function(a,r){  return a+(parseFloat(String(r['Total (COP)']).replace(/[^0-9.]/g,''))||0);},0);
+  var totalFac  = facturas.reduce(function(a,r){   return a+(parseFloat(String(r['Total (COP)']).replace(/[^0-9.]/g,''))||0);},0);
+  var totalAll  = totalHon + totalDian + totalFac;
+
+  if (kpis) {
+    kpis.innerHTML =
+      '<div style="background:#EBF3FB;border-radius:10px;padding:14px 16px;">'
+        +'<div style="font-size:10px;color:#0C447C;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Total obligaciones</div>'
+        +'<div style="font-size:20px;font-weight:700;color:#0C447C;">'+frFmt(totalAll)+'</div>'
+        +'<div style="font-size:10px;color:#888;">'+filtered.length+' registros</div>'
+      +'</div>'
+      +'<div style="background:#F0EDFC;border-radius:10px;padding:14px 16px;">'
+        +'<div style="font-size:10px;color:#6950B8;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Honorarios y Cuentas de Cobro</div>'
+        +'<div style="font-size:20px;font-weight:700;color:#6950B8;">'+frFmt(totalHon)+'</div>'
+        +'<div style="font-size:10px;color:#888;">'+honorarios.length+' registros · contratistas</div>'
+      +'</div>'
+      +'<div style="background:#EBF3FB;border-radius:10px;padding:14px 16px;">'
+        +'<div style="font-size:10px;color:#0C447C;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Facturas Radicadas</div>'
+        +'<div style="font-size:20px;font-weight:700;color:#0C447C;">'+frFmt(totalFac)+'</div>'
+        +'<div style="font-size:10px;color:#888;">'+facturas.length+' registros · proveedores</div>'
+      +'</div>'
+      +'<div style="background:#FEF3C7;border-radius:10px;padding:14px 16px;">'
+        +'<div style="font-size:10px;color:#B45309;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Obligaciones DIAN</div>'
+        +'<div style="font-size:20px;font-weight:700;color:#B45309;">'+frFmt(totalDian)+'</div>'
+        +'<div style="font-size:10px;color:#888;">'+dianOblig.length+' registros · impuestos</div>'
+      +'</div>';
+  }
+
+  var _frOpen = {hon: true, fac: true, dian: true}; // track open state
+
+  function buildTable(rows, title, color, bg, key) {
+    if (!rows.length) return '';
+    var isOpen = _frOpen[key] !== false;
+    var tbody = rows.map(function(r){
+      var total_val = parseFloat(String(r['Total (COP)']).replace(/[^0-9.]/g,''))||0;
+      return '<tr style="border-bottom:1px solid #f0eeec;">'
+        +'<td style="padding:6px 10px;font-size:11px;white-space:nowrap;color:#666;">'+frEsc(r['Fecha']||'')+'</td>'
+        +'<td style="padding:6px 10px;font-size:10px;color:'+color+';font-weight:600;">'+frEsc(r['Categoria']||'')+'</td>'
+        +'<td style="padding:6px 10px;font-size:11px;font-weight:600;">'+frEsc((r['Proveedor / Beneficiario']||'').substring(0,40))+'</td>'
+        +'<td style="padding:6px 10px;font-size:11px;color:#555;max-width:220px;">'+frEsc((r['Concepto']||'').substring(0,65))+(r['Concepto']&&r['Concepto'].length>65?'…':'')+'</td>'
+        +'<td style="padding:6px 10px;font-size:10px;color:#888;">'+frEsc(r['N Comprobante']||'')+'</td>'
+        +'<td style="padding:6px 10px;font-size:12px;font-weight:700;text-align:right;">'+frFmt(total_val)+'</td>'
+        +'</tr>';
+    }).join('');
+    var total_grp = rows.reduce(function(a,r){return a+(parseFloat(String(r['Total (COP)']).replace(/[^0-9.]/g,''))||0);},0);
+    var panelId = 'fr-panel-' + key;
+    return '<div style="margin-bottom:18px;">'
+      +'<button onclick="frToggleGrupo(\''+key+'\')" style="width:100%;background:'+bg+';border-left:4px solid '+color+';border-top:none;border-right:none;border-bottom:none;padding:10px 14px;border-radius:0 6px 0 0;display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-family:inherit;">'
+        +'<span style="font-size:12px;font-weight:700;color:'+color+';">'+title+' <span style="font-size:10px;font-weight:400;color:#888;">'+rows.length+' registros</span></span>'
+        +'<div style="display:flex;align-items:center;gap:12px;">'
+          +'<span style="font-size:13px;font-weight:700;color:'+color+';">'+frFmt(total_grp)+'</span>'
+          +'<span id="fr-arrow-'+key+'" style="color:'+color+';font-size:12px;">'+(isOpen?'&#9650;':'&#9660;')+'</span>'
+        +'</div>'
+      +'</button>'
+      +'<div id="'+panelId+'" style="display:'+(isOpen?'block':'none')+';overflow-x:auto;">'
+        +'<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+          +'<thead><tr style="background:#f9f9f9;">'
+            +'<th style="padding:6px 10px;text-align:left;font-size:10px;color:#888;border-bottom:1px solid #eee;">Fecha</th>'
+            +'<th style="padding:6px 10px;text-align:left;font-size:10px;color:#888;border-bottom:1px solid #eee;">Categoría</th>'
+            +'<th style="padding:6px 10px;text-align:left;font-size:10px;color:#888;border-bottom:1px solid #eee;">Proveedor / Contratista</th>'
+            +'<th style="padding:6px 10px;text-align:left;font-size:10px;color:#888;border-bottom:1px solid #eee;">Concepto</th>'
+            +'<th style="padding:6px 10px;text-align:left;font-size:10px;color:#888;border-bottom:1px solid #eee;">N° Comp.</th>'
+            +'<th style="padding:6px 10px;text-align:right;font-size:10px;color:#888;border-bottom:1px solid #eee;">Total</th>'
+          +'</tr></thead>'
+          +'<tbody>'+tbody+'</tbody>'
+        +'</table>'
+      +'</div>'
+    +'</div>';
+  }
+
+  tabla.innerHTML =
+    buildTable(honorarios, 'Honorarios y Cuentas de Cobro — Contratistas', '#6950B8', '#F5F3FF', 'hon') +
+    buildTable(facturas,   'Facturas Radicadas — Proveedores', '#0C447C', '#EBF3FB', 'fac') +
+    buildTable(dianOblig,  'Obligaciones DIAN — Impuestos y Acuerdos de Pago', '#B45309', '#FEF3C7', 'dian');
+}
+
+// Start empty — user loads CSV manually
+document.addEventListener('DOMContentLoaded', function(){
+  setTimeout(frRender, 300);
+});
+
+// Load SheetJS for Excel support if not already loaded
+if (typeof XLSX === 'undefined') {
+  var s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  document.head.appendChild(s);
 }
 </script>
 

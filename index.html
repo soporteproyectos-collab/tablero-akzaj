@@ -176,11 +176,9 @@ body{font-family:'Montserrat','Helvetica Neue',Helvetica,Arial,sans-serif;backgr
 .logo-sub{font-size:9px;color:var(--gray-mid);letter-spacing:.4px;margin-top:1px;}
 .logo-sub span{color:var(--cyan);font-weight:600;}
 .hdr-right{display:flex;gap:7px;align-items:center;flex-wrap:wrap;}
-select,button{font-family:'Montserrat',Helvetica,sans-serif;font-size:12px;font-weight:500;border-radius:4px;cursor:pointer;transition:all .15s;}
+select,button{font-family:'Montserrat',Helvetica,sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;}
 select{background:var(--white);color:var(--gray-dark);border:1.5px solid var(--gray-light);padding:5px 26px 5px 9px;height:32px;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239E9E9E'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;}
 select:focus{outline:none;border-color:var(--cyan);}
-.btn{background:var(--white);color:var(--gray);border:1.5px solid var(--gray-light);padding:0 13px;height:32px;}
-.btn:hover{border-color:var(--cyan);color:var(--cyan);}
 .btn-pri{background:var(--cyan);color:var(--white);border:none;font-weight:600;}
 .btn-pri:hover{background:#4AB5BA;}
 
@@ -361,7 +359,7 @@ tbody tr:hover td{background:var(--cyan-light);}
 
 <body>
 
-<div id="login-screen" style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#0d1117 0%,#1a1f2e 40%,#0d1117 100%);">
+<div id="login-screen" style="position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;background:linear-gradient(145deg,#0d1117 0%,#1a1f2e 40%,#0d1117 100%);">
   <style>
     @keyframes fadeInUp {from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
     .login-card{animation:fadeInUp 0.5s ease;}
@@ -441,7 +439,7 @@ tbody tr:hover td{background:var(--cyan-light);}
 
       <span id="gs-sync-icon" style="margin-left:10px;font-size:10px;color:rgba(255,255,255,0.4);transition:color .3s">☁️ Listo</span>
 
-      <button onclick="abrirConfigAPI()" style="margin-left:10px;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:10px;font-family:Helvetica,Arial,sans-serif">🔑 API</button><button onclick="guardarDatos();mostrarToast('💾 Guardando en Google Sheets...')" style="margin-left:6px;background:rgba(29,158,117,0.3);border:none;color:#4DD9A8;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-family:Helvetica,Arial,sans-serif;font-weight:700">💾 Guardar</button><button onclick="cerrarSesion()" style="margin-left:6px;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.5);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:10px;font-family:Helvetica,Arial,sans-serif">Salir</button>
+      <button onclick="abrirConfigAPI()" style="margin-left:10px;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:10px;font-family:Helvetica,Arial,sans-serif">🔑 API</button><button onclick="guardarDatos();mostrarToast('💾 Guardando en Google Sheets...')" style="margin-left:6px;background:rgba(29,158,117,0.3);border:none;color:#4DD9A8;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-family:Helvetica,Arial,sans-serif;font-weight:700">💾 Guardar</button><button onclick="alzakCargarDatosSheets()" title="Recargar datos desde Google Sheets" style="margin-left:6px;background:rgba(93,195,218,0.3);border:none;color:#5DC3DA;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:11px;font-family:Helvetica,Arial,sans-serif;font-weight:700">🔄 Sheets</button><button onclick="cerrarSesion()" style="margin-left:6px;background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.5);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:10px;font-family:Helvetica,Arial,sans-serif">Salir</button>
 
     </div>
 
@@ -557,7 +555,7 @@ tbody tr:hover td{background:var(--cyan-light);}
 
 <div class="card" style="border:1.5px solid #0C447C;margin-bottom:12px;">
 
-<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
 
 <div>
 <div style="font-size:10px;font-weight:700;color:#0C447C;letter-spacing:.06em;margin-bottom:2px">📋 Facturas y Cuentas de Cobro</div>
@@ -565,13 +563,18 @@ tbody tr:hover td{background:var(--cyan-light);}
 <div style="font-size:11px;color:#888;margin-top:2px">Lo que nos cobran · obligaciones adquiridas · independiente de caja</div>
 </div>
 
-<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-<button class="btn" onclick="document.getElementById('fr-file-csv').click()" style="font-size:12px;padding:7px 14px;background:#0C447C;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;">📊 CSV / Excel</button>
-<input id="fr-file-csv" type="file" accept=".csv,.xlsx,.xls" style="display:none" onchange="frCargarCSV(this)">
-<button onclick="frExportExcel()" style="font-size:12px;padding:7px 14px;background:#1D6F42;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;">⬇ Excel</button>
-<button onclick="frExportPDF()" style="font-size:12px;padding:7px 14px;background:#A32D2D;color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;">📄 PDF</button>
-<button onclick="frLimpiar()" style="font-size:12px;padding:7px 14px;background:#fff;color:#A32D2D;border:1.5px solid #A32D2D;border-radius:8px;cursor:pointer;font-weight:700;">🗑 Borrar todo</button>
+<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;flex-shrink:0">
+
+<label class="btn" style="font-size:11px;cursor:pointer;background:#5DC3DA;color:#fff;border-color:#5DC3DA;font-weight:600">📊 CSV / Excel<input id="fr-file-csv" type="file" accept=".csv,.xlsx,.xls" style="display:none" onchange="frCargarCSV(this)"></label>
+
+<button class="btn" onclick="frExportExcel()" style="font-size:11px;background:#54504F;color:#fff;border-color:#54504F;font-weight:600">⬇️ Excel</button>
+
+<button class="btn" onclick="frExportPDF()" style="font-size:11px;background:#A32D2D;color:#fff;border-color:#A32D2D;font-weight:600">⬇️ PDF</button>
+
+<button class="btn" onclick="frLimpiar()" style="font-size:11px;color:#A32D2D;border-color:#f0ccc8">🗑 Borrar todo</button>
+
 </div>
+
 </div>
 
 <!-- KPIs simples -->
@@ -623,31 +626,27 @@ tbody tr:hover td{background:var(--cyan-light);}
 
 <div class="card" style="border:1.5px solid #993C1D">
 
-<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+<div style="display:flex;flex-direction:column;gap:10px">
 
 <div>
-
 <div style="font-size:11px;font-weight:700;color:#993C1D;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">💸 Egresos</div>
-
 <div style="font-size:15px;font-weight:700;color:#54504F">Egresos de Caja — Pagos realizados</div>
-
 <div style="font-size:11px;color:#888;margin-top:2px">Pagos reales de caja · salidas bancarias confirmadas · Q1 2026</div>
-
 </div>
 
-<div style="display:flex;gap:6px;flex-wrap:wrap">
+<div style="width:100%;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
 
-<button class="btn btn-p" onclick="abrirModalGastoDash()" style="font-size:12px;padding:7px 14px;background:#993C1D;border-color:#993C1D">+ Agregar gasto</button>
-
-<button class="btn" onclick="abrirCargaGastoPDF()" style="font-size:11px;padding:7px 14px;background:#54504F;color:#fff;border-color:#54504F;font-weight:600">📎 Cargar PDF</button>
+<button class="btn" onclick="abrirModalGastoDash()" style="font-size:11px;background:#54504F;color:#fff;border-color:#54504F;font-weight:600">+ Agregar gasto</button>
 
 <label class="btn" style="font-size:11px;cursor:pointer;background:#5DC3DA;color:#fff;border-color:#5DC3DA;font-weight:600">📊 CSV / Excel<input type="file" accept=".csv,.xlsx,.xls" style="display:none" onchange="gastoArchivoSeleccionado(this)"></label>
 
+<button class="btn" onclick="abrirCargaGastoPDF()" style="font-size:11px;background:#2E7D32;color:#fff;border-color:#2E7D32;font-weight:600">📎 Cargar PDF</button>
+
 <button class="btn" onclick="descargarExcelGastos()" style="font-size:11px;background:#54504F;color:#fff;border-color:#54504F;font-weight:600">⬇️ Excel</button>
 
-<button class="btn" onclick="exportarPDFGastos()" style="font-size:11px;background:#A32D2D;color:#fff;border-color:#A32D2D;font-weight:600">📄 PDF</button>
+<button class="btn" onclick="exportarPDFGastos()" style="font-size:11px;background:#A32D2D;color:#fff;border-color:#A32D2D;font-weight:600">⬇️ PDF</button>
 
-<button class="btn" onclick="borrarBloque('gastos')" style="font-size:11px;color:#A32D2D;border-color:#f0ccc8" title="Eliminar todos los gastos">🗑 Borrar todo</button>
+<button class="btn" onclick="borrarBloque('gastos')" style="font-size:11px;color:#A32D2D;border-color:#f0ccc8">🗑 Borrar todo</button>
 
 </div>
 
@@ -940,8 +939,77 @@ tbody tr:hover td{background:var(--cyan-light);}
 
     <div style="display:flex;gap:6px;flex-wrap:wrap">
 
+      <button onclick="balToggleCierre2025()" id="btn-cierre-2025" class="btn" style="font-size:11px;background:#54504F;color:#fff;border-color:#54504F;font-weight:600">📋 Cierre 2025</button>
+
       <button onclick="abrirConfigBalance()" class="btn" style="font-size:11px">⚙️ Configurar</button>
 
+    </div>
+
+  </div>
+
+  <!-- Panel Cierre 2025 (oculto por defecto) -->
+  <div id="bal-cierre-2025" style="display:none;margin-bottom:16px;">
+
+    <!-- Nota Jannina -->
+    <div style="background:#FEF9C3;border:1px solid #FDE047;border-radius:8px;padding:9px 13px;margin-bottom:12px;font-size:11px;color:#713F12;line-height:1.5;">
+      ⚠️ <strong>Nota:</strong> El préstamo de <strong>Jannina Alvis ($11.100.000)</strong> fue incluido en el desglose interno pero <strong>no está en el cierre oficial firmado por el contador Kevin Díaz (T.P. 103960-T) a 31 Dic 2025</strong>. Por eso el total de pasivos difiere $11.100.000 del balance oficial. Se ajustará en el período 2026.
+    </div>
+
+    <!-- Encabezado -->
+    <div style="text-align:center;padding:10px;background:#f9f8f5;border-radius:8px;border:1px solid #e0ddd8;margin-bottom:10px;">
+      <div style="font-size:12px;font-weight:700;color:#54504F;">ALZAK GROUP S.A.S. — ESTADO DE SITUACIÓN FINANCIERA</div>
+      <div style="font-size:11px;color:#888;margin-top:2px;">Al 31 de Diciembre de 2025 · Cifras en COP</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+
+      <!-- ACTIVOS -->
+      <div style="border:1px solid #e0ddd8;border-radius:8px;overflow:hidden;">
+        <div style="background:#0C447C;color:#fff;padding:7px 12px;font-size:11px;font-weight:700;">ACTIVOS</div>
+        <div style="padding:6px 12px;font-size:10px;font-weight:700;color:#0C447C;background:#EBF3FB;">Activos Corrientes</div>
+        <div style="padding:5px 12px;display:flex;justify-content:space-between;font-size:11px;border-bottom:1px solid #f5f4f0;"><span style="color:#555;">Efectivo y equivalentes</span><span style="font-weight:600;">$4.485.000</span></div>
+        <div style="padding:3px 20px;display:flex;justify-content:space-between;font-size:10px;border-bottom:1px solid #f5f4f0;color:#888;"><span>En cuentas bancarias</span><span>$4.485.000</span></div>
+        <div style="padding:5px 12px;display:flex;justify-content:space-between;font-size:11px;border-bottom:1px solid #f5f4f0;"><span style="color:#555;">Cuentas por cobrar comerciales</span><span style="font-weight:600;">$312.180.000</span></div>
+        <div style="padding:3px 20px;display:flex;justify-content:space-between;font-size:10px;border-bottom:1px solid #f5f4f0;color:#888;"><span>Clientes — cartera activa 2025</span><span>$312.180.000</span></div>
+        <div style="padding:5px 12px;display:flex;justify-content:space-between;font-size:11px;border-bottom:1px solid #f5f4f0;"><span style="color:#555;">Impuestos anticipados</span><span style="font-weight:600;">$116.724.000</span></div>
+        <div style="padding:5px 12px;display:flex;justify-content:space-between;font-size:11px;font-weight:700;background:#EBF3FB;color:#0C447C;border-bottom:2px solid #0C447C;"><span>Total Activos Corrientes</span><span>$433.389.000</span></div>
+        <div style="padding:6px 12px;font-size:10px;font-weight:700;color:#0C447C;background:#EBF3FB;">Activos No Corrientes</div>
+        <div style="padding:5px 12px;display:flex;justify-content:space-between;font-size:11px;border-bottom:1px solid #f5f4f0;"><span style="color:#555;">Propiedades, Planta y Equipos (neto)</span><span style="font-weight:600;">$72.899.000</span></div>
+        <div style="padding:3px 20px;display:flex;justify-content:space-between;font-size:10px;border-bottom:1px solid #f5f4f0;color:#888;"><span>Equipo cómputo y comunicación</span><span>$80.754.000</span></div>
+        <div style="padding:3px 20px;display:flex;justify-content:space-between;font-size:10px;border-bottom:1px solid #f5f4f0;color:#c0392b;"><span>(-) Depreciación acumulada</span><span>($7.855.000)</span></div>
+        <div style="padding:5px 12px;display:flex;justify-content:space-between;font-size:11px;font-weight:700;background:#EBF3FB;color:#0C447C;border-bottom:2px solid #0C447C;"><span>Total Activos No Corrientes</span><span>$72.899.000</span></div>
+        <div style="padding:8px 12px;display:flex;justify-content:space-between;background:#0C447C;"><span style="color:#fff;font-size:12px;font-weight:700;">TOTAL ACTIVOS</span><span style="color:#5DC3DA;font-size:13px;font-weight:700;">$506.288.000</span></div>
+      </div>
+
+      <!-- PASIVOS Y PATRIMONIO -->
+      <div style="border:1px solid #e0ddd8;border-radius:8px;overflow:hidden;">
+        <div style="background:#993C1D;color:#fff;padding:7px 12px;font-size:11px;font-weight:700;">PASIVOS Y PATRIMONIO</div>
+        <div style="padding:6px 12px;font-size:10px;font-weight:700;color:#993C1D;background:#FEF3EE;">Pasivos Corrientes</div>
+        <div style="padding:5px 12px;display:flex;justify-content:space-between;font-size:11px;border-bottom:1px solid #f5f4f0;"><span style="color:#555;">Cuentas por pagar comerciales</span><span style="font-weight:600;">$232.088.105</span></div>
+        <div style="padding:3px 20px;display:flex;justify-content:space-between;font-size:10px;border-bottom:1px solid #f5f4f0;color:#888;"><span>Proveedores nacionales</span><span>$155.301.000</span></div>
+        <div style="padding:3px 20px;display:flex;justify-content:space-between;font-size:10px;border-bottom:1px solid #f5f4f0;color:#888;font-weight:600;"><span>Préstamos accionistas (NJAZ)</span><span>$40.687.105</span></div>
+        <div style="padding:2px 28px;display:flex;justify-content:space-between;font-size:10px;border-bottom:1px solid #f5f4f0;color:#aaa;"><span>Scotiabank Sep 2025</span><span>$29.336.905</span></div>
+        <div style="padding:2px 28px;display:flex;justify-content:space-between;font-size:10px;border-bottom:1px solid #f5f4f0;color:#aaa;"><span>ITAU nuevo 2025</span><span>$5.300.000</span></div>
+        <div style="padding:2px 28px;display:flex;justify-content:space-between;font-size:10px;border-bottom:1px solid #f5f4f0;color:#aaa;"><span>ITAU donación AF</span><span>$6.050.200</span></div>
+        <div style="padding:3px 20px;display:flex;justify-content:space-between;font-size:10px;border-bottom:1px solid #f5f4f0;color:#E97316;font-weight:600;"><span>⚠️ Jannina Alvis (no en cierre oficial)</span><span>$11.100.000</span></div>
+        <div style="padding:3px 20px;display:flex;justify-content:space-between;font-size:10px;border-bottom:1px solid #f5f4f0;color:#888;"><span>Préstamo ALZAK Foundation</span><span>$25.000.000</span></div>
+        <div style="padding:5px 12px;display:flex;justify-content:space-between;font-size:11px;border-bottom:1px solid #f5f4f0;"><span style="color:#555;">Impuestos nacionales por pagar</span><span style="font-weight:600;">$51.422.000</span></div>
+        <div style="padding:5px 12px;display:flex;justify-content:space-between;font-size:11px;font-weight:700;background:#FEF3EE;color:#993C1D;border-bottom:2px solid #993C1D;"><span>Total Pasivos Corrientes</span><span>$283.510.105</span></div>
+        <div style="padding:6px 12px;display:flex;justify-content:space-between;background:#993C1D;margin-top:2px;"><span style="color:#fff;font-size:11px;font-weight:700;">TOTAL PASIVOS</span><span style="color:#FECACA;font-size:12px;font-weight:700;">$283.510.105</span></div>
+        <!-- Patrimonio -->
+        <div style="padding:6px 12px;font-size:10px;font-weight:700;color:#166534;background:#DCFCE7;margin-top:6px;">Patrimonio</div>
+        <div style="padding:4px 12px;display:flex;justify-content:space-between;font-size:11px;border-bottom:1px solid #f5f4f0;"><span style="color:#555;">Capital emitido</span><span>$20.000.000</span></div>
+        <div style="padding:4px 12px;display:flex;justify-content:space-between;font-size:11px;border-bottom:1px solid #f5f4f0;"><span style="color:#555;">Ganancias acumuladas</span><span>$183.112.000</span></div>
+        <div style="padding:4px 12px;display:flex;justify-content:space-between;font-size:11px;border-bottom:1px solid #f5f4f0;"><span style="color:#555;">Utilidad del ejercicio 2025</span><span style="color:#166534;font-weight:600;">$30.766.000</span></div>
+        <div style="padding:5px 12px;display:flex;justify-content:space-between;font-size:11px;font-weight:700;background:#DCFCE7;color:#166534;border-bottom:2px solid #166534;"><span>Total Patrimonio</span><span>$233.878.000</span></div>
+        <div style="padding:8px 12px;display:flex;justify-content:space-between;background:#54504F;"><span style="color:#fff;font-size:12px;font-weight:700;">TOTAL PASIVOS + PATRIMONIO</span><span style="color:#5DC3DA;font-size:13px;font-weight:700;">$517.388.105</span></div>
+      </div>
+    </div>
+
+    <!-- Firmas -->
+    <div style="display:flex;justify-content:space-around;margin-top:16px;padding-top:12px;border-top:1px solid #e0ddd8;">
+      <div style="text-align:center;"><div style="width:160px;border-top:1px solid #54504F;padding-top:5px;font-size:10px;font-weight:700;color:#54504F;">NELSON J. ALVIS ZAKZUK</div><div style="font-size:10px;color:#888;">Representante Legal</div></div>
+      <div style="text-align:center;"><div style="width:160px;border-top:1px solid #54504F;padding-top:5px;font-size:10px;font-weight:700;color:#54504F;">KEVIN DIAZ ESCUDERO</div><div style="font-size:10px;color:#888;">Contador · T.P. 103960-T</div></div>
     </div>
 
   </div>
@@ -14835,7 +14903,7 @@ function tabPres() {
   if (c) c.classList.add('on');
   var tb = document.getElementById('topbar-t');
   if (tb) tb.textContent = 'Presupuesto 2026';
-  ['tab-home-btn','tab-conc-btn','tab-pres-btn'].forEach(function(id,idx){
+  ['tab-home-btn','tab-conc-btn','tab-pres-btn'].forEach(function(id){
     var b = document.getElementById(id);
     if (b) { b.style.background='rgba(255,255,255,0.12)'; b.style.color='#ccc'; }
   });
@@ -14844,7 +14912,7 @@ function tabPres() {
   setTimeout(function(){ try{ renderPresupuesto(); }catch(e){} try{ pfRender(); }catch(e){} }, 60);
 }
 
-// Intercept tablero's ir() to also hide pg-conc and update tabs
+// Intercept tablero's ir() to also hide pg-conc/pg-balance and update tabs
 document.addEventListener('DOMContentLoaded', function() {
   var nav = document.getElementById('tab-nav');
   if (nav) nav.style.display = 'flex';
@@ -14854,15 +14922,17 @@ document.addEventListener('DOMContentLoaded', function() {
       if(typeof devolverModulosAHome==="function") devolverModulosAHome();
       var c = document.getElementById('pg-conc');
       if (c) c.classList.remove('on');
-      origIr(id);
-      var hb=document.getElementById('tab-home-btn');
-      var cb=document.getElementById('tab-conc-btn');
-      var pb=document.getElementById('tab-pres-btn');
+      var pb2 = document.getElementById('pg-balance');
+      if (pb2) pb2.classList.remove('on');
       var pp=document.getElementById('pg-presupuesto');
       if(pp) pp.classList.remove('on');
+      origIr(id);
+      ['tab-home-btn','tab-conc-btn','tab-pres-btn'].forEach(function(id2){
+        var b = document.getElementById(id2);
+        if (b) { b.style.background='rgba(255,255,255,0.12)'; b.style.color='#ccc'; }
+      });
+      var hb=document.getElementById('tab-home-btn');
       if(hb){hb.style.background='#5DC3DA';hb.style.color='#fff';}
-      if(cb){cb.style.background='rgba(255,255,255,0.12)';cb.style.color='#ccc';}
-      if(pb){pb.style.background='rgba(255,255,255,0.12)';pb.style.color='#ccc';}
     };
   }
 });
@@ -17720,6 +17790,11 @@ document.addEventListener('DOMContentLoaded', function(){
     if(_origTabPres) _origTabPres.apply(this,arguments);
     setTimeout(function(){ try{pfRender();}catch(e){} try{fcRender();}catch(e){} },80);
   };
+
+  // ── Carga automática desde Google Sheets al abrir ──────────
+  setTimeout(function(){
+    try { alzakCargarDatosSheets(); } catch(e) { console.warn('Auto-sync Sheets:', e); }
+  }, 1500);
 });
 </script>
 
@@ -18177,7 +18252,97 @@ function alzakImportarDatos(input) {
 //  BACKUP → GOOGLE DRIVE (via Apps Script)
 // ══════════════════════════════════════════════════════════════
 
-var ALZAK_GS_URL = 'https://script.google.com/a/macros/alzak.com.co/s/AKfycbzjKCeUYwKRcxn1KWAEXPVLsVrhxM6jxl0QP6ib3mFMKB-TSCSZsOPJZyz0EaJzeWmD/exec';
+var ALZAK_GS_URL = 'https://script.google.com/macros/s/AKfycbyY6S01O0PtppuxQXsjy75-YF9Gb27k03LZcxVWsXr11gDMKPRT0C101oGy0iXzuOj_/exec';
+
+// ── Carga automática de datos desde Google Sheets al abrir ────────
+function alzakCargarDatosSheets(callback) {
+  var url = ALZAK_GS_URL + '?tab=_datos_todos';
+  mostrarToast('🔄 Sincronizando datos desde Google Sheets...', '#0C447C', 4000);
+  fetch(url, { mode: 'cors' })
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      if (!data.ok) { mostrarToast('⚠️ Error al cargar Sheets: ' + (data.error||''), '#993C1D'); return; }
+
+      var cargados = [];
+
+      // Facturas Radicadas → FR_DATA
+      if (data.radicadas && data.radicadas.length) {
+        FR_DATA = data.radicadas.map(function(r) {
+          return {
+            'Fecha':                    r['Fecha']||'',
+            'Categoria':                r['Categoria']||r['Categoría']||'',
+            'Proveedor / Beneficiario': r['Proveedor / Beneficiario']||r['Proveedor']||'',
+            'Concepto':                 r['Concepto']||'',
+            'N Comprobante':            r['N Comprobante']||r['N_Comprobante']||'',
+            'Subtotal (COP)':           parseFloat(r['Subtotal (COP)']||r['Subtotal ($)']||0),
+            'IVA (COP)':                parseFloat(r['IVA (COP)']||r['IVA ($)']||0),
+            'Total (COP)':              parseFloat(r['Total (COP)']||r['Total ($)']||0)
+          };
+        });
+        if (typeof frRender === 'function') { _FR_FUENTE_CACHE={}; _FR_MOVS_POOL=null; frRender(); }
+        cargados.push('Facturas Radicadas: ' + FR_DATA.length);
+      }
+
+      // Egresos → GASTOS_DATA
+      if (data.egresos && data.egresos.length) {
+        GASTOS_DATA = data.egresos.map(function(r) {
+          return {
+            'Mes':                      r['Mes']||'',
+            'Fecha':                    r['Fecha']||'',
+            'Categoria':                r['Categoría']||r['Categoria']||'',
+            'Beneficiario':             r['Beneficiario']||'',
+            'Concepto':                 r['Concepto']||'',
+            'N_Comprobante':            r['N_Comprobante']||'',
+            'Total ($)':                parseFloat(r['Total ($)']||0),
+            'Subtotal ($)':             parseFloat(r['Subtotal ($)']||0),
+            'IVA ($)':                  parseFloat(r['IVA ($)']||0),
+            'Cuenta_Origen':            r['Cuenta_Origen']||'',
+            'N_Transaccion':            r['N_Transaccion']||'',
+            'Estado':                   r['Estado']||'',
+            'Observaciones':            r['Observaciones']||''
+          };
+        });
+        if (typeof renderDashGastos === 'function') renderDashGastos();
+        if (typeof renderResumenTablero === 'function') renderResumenTablero();
+        cargados.push('Egresos: ' + GASTOS_DATA.length);
+      }
+
+      // Facturación → FACTURAS
+      if (data.facturacion && data.facturacion.length) {
+        // Solo carga si no hay facturas manuales ya cargadas
+        if (!FACTURAS || FACTURAS.length === 0) {
+          FACTURAS = data.facturacion.map(function(r, idx) {
+            return {
+              id:       'GS-' + idx,
+              fecha:    alzakFechaAISO(r['Fecha']||''),
+              cliente:  r['Cliente']||r['Proveedor']||'',
+              concepto: r['Concepto']||r['Descripcion']||'',
+              num:      r['Factura']||r['N Factura']||'',
+              valor:    parseFloat(r['Valor']||r['Subtotal']||r['Total']||0),
+              iva:      parseFloat(r['IVA']||0),
+              estado:   r['Estado']||'pendiente'
+            };
+          });
+          if (typeof renderDashFacturas === 'function') renderDashFacturas();
+          cargados.push('Facturación: ' + FACTURAS.length);
+        }
+      }
+
+      if (typeof renderBalance === 'function') setTimeout(renderBalance, 300);
+      mostrarToast('✅ Sheets sincronizados — ' + cargados.join(' · '), '#2E7D32', 4000);
+      if (callback) callback();
+    })
+    .catch(function(err) {
+      mostrarToast('⚠️ No se pudo conectar con Google Sheets', '#993C1D');
+    });
+}
+
+function alzakFechaAISO(f) {
+  if (!f) return '';
+  var p = String(f).split('/');
+  if (p.length === 3) return p[2] + '-' + p[1] + '-' + p[0];
+  return f;
+}
 
 // ── Override alzakExportarDatos to ALSO save to Drive ─────────────────────
 var _alzakExportarOrig = typeof alzakExportarDatos === 'function' ? alzakExportarDatos : null;
@@ -19746,6 +19911,8 @@ var FR_TC_MAP = [
   ['ATRIUM',            'ATRIUM'],
   ['MILAGROSA',         'MILAGROSA'],
   ['LA MILAGROSA',      'MILAGROSA'],
+  ['FALABELLA',         'PCTEL'],       // Laptop Pctel S.A.S. pagado via Falabella
+  ['FALABELLA',         'FALABELLA'],
 ];
 
 // Obtener todos los movimientos Gasto TC de todos los periodos cargados
@@ -19863,7 +20030,42 @@ function frBuildPool() {
     if (_per.movs) _per.movs.forEach(function(mv){if(mv.v<0)_FR_MOVS_POOL.push({v:Math.abs(mv.v),d:mv.d,f:mv.f,banco:'BCOL',cuenta:'Bancolombia Ah *6556',label:'BCOL AH',color:'#0C6EAF',periodo:_lbl,usado:false});});
     if (_per.caja&&_per.caja.movs) _per.caja.movs.forEach(function(mv){if(mv.v<0)_FR_MOVS_POOL.push({v:Math.abs(mv.v),d:mv.d,f:mv.f,banco:'BCS',cuenta:'BCS Cte *2970',label:'BCS CTE',color:'#C2410C',periodo:_lbl,usado:false});});
     if (_per.bold&&_per.bold.movs) _per.bold.movs.forEach(function(mv){if(mv.v<0)_FR_MOVS_POOL.push({v:Math.abs(mv.v),d:mv.d,f:mv.f,banco:'BOLD',cuenta:'Bold CF *2371',label:'BOLD CF',color:'#1E3A5F',periodo:_lbl,usado:false});});
+    // Incluir DATA[] de Bancolombia empresarial si está disponible
+    if (typeof DATA !== 'undefined') {
+      var dataKeys = Object.keys(DATA);
+      for (var _dk=0; _dk<dataKeys.length; _dk++) {
+        var _dkey = dataKeys[_dk];
+        if (_dkey.indexOf('TC ') === 0) continue; // TC ya va por frGetAllTCGastos
+        var _dper = DATA[_dkey];
+        if (!_dper || !_dper.movs || !_dper.info) continue;
+        // Solo incluir si el período solapa con _lbl (evitar doble conteo entre cuentas)
+        var _dcta = _dper.info.cta || '';
+        var _dlbl = (_dper.info.banco||'') + ' *' + _dcta.slice(-4);
+        if (_dper.info.esTarjeta) continue; // TC ya se maneja por separado
+        _dper.movs.forEach(function(mv){
+          if (mv.ab > 0 || mv.car <= 0) return; // solo egresos
+          // Evitar duplicar si ya está en P[] (misma cuenta y período)
+          _FR_MOVS_POOL.push({
+            v: mv.car, d: mv.desc||mv.d||'', f: mv.f,
+            banco: _dper.info.banco||'BCOL',
+            cuenta: _dlbl,
+            label: _dper.info.banco||'BCOL',
+            color: '#0C6EAF',
+            periodo: _dper.info.ini ? _dper.info.ini.substring(0,7) : _lbl,
+            usado: false
+          });
+        });
+      }
+    }
   }
+  // Deduplicar por monto+fecha+desc para evitar entradas duplicadas entre P[] y DATA[]
+  var seen = {};
+  _FR_MOVS_POOL = _FR_MOVS_POOL.filter(function(mv){
+    var k = mv.v+'|'+mv.f+'|'+(mv.d||'').substring(0,20);
+    if (seen[k]) return false;
+    seen[k] = true;
+    return true;
+  });
 }
 function frResetPool(){if(_FR_MOVS_POOL)_FR_MOVS_POOL.forEach(function(m){m.usado=false;});else frBuildPool();}
 function frConsumir(total){
@@ -19943,9 +20145,22 @@ function frFuentePago(r) {
       var cta   = (gx['Cuenta_Origen'] || '').trim();
 
       // MODO A: N° comprobante de la factura radicada aparece en el egreso
-      if (ncomp.length > 2 && gComp.indexOf(ncomp.toLowerCase()) >= 0) {
+      // Busca en N_Comprobante, Concepto Y Observaciones del egreso
+      var gConcepto = (gx['Concepto'] || '').toLowerCase();
+      var gObs      = (gx['Observaciones'] || '').toLowerCase();
+      var gCompFull = gComp + ' ' + gConcepto + ' ' + gObs;
+      if (ncomp.length > 2 && gCompFull.indexOf(ncomp.toLowerCase()) >= 0) {
         var _ra = frParseCuenta(cta, 'egreso');
         _FR_FUENTE_CACHE[_ck] = _ra; return _ra;
+      }
+
+      // También: si alguna parte del N°comp de la factura (separado por / o espacio) aparece
+      if (ncomp.length > 4) {
+        var ncompParts = ncomp.split(/[\/\s\-]+/).filter(function(p){ return p.length > 3; });
+        if (ncompParts.some(function(p){ return gCompFull.indexOf(p) >= 0; })) {
+          var _ra2 = frParseCuenta(cta, 'egreso');
+          _FR_FUENTE_CACHE[_ck] = _ra2; return _ra2;
+        }
       }
 
       // MODO B: monto exacto (±100) + al menos 1 palabra clave del proveedor
@@ -19962,6 +20177,31 @@ function frFuentePago(r) {
   // Usa frConsumir() que marca cada movimiento como usado — evita que el mismo
   // movimiento bancario pague múltiples facturas del mismo monto
   var poolMatch = frConsumir(total);
+  // MODO C: si frConsumir no encontró match, buscar en pool por monto+descripción
+  // Esto cubre casos donde el proveedor en extracto difiere del de la factura
+  // Ej: Atrium Food ↔ "ATRIUM ZONA NORTE", Padel One ↔ "Mucho Padel Col"
+  if (!poolMatch) {
+    var SKIP2 = {S:1,A:1,SAS:1,DE:1,LA:1,EL:1,LOS:1,Y:1,DEL:1,LTDA:1,COL:1};
+    var provW2 = proveedor.split(/[\s.,()+*]+/).filter(function(w){ return w.length>3 && !SKIP2[w]; });
+    if (!_FR_MOVS_POOL) frBuildPool();
+    for (var _mi2=0; _mi2<_FR_MOVS_POOL.length; _mi2++) {
+      var _mv2 = _FR_MOVS_POOL[_mi2];
+      if (_mv2.usado || Math.abs(_mv2.v - total) > 100) continue;
+      var _desc2 = (_mv2.d||'').toUpperCase();
+      // Verificar que alguna palabra clave del proveedor aparece en la descripción del extracto
+      // O que alguna entrada de FR_TC_MAP conecte la descripción con el proveedor
+      var _descMatch = provW2.some(function(w){ return _desc2.indexOf(w) >= 0; });
+      if (!_descMatch) {
+        // Intentar vía FR_TC_MAP
+        for (var _tm2=0; _tm2<FR_TC_MAP.length; _tm2++) {
+          if (_desc2.indexOf(FR_TC_MAP[_tm2][0]) >= 0 && proveedor.indexOf(FR_TC_MAP[_tm2][1]) >= 0) {
+            _descMatch = true; break;
+          }
+        }
+      }
+      if (_descMatch) { _mv2.usado = true; poolMatch = _mv2; break; }
+    }
+  }
   // Si no hubo match exacto (±100 COP), intentar cruce porcentual para USD
   if (!poolMatch && frEsProveedorUSD(proveedor)) {
     poolMatch = frConsumirUSD(total);
@@ -20293,7 +20533,32 @@ function frExportPDF() {
   mostrarToast('✅ Reporte descargado — ábrelo en Chrome y usa Ctrl+P → Guardar como PDF');
 }
 
+function balToggleCierre2025() {
+  var panel = document.getElementById('bal-cierre-2025');
+  var btn   = document.getElementById('btn-cierre-2025');
+  var pills = document.getElementById('bal-pills');
+  var kpis  = document.getElementById('bal-kpis');
+  var tabla = document.getElementById('bal-tabla');
+  if (!panel) return;
+  var visible = panel.style.display !== 'none';
+  panel.style.display = visible ? 'none' : 'block';
+  if (pills) pills.style.display = visible ? '' : 'none';
+  if (kpis)  kpis.style.display  = visible ? '' : 'none';
+  if (tabla) tabla.style.display  = visible ? '' : 'none';
+  if (btn) {
+    btn.style.background  = visible ? '#54504F' : '#5DC3DA';
+    btn.style.borderColor = visible ? '#54504F' : '#5DC3DA';
+    btn.textContent       = visible ? '📋 Cierre 2025' : '✕ Cerrar 2025';
+  }
+}
+
 // init on demand
+</script>
+     MÓDULO: Balance General / Estado de Situación Financiera
+     ═══════════════════════════════════════════════════════ -->
+
+
+<script>
 </script>
 
 </body>

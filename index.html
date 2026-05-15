@@ -239,10 +239,10 @@ select:focus{outline:none;border-color:var(--cyan);}
 .chart-title{font-size:9px;font-weight:700;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.7px;margin-bottom:7px;}
 
 /* ACCOUNT CARDS */
-.acct-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:9px;margin-bottom:15px;}
-.ac{background:var(--white);border:1.5px solid var(--gray-light);border-radius:6px;padding:10px 14px;}
+.acct-cards{display:grid;grid-template-columns:repeat(6,1fr);gap:9px;margin-bottom:15px;overflow:hidden;}
+.ac{background:var(--white);border:1.5px solid var(--gray-light);border-radius:6px;padding:10px 14px;min-width:0;overflow:hidden;}
 .ac-lbl{font-size:9px;font-weight:700;color:var(--gray-mid);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px;}
-.ac-val{font-size:14px;font-weight:700;color:var(--gray-dark);}
+.ac-val{font-size:14px;font-weight:700;color:var(--gray-dark);;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .ac-val.cyan  {color:var(--cyan);}
 .ac-val.green {color:var(--green);}
 .ac-val.red   {color:var(--red);}
@@ -305,7 +305,7 @@ td{padding:7px 12px;border-bottom:1px solid var(--gray-light);vertical-align:mid
 tr:last-child td{border-bottom:none;}
 tbody tr:hover td{background:var(--cyan-light);}
 .pill{display:inline-block;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;}
-.pg{background:var(--green-bg); color:var(--green);}
+.pill.pg{background:var(--green-bg); color:var(--green);}
 .pr{background:var(--red-bg);   color:var(--red);}
 .pa{background:var(--amber-bg); color:var(--amber);}
 .pc{background:var(--cyan-light);color:#2E9099;}
@@ -594,6 +594,12 @@ tbody tr:hover td{background:var(--cyan-light);}
 </select>
 <input id="fr-buscar" type="text" placeholder="Buscar proveedor o concepto..." onkeyup="frRender()"
   style="flex:1;min-width:180px;padding:5px 10px;border:1px solid #ddd;border-radius:6px;font-size:11px;">
+<span style="font-size:10px;color:#888;white-space:nowrap;" title="Tolerancia % para cruce de suscripciones en USD (Google, Microsoft, etc.)">
+  💱 TRM±
+  <input id="fr-trm-pct" type="number" min="1" max="20" value="8"
+    onchange="FR_TOL_USD_PCT=Math.max(1,Math.min(20,parseInt(this.value)||8));_FR_FUENTE_CACHE={};_FR_MOVS_POOL=null;frRender();"
+    style="width:40px;padding:2px 4px;border:1px solid #ddd;border-radius:4px;font-size:11px;text-align:center;">%
+</span>
 <span id="fr-count" style="font-size:11px;color:#888;"></span>
 </div>
 
@@ -1985,46 +1991,42 @@ function procesarFilasGasto(rows, tipo) {
   }
 
   function parseDate(v) {
-
     if (!v) return '';
-
     if (v instanceof Date) {
-
-      var y=v.getFullYear(), m=String(v.getMonth()+1).padStart(2,'0'), d=String(v.getDate()).padStart(2,'0');
-
-      return y+'-'+m+'-'+d;
-
+      var y=v.getFullYear(),mm=String(v.getMonth()+1).padStart(2,'0'),dd=String(v.getDate()).padStart(2,'0');
+      return dd+'/'+mm+'/'+y;
     }
-
     var s = v.toString().trim();
-
-    // DD/MM/YYYY → YYYY-MM-DD
-
-    var p = s.split('/');
-
-    if (p.length===3&&p[2].length===4) return p[2]+'-'+p[1].padStart(2,'0')+'-'+p[0].padStart(2,'0');
-
-    // YYYY-MM-DD ya correcto
-
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-
+    // ISO con T: 2026-01-03T05:00:00.000Z
+    if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
+      var ip=s.split('T')[0].split('-');
+      return ip[2].padStart(2,'0')+'/'+ip[1].padStart(2,'0')+'/'+ip[0];
+    }
+    // DD/MM/YYYY ya correcto
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+    // YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) { var p2=s.split('-'); return p2[2]+'/'+p2[1]+'/'+p2[0]; }
+    // YYYY/MM/DD
+    if (/^\d{4}\/\d{2}\/\d{2}$/.test(s)) { var p3=s.split('/'); return p3[2]+'/'+p3[1]+'/'+p3[0]; }
+    var p=s.split('/');
+    if (p.length===3&&p[2].length===4) return p[0].padStart(2,'0')+'/'+p[1].padStart(2,'0')+'/'+p[2];
     return s;
-
   }
 
-  function getMes(fechaStr) {
-
+    function getMes(fechaStr) {
     if (!fechaStr) return 'Sin mes';
-
-    var p = fechaStr.split('-');
-
-    if (p.length===3) return MN[parseInt(p[1])-1]+' '+p[0];
-
+    var MN2=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    // DD/MM/YYYY
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(fechaStr)) {
+      var p=fechaStr.split('/'); return MN2[parseInt(p[1])-1]+' '+p[2];
+    }
+    // YYYY-MM-DD
+    var p2 = fechaStr.split('-');
+    if (p2.length===3) return MN2[parseInt(p2[1])-1]+' '+p2[0];
     return 'Sin mes';
-
   }
 
-  function inferirCategoria(prov, conc) {
+    function inferirCategoria(prov, conc) {
 
     var t = ((prov||'')+(conc||'')).toLowerCase();
 
@@ -2083,7 +2085,14 @@ function procesarFilasGasto(rows, tipo) {
         }
 
         var fechaRaw = (row[2]||'').toString().trim();
-        if (!fechaRaw || !/\d{2}\/\d{2}\/\d{4}/.test(fechaRaw) && !(row[2] instanceof Date)) { errores++; continue; }
+        // Aceptar fecha en formato DD/MM/YYYY, YYYY-MM-DD, o Date object
+        var fechaValida = fechaRaw && (
+          /\d{2}\/\d{2}\/\d{4}/.test(fechaRaw) ||
+          /\d{4}-\d{2}-\d{2}/.test(fechaRaw) ||
+          row[2] instanceof Date ||
+          /\d{4}\/\d{2}\/\d{2}/.test(fechaRaw)
+        );
+        if (!fechaValida) { errores++; continue; }
 
         fecha    = parseDate(row[2]);
         var catRaw = (row[3]||'').toString().trim();
@@ -2270,86 +2279,22 @@ function procesarFilasGasto(rows, tipo) {
 
     //            3) lógica automática por categoría
 
-    var _esPagadoFinal;
-
-    // Control Único format — use estadoRaw from row
-    if (typeof estadoRaw !== 'undefined' && estadoRaw) {
-      _esPagadoFinal = estadoRaw.toUpperCase() === 'PAGADO';
-    } else if (row.__est_excel === 'pagado') {
-
-      _esPagadoFinal = true;
-
-    } else if (row.__est_excel === 'pendiente') {
-
-      _esPagadoFinal = false;
-
-    } else {
-
-      // Buscar columna Estado en CSV estándar
-
-      var rawHEst2 = rows[dataStart > 1 ? 1 : 0].map(function(x){
-
-        return (x||'').toString().toLowerCase().trim();
-
-      });
-
-      var idxEstCol = -1;
-
-      for (var _ei=0; _ei<rawHEst2.length; _ei++) {
-
-        if (rawHEst2[_ei]==='estado' || rawHEst2[_ei]==='pagada' || rawHEst2[_ei]==='pagado') {
-
-          idxEstCol = _ei; break;
-
-        }
-
-      }
-
-      var estFileVal = idxEstCol >= 0 && row[idxEstCol]
-
-        ? (row[idxEstCol]||'').toString().toLowerCase().trim()
-
-        : '';
-
-      if (estFileVal === 'pagado' || estFileVal === 'pagada' || estFileVal === 'si' || estFileVal === 'sí') {
-
-        _esPagadoFinal = true;
-
-      } else if (estFileVal === 'pendiente' || estFileVal === 'no') {
-
-        _esPagadoFinal = false;
-
-      } else {
-
-        // Lógica automática por categoría
-
-        var _catLow2 = (cat || '').toLowerCase();
-
-        var _cnLow2  = (conc || '').toLowerCase();
-
-        var _esPend = (_catLow2.indexOf('nomina') >= 0 || _catLow2.indexOf('nómina') >= 0 ||
-
-                       _catLow2.indexOf('honorar') >= 0 ||
-
-                       /^cc-/i.test(nfact) ||
-
-                       _cnLow2.indexOf('cuenta de cobro') >= 0);
-
-        _esPagadoFinal = !_esPend;
-
-      }
-
-    }
+        // Si está en egresos = pagado por definición
+    var _esPagadoFinal = true;
 
     var entry = {
 
       'N_Factura':    nfact,
+      'N_Comprobante': nfact,
+      'N Comprobante': nfact,
 
       'Fecha':        fecha,
 
       'Mes':          mes,
 
       'Proveedor':    prov,
+      'Beneficiario': prov,
+      'Proveedor / Beneficiario': prov,
 
       'Concepto':     conc,
 
@@ -2358,6 +2303,8 @@ function procesarFilasGasto(rows, tipo) {
       'IVA_COP':      iva,
 
       'Total_COP':    total,
+      'Total ($)':    total,
+      'Total (COP)':  total,
 
       'Medio_Pago':   (typeof medioPago !== 'undefined' && medioPago) ? medioPago : 'Transferencia',
 
@@ -3153,6 +3100,107 @@ DATA['BCS Marzo 2026'] = {
 
 };
 
+DATA['BCS Abril 2026'] = {
+  info:{banco:'BCS',titular:'ALZAK GROUP SAS',cta:'21003622970',tipo:'Cuenta Corriente',ini:'2026-04-01',fin:'2026-04-30',sant:15648594.84,tab:117490802.0,tcar:91394276.0,sfin:41745120.84},
+  movs:[
+    {f:'13/04/2026',doc:'98648580',desc:'TRANSFERENCIA OTRA ENTIDA ACH — FEE2288 BAYER',ab:96555016.0,car:0,saldo:112203610.84,tipo:'Transferencia entrada'},
+    {f:'15/04/2026',doc:'99135745',desc:'TRANSFERENCIA OTRA ENTIDA ACH — FEE2286 AMGEN',ab:20935786.0,car:0,saldo:133139396.84,tipo:'Transferencia entrada'},
+    {f:'15/04/2026',doc:'6526950',desc:'COMPRA INTERNET DIAN — 4911102594618 A/O 2025 PERIODO 2',ab:0,car:36405000.0,saldo:96734396.84,tipo:'Pago DIAN'},
+    {f:'15/04/2026',doc:'6558678',desc:'COMPRA INTERNET DIAN — 4911102596993 A/O 2025 PERIODO 3',ab:0,car:52005000.0,saldo:44729396.84,tipo:'Pago DIAN'},
+    {f:'23/04/2026',doc:'04704371',desc:'PAGO TARJETA DE CREDITO 4704371054186529',ab:0,car:2370155.0,saldo:42359241.84,tipo:'Pago tarjeta crédito'},
+    {f:'23/04/2026',doc:'03112175',desc:'DEBITO PAGO NOMINA Y/O PROVEEDORES — ACH',ab:0,car:250000.0,saldo:42109241.84,tipo:'Débito ACH'},
+    {f:'30/04/2026',doc:'12345678',desc:'GRAVAMEN MOVS FINANCIEROS',ab:0,car:364121.0,saldo:41745120.84,tipo:'Gravamen financiero'}
+  ]
+};
+
+DATA['Bancolombia Abril 2026'] = {
+  info:{banco:'Bancolombia',titular:'ALZAK GROUP SAS',cta:'78349636556',tipo:'Cuenta Ahorros',ini:'2026-04-01',fin:'2026-04-30',sant:94578.95,tab:48000308.58,tcar:47737176.94,sfin:357710.59},
+  movs:[
+    {f:'07/04/2026',doc:'—',desc:'ABONO INTERESES AHORROS',ab:0.84,car:0,saldo:94579.79,tipo:'Interés'},
+    {f:'08/04/2026',doc:'—',desc:'TRASLADO DE FONDO DE INVERS — Fiducuenta *1771',ab:8000000.0,car:0,saldo:8094579.79,tipo:'Traslado fondo inversión'},
+    {f:'08/04/2026',doc:'—',desc:'ABONO INTERESES AHORROS',ab:11.08,car:0,saldo:8094590.87,tipo:'Interés'},
+    {f:'09/04/2026',doc:'—',desc:'TRASLADO DE FONDO DE INVERS — Fiducuenta *1771',ab:30000000.0,car:0,saldo:38094590.87,tipo:'Traslado fondo inversión'},
+    {f:'09/04/2026',doc:'—',desc:'IMPTO GOBIERNO 4X1000',ab:0,car:114048.78,saldo:37980542.09,tipo:'Gravamen financiero'},
+    {f:'09/04/2026',doc:'—',desc:'PAGO PSE IMPUESTO DIAN — Mall Plaza del Castillo',ab:0,car:5000000.0,saldo:32980542.09,tipo:'Pago DIAN'},
+    {f:'09/04/2026',doc:'—',desc:'TRANSFERENCIA CTA — Honorarios Sanofi evento Abril',ab:0,car:240370.0,saldo:32740172.09,tipo:'Transferencia salida'},
+    {f:'09/04/2026',doc:'—',desc:'TRANSFERENCIA CTA — Lina Moyano Abril 2026',ab:0,car:5138880.0,saldo:27601292.09,tipo:'Transferencia salida'},
+    {f:'09/04/2026',doc:'—',desc:'TRANSFERENCIA CTA — Rosmery Barroso Abril 2026',ab:0,car:2192982.0,saldo:25408310.09,tipo:'Transferencia salida'},
+    {f:'09/04/2026',doc:'—',desc:'TRANSFERENCIA CTA — Kevin Diaz Abril 2026',ab:0,car:1588205.0,saldo:23820105.09,tipo:'Transferencia salida'},
+    {f:'09/04/2026',doc:'—',desc:'TRANSFERENCIA CTA — Faiber Chaparro Abril 2026',ab:0,car:3180000.0,saldo:20640105.09,tipo:'Transferencia salida'},
+    {f:'09/04/2026',doc:'—',desc:'TRANSFERENCIA CTA — Maria Carrasquilla Abril 2026',ab:0,car:6249760.0,saldo:14390345.09,tipo:'Transferencia salida'},
+    {f:'09/04/2026',doc:'—',desc:'TRANSFERENCIA CTA — Daniela Torres Abril 2026',ab:0,car:4350000.0,saldo:10040345.09,tipo:'Transferencia salida'},
+    {f:'09/04/2026',doc:'—',desc:'TRANSFERENCIA CTA — Angela Carrasquilla Roncallo',ab:0,car:572000.0,saldo:9468345.09,tipo:'Transferencia salida'},
+    {f:'12/04/2026',doc:'—',desc:'ABONO INTERESES AHORROS',ab:51.88,car:0,saldo:9468396.97,tipo:'Interés'},
+    {f:'13/04/2026',doc:'—',desc:'ABONO INTERESES AHORROS',ab:9.65,car:0,saldo:9468406.62,tipo:'Interés'},
+    {f:'13/04/2026',doc:'—',desc:'IMPTO GOBIERNO 4X1000',ab:0,car:9635.42,saldo:9458771.20,tipo:'Gravamen financiero'},
+    {f:'13/04/2026',doc:'—',desc:'PAGO PSE Aguas de Cartagena',ab:0,car:271383.0,saldo:9187388.20,tipo:'Transferencia salida'},
+    {f:'13/04/2026',doc:'—',desc:'PAGO PSE SURTIDORA DE GAS DEL CARIBE',ab:0,car:4627.0,saldo:9182761.20,tipo:'Transferencia salida'},
+    {f:'13/04/2026',doc:'—',desc:'TRANSFERENCIA CTA — Pago Luisa Romero Asesoria',ab:0,car:1897925.0,saldo:7284836.20,tipo:'Transferencia salida'},
+    {f:'13/04/2026',doc:'—',desc:'TRANSFERENCIA CTA — Cuota celular Profe Alvis',ab:0,car:234922.0,saldo:7049914.20,tipo:'Transferencia salida'},
+    {f:'14/04/2026',doc:'—',desc:'ABONO INTERESES AHORROS',ab:9.64,car:0,saldo:7049923.84,tipo:'Interés'},
+    {f:'14/04/2026',doc:'—',desc:'IMPTO GOBIERNO 4X1000',ab:0,car:48.40,saldo:7049875.44,tipo:'Gravamen financiero'},
+    {f:'14/04/2026',doc:'—',desc:'PAGO PSE CAMARA DE COMERCIO CARTAGENA',ab:0,car:12100.0,saldo:7037775.44,tipo:'Transferencia salida'},
+    {f:'15/04/2026',doc:'—',desc:'TRASLADO DE FONDO DE INVERS — Fiducuenta *1771',ab:10000000.0,car:0,saldo:17037775.44,tipo:'Traslado fondo inversión'},
+    {f:'15/04/2026',doc:'—',desc:'ABONO INTERESES AHORROS',ab:17.08,car:0,saldo:17037792.52,tipo:'Interés'},
+    {f:'15/04/2026',doc:'—',desc:'IMPTO GOBIERNO 4X1000',ab:0,car:18204.30,saldo:17019588.22,tipo:'Gravamen financiero'},
+    {f:'15/04/2026',doc:'—',desc:'TRANSFERENCIA CTA — Honorarios varios Abril',ab:0,car:4551075.0,saldo:12468513.22,tipo:'Transferencia salida'},
+    {f:'16/04/2026',doc:'—',desc:'IMPTO GOBIERNO 4X1000',ab:0,car:324.0,saldo:12468189.22,tipo:'Gravamen financiero'},
+    {f:'16/04/2026',doc:'—',desc:'TRANSFERENCIA CTA SUC VIRTUAL',ab:0,car:81000.0,saldo:12387189.22,tipo:'Transferencia salida'},
+    {f:'23/04/2026',doc:'—',desc:'ABONO INTERESES AHORROS',ab:135.68,car:0,saldo:12387324.90,tipo:'Interés'},
+    {f:'24/04/2026',doc:'—',desc:'IMPTO GOBIERNO 4X1000',ab:0,car:14327.04,saldo:12372997.86,tipo:'Gravamen financiero'},
+    {f:'24/04/2026',doc:'—',desc:'TRANSFERENCIA CTA SUC VIRTUAL',ab:0,car:3249760.0,saldo:9123237.86,tipo:'Transferencia salida'},
+    {f:'24/04/2026',doc:'—',desc:'TRANSFERENCIA CTA SUC VIRTUAL',ab:0,car:332000.0,saldo:8791237.86,tipo:'Transferencia salida'},
+    {f:'29/04/2026',doc:'—',desc:'ABONO INTERESES AHORROS',ab:72.24,car:0,saldo:8791310.10,tipo:'Interés'},
+    {f:'30/04/2026',doc:'—',desc:'ABONO INTERESES AHORROS',ab:0.49,car:0,saldo:8791310.59,tipo:'Interés'},
+    {f:'30/04/2026',doc:'—',desc:'IMPTO GOBIERNO 4X1000',ab:0,car:33600.0,saldo:8757710.59,tipo:'Gravamen financiero'},
+    {f:'30/04/2026',doc:'—',desc:'TRANSFERENCIA CTA SUC VIRTUAL',ab:0,car:1700000.0,saldo:7057710.59,tipo:'Transferencia salida'},
+    {f:'30/04/2026',doc:'—',desc:'TRANSFERENCIA CTA SUC VIRTUAL',ab:0,car:5000000.0,saldo:2057710.59,tipo:'Transferencia salida'},
+    {f:'30/04/2026',doc:'—',desc:'TRANSFERENCIA CTA SUC VIRTUAL',ab:0,car:1700000.0,saldo:357710.59,tipo:'Transferencia salida'}
+  ]
+};
+
+DATA['Fiducia Abril 2026'] = {
+  info:{banco:'Fiduciaria Bancolombia',titular:'ALZAK GROUP SAS',cta:'98000001771',tipo:'Fondo inversión',ini:'2026-04-01',fin:'2026-04-30',sant:78147690.75,tab:0,tcar:48048272.68,sfin:30524992.57},
+  movs:[
+    {f:'08/04/2026',doc:'—',desc:'RETIRO TRASLA — Traslado a Ahorros Bancolombia *6556',ab:0,car:8000000.0,saldo:70254112.39,tipo:'Retiro fondo'},
+    {f:'08/04/2026',doc:'—',desc:'RETEFTE sobre rendimientos',ab:0,car:37324.46,saldo:70254112.39,tipo:'Retención'},
+    {f:'09/04/2026',doc:'—',desc:'RETIRO TRASLA — Traslado a Ahorros Bancolombia *6556',ab:0,car:30000000.0,saldo:40280452.29,tipo:'Retiro fondo'},
+    {f:'09/04/2026',doc:'—',desc:'RETEFTE sobre rendimientos',ab:0,car:4255.86,saldo:40280452.29,tipo:'Retención'},
+    {f:'15/04/2026',doc:'—',desc:'RETIRO TRASLA — Traslado a Ahorros Bancolombia *6556',ab:0,car:10000000.0,saldo:30370510.71,tipo:'Retiro fondo'},
+    {f:'15/04/2026',doc:'—',desc:'RETEFTE sobre rendimientos',ab:0,car:6692.36,saldo:30370510.71,tipo:'Retención'}
+  ]
+};
+
+DATA['BOLD Abril 2026'] = {
+  info:{banco:'BOLD CF',titular:'ALZAK GROUP SAS',cta:'1700-1155-2371',tipo:'Depósito ordinario',ini:'2026-04-01',fin:'2026-04-30',sant:36614121.45,tab:219741.21,tcar:17988803.42,sfin:18845059.24},
+  movs:[
+    {f:'01/04/2026',doc:'c80878d6',desc:'Abono de intereses (Ahorro)',ab:219741.21,car:0,saldo:36833862.66,tipo:'Interés'},
+    {f:'01/04/2026',doc:'c80878d6',desc:'GMF Retefuente (Ahorro)',ab:0,car:61.53,saldo:36833801.13,tipo:'GMF'},
+    {f:'01/04/2026',doc:'c80878d6',desc:'Retefuente (Ahorro)',ab:0,car:15381.88,saldo:36818419.25,tipo:'Retención'},
+    {f:'01/04/2026',doc:'RXWDPH8Q99',desc:'Envío por Llaves — Cuota computador Profe Alvis',ab:0,car:338867.0,saldo:36479552.25,tipo:'Envío por Llaves'},
+    {f:'01/04/2026',doc:'RXWDPH8Q99',desc:'GMF de envío por Llaves',ab:0,car:1355.47,saldo:36478196.78,tipo:'GMF'},
+    {f:'01/04/2026',doc:'YBYONTBKQP',desc:'Envío por Llaves — Cuota MC Mini Director Comercial',ab:0,car:201067.0,saldo:36277129.78,tipo:'Envío por Llaves'},
+    {f:'01/04/2026',doc:'YBYONTBKQP',desc:'GMF de envío por Llaves',ab:0,car:804.27,saldo:36276325.51,tipo:'GMF'},
+    {f:'01/04/2026',doc:'8YKUXQLAB8',desc:'Envío por Llaves — Cuota IMAC Nelson José',ab:0,car:321000.0,saldo:35955325.51,tipo:'Envío por Llaves'},
+    {f:'01/04/2026',doc:'8YKUXQLAB8',desc:'GMF de envío por Llaves',ab:0,car:1284.0,saldo:35954041.51,tipo:'GMF'},
+    {f:'01/04/2026',doc:'XD0AO83MUQ',desc:'Envío por Llaves — Abono cuenta NJAZ Abril',ab:0,car:3249760.0,saldo:32704281.51,tipo:'Envío por Llaves'},
+    {f:'01/04/2026',doc:'XD0AO83MUQ',desc:'GMF de envío por Llaves',ab:0,car:12999.04,saldo:32691282.47,tipo:'GMF'},
+    {f:'01/04/2026',doc:'S0MSNVK5RY',desc:'Transferencia ACH — Escuela Taller Divertiarte Pensión',ab:0,car:760196.0,saldo:31931086.47,tipo:'Transferencia salida'},
+    {f:'01/04/2026',doc:'S0MSNVK5RY',desc:'GMF transferencia ACH Divertiarte',ab:0,car:3040.78,saldo:31928045.69,tipo:'GMF'},
+    {f:'09/04/2026',doc:'T7G4NKN8NL',desc:'Envío por Llaves — Ana Lozano Honorarios Marzo',ab:0,car:5139380.0,saldo:26788665.69,tipo:'Envío por Llaves'},
+    {f:'09/04/2026',doc:'T7G4NKN8NL',desc:'GMF de envío por Llaves',ab:0,car:20557.52,saldo:26768108.17,tipo:'GMF'},
+    {f:'16/04/2026',doc:'F1UJZD5OF7',desc:'Envío por Llaves',ab:0,car:150000.0,saldo:26618108.17,tipo:'Envío por Llaves'},
+    {f:'16/04/2026',doc:'F1UJZD5OF7',desc:'GMF de envío por Llaves',ab:0,car:600.0,saldo:26617508.17,tipo:'GMF'},
+    {f:'16/04/2026',doc:'8QKXADINVJ',desc:'Envío por Llaves',ab:0,car:2162371.0,saldo:24455137.17,tipo:'Envío por Llaves'},
+    {f:'16/04/2026',doc:'8QKXADINVJ',desc:'GMF de envío por Llaves',ab:0,car:8649.48,saldo:24446487.69,tipo:'GMF'},
+    {f:'24/04/2026',doc:'6VHN4JXRT3',desc:'Envío por Llaves — Cuentas NJAZ Abril',ab:0,car:3670400.0,saldo:20776087.69,tipo:'Envío por Llaves'},
+    {f:'24/04/2026',doc:'6VHN4JXRT3',desc:'GMF de envío por Llaves',ab:0,car:14681.60,saldo:20761406.09,tipo:'GMF'},
+    {f:'30/04/2026',doc:'JMZQFWNCET',desc:'Envío por Llaves — Pago fin de mes',ab:0,car:1908712.0,saldo:18852694.09,tipo:'Envío por Llaves'},
+    {f:'30/04/2026',doc:'JMZQFWNCET',desc:'GMF de envío por Llaves',ab:0,car:7634.85,saldo:18845059.24,tipo:'GMF'}
+  ]
+};
+
+
 DATA['BOLD'] = {
 
   info:{banco:'BOLD',titular:'ALZAK GROUP SAS',cta:'1700-1155-2371',tipo:'Depósito ordinario',ini:'2026-02-01',fin:'2026-02-28',sant:0,tab:25000000.0,tcar:5342946.64,sfin:19657053.36},
@@ -3410,6 +3458,8 @@ DATA['TC FEB-MAR 2026'] = {
   info:{banco:'TC',titular:'NELSON R. ALVIS ZAKZUK',cta:'4704371054186529',tipo:'Tarjeta de Crédito',ini:'2026-01-31',fin:'2026-02-27',sant:1830654.0,tab:3351186.0,tcar:2777956.0,sfin:0.0,esTarjeta:true},
 
   movs:[
+
+    {f:'30/01/2026',doc:'000168726519',desc:'MERCADO PAGO*CUEROSVEL',ab:0,car:601860.0,saldo:0.0,tipo:'Gasto TC'},
 
     {f:'01/02/2026',doc:'000168768657',desc:'DIGITALOCEAN.COM',ab:0,car:48221.0,saldo:0.0,tipo:'Gasto TC'},
 
@@ -4933,7 +4983,11 @@ function renderHomeGastos() {
 
     var r = datos[i];
 
-    var key = (r['Beneficiario'] || r['Concepto'] || 'Sin identificar').trim();
+    // Key incluye N° Comprobante para que registros del mismo proveedor
+    // con diferente comprobante no se colapsen en uno solo
+    var ncomp2 = (r['N Comprobante'] || r['N_Comprobante'] || '').trim();
+    var baseKey = (r['Proveedor / Beneficiario'] || r['Beneficiario'] || r['Concepto'] || 'Sin identificar').trim();
+    var key = ncomp2 ? baseKey + '|' + ncomp2 : baseKey;
 
     var cat = r['Categoria'] || 'Sin categoria';
 
@@ -6759,7 +6813,18 @@ function procesarFilasFactura(rows) {
 
   if (!rows || rows.length < 2) { mostrarToast('Archivo vacío', '#A32D2D'); return; }
 
-  var rawH = rows[0].map(function(h2){ return (h2||'').toString().toLowerCase().trim(); });
+  // Detectar fila de encabezados automáticamente
+  // (el archivo puede tener una fila de título antes de los encabezados reales)
+  var headerRow = 0;
+  var camposClave = ['n_factura','no_factura','num','factura','fecha','cliente','total_cop','total'];
+  for (var hi = 0; hi < Math.min(rows.length, 5); hi++) {
+    var testH = rows[hi].map(function(h2){ return (h2||'').toString().toLowerCase().trim(); });
+    var encontrados = camposClave.filter(function(c){ return testH.indexOf(c) >= 0; }).length;
+    if (encontrados >= 2) { headerRow = hi; break; }
+  }
+  var rawH = rows[headerRow].map(function(h2){ return (h2||'').toString().toLowerCase().trim(); });
+  // Datos empiezan en la fila siguiente a los encabezados
+  var dataStartRow = headerRow + 1;
 
   function colF(row, names) {
 
@@ -6799,7 +6864,7 @@ function procesarFilasFactura(rows) {
 
   var imp=0, err=0;
 
-  for (var i=1; i<rows.length; i++) {
+  for (var i=dataStartRow; i<rows.length; i++) {
 
     var row=rows[i]; if (!row||!row.length) continue;
 
@@ -6821,6 +6886,8 @@ function procesarFilasFactura(rows) {
 
     var rete  = toNF(colF(row,['retefuente','rete']));
 
+    var reteiva_raw = toNF(colF(row,['reteiva_cop','reteiva']));
+
     var total = toNF(colF(row,['total_cop','total']));
 
     var est   = (colF(row,['estado','pagada'])||'').toLowerCase();
@@ -6833,7 +6900,7 @@ function procesarFilasFactura(rows) {
 
       ciudad:'', tel:'', fecha:fecha, vence:vence, descripcion:conc, oc:'', observacion:'',
 
-      bruto:bruto||total, iva:iva, retefuente:rete, reteiva:Math.round((iva||0)*0.15), total:total,
+      bruto:bruto||total, iva:iva, retefuente:rete, reteiva:reteiva_raw||Math.round((iva||0)*0.15), total:total,
 
       pagada:est==='pagada'||est==='cobrada'||est==='si'||est==='sí', fecha_pago:null};
 
@@ -8169,7 +8236,7 @@ async function procesarArchivoFactura(file) {
 
       headers: { 'Content-Type': 'application/json', 'x-api-key': (window.ALZAK_API_KEY||''), 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
 
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 800, messages: messages })
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 800, messages: messages })
 
     });
 
@@ -8255,7 +8322,19 @@ function confirmarNuevaFactura() {
 
   var fecha  = document.getElementById('cf-fecha').value;
 
-  var cliente= (document.getElementById('cf-cliente').value||'').trim();
+  // Leer cliente del input directo o del dropdown según cuál tenga valor
+  var cfCliente = document.getElementById('cf-cliente');
+  var cfClienteSel = document.getElementById('cf-cliente-sel');
+  var cliente = '';
+  if (cfCliente && cfCliente.style.display !== 'none' && cfCliente.value.trim()) {
+    cliente = cfCliente.value.trim(); // modo "Otro..."
+  } else if (cfClienteSel && cfClienteSel.value && cfClienteSel.value !== '__otro__') {
+    cliente = cfClienteSel.value.trim(); // selección del dropdown
+    // Asegurarse de sincronizar el input oculto
+    if (cfCliente) cfCliente.value = cliente;
+  } else if (cfCliente) {
+    cliente = cfCliente.value.trim();
+  }
 
   var total  = parseFloat(document.getElementById('cf-total').value)||0;
 
@@ -10745,6 +10824,15 @@ function gastoProcesarDatos(datos) {
 
   gastoInicializar(); renderGastosDashboard(); if(typeof renderMSD==="function") renderMSD(); if(typeof renderEquipoBase==="function") renderEquipoBase();
 
+  // ── Re-cruzar facturas radicadas con los nuevos egresos ──────────────
+  // GASTOS_DATA tiene Cuenta_Origen → mejora el cruce de fuente de pago
+  if (typeof frRender === 'function' && typeof FR_DATA !== 'undefined' && FR_DATA.length > 0) {
+    if (typeof frResetPool === 'function') frResetPool();
+    if (typeof _FR_FUENTE_CACHE !== 'undefined') _FR_FUENTE_CACHE = {};
+    setTimeout(frRender, 150);
+    if (typeof mostrarToast === 'function') mostrarToast('🔄 Cruzando egresos con facturas radicadas…');
+  }
+
 }
 
 function gastoLeerCSV(file) { gastoLeerArchivo(file); }
@@ -11091,7 +11179,7 @@ async function procesarPDFGasto(file) {
 
       method:'POST', headers:{'Content-Type':'application/json','x-api-key':(window.ALZAK_API_KEY||''),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
 
-      body: JSON.stringify({model:'claude-sonnet-4-20250514', max_tokens:600, messages:messages})
+      body: JSON.stringify({model:'claude-sonnet-4-6', max_tokens:600, messages:messages})
 
     });
 
@@ -12062,7 +12150,7 @@ function renderGastosDashboard() {
   if(panel && panel.style.display !== 'none') { renderGruposGastos(hayFiltro?listaFiltrada:dataOp,filCat); }
 
   // Actualizar panel de programación si hay datos cargados
-  if (PROG_DATA.length) setTimeout(progRender, 50);
+  if (typeof PROG_DATA !== 'undefined' && PROG_DATA.length) setTimeout(progRender, 50);
 
   var contEl=g('gd-conteo');if(contEl)contEl.textContent=hayFiltro?listaFiltrada.length+' resultados':dataOp.length+' registros';
 
@@ -14671,7 +14759,8 @@ function renderBcol() {
     <select id="sel-periodo" onchange="renderConc()">
       <option value="0">Enero 2026</option>
       <option value="1">Febrero 2026</option>
-      <option value="2" selected>Marzo 2026</option>
+      <option value="2">Marzo 2026</option>
+      <option value="3" selected>Abril 2026</option>
     </select>
     <button class="btn" onclick="exportarCSVConc()">↓ CSV</button>
     <button class="btn btn-pri" onclick="window.print()">⎙ Imprimir</button>
@@ -14684,9 +14773,8 @@ function renderBcol() {
   <div class="section"><div class="section-head s-ahorros"><div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;"><span class="sec-badge sb-ahorros">Cta. Ahorros</span><span class="sec-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">78349636556 · Bancolombia · Sucursal Mall Plaza del Castillo</span></div><span id="ah-per" style="font-size:10px;color:#aaa;white-space:nowrap;padding:0 10px;flex-shrink:0;"></span><label style="cursor:pointer;background:#5BC8CD;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:10px;font-weight:700;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;box-shadow:0 1px 4px rgba(0,0,0,.25);flex-shrink:0;">📄 Extracto PDF<input type="file" accept=".pdf" style="display:none" onchange="concPdfLoad(this,'ahorros')"></label></div><div class="section-body" id="body-ahorros"></div></div>
   <div class="section"><div class="section-head s-fondo"><div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;"><span class="sec-badge sb-fondo">Fiducuenta</span><span class="sec-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">98000001771 · Fondo de Inversión Colectiva · Fiduciaria Bancolombia</span></div><span id="fid-per" style="font-size:10px;color:#aaa;white-space:nowrap;padding:0 10px;flex-shrink:0;"></span><label style="cursor:pointer;background:#6950B8;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:10px;font-weight:700;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;box-shadow:0 1px 4px rgba(0,0,0,.25);flex-shrink:0;">📄 Extracto PDF<input type="file" accept=".pdf" style="display:none" onchange="concPdfLoad(this,'fondo')"></label></div>
   <div class="section-body" id="body-fondo"></div></div>
-</div>
 
-<div class="section"><div class="section-head s-caja"><div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;"><span class="sec-badge sb-caja">Cta. Corriente</span><span class="sec-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">21003622970 · Banco Caja Social · Cartagena</span></div><span id="cj-per" style="font-size:10px;color:#aaa;white-space:nowrap;padding:0 10px;flex-shrink:0;"></span><label style="cursor:pointer;background:#C2410C;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:10px;font-weight:700;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;box-shadow:0 1px 4px rgba(0,0,0,.25);flex-shrink:0;">📄 Extracto PDF<input type="file" accept=".pdf" style="display:none" onchange="concPdfLoad(this,'caja')"></label></div><div class="section-body" id="body-caja"></div></div>
+  <div class="section"><div class="section-head s-caja"><div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;"><span class="sec-badge sb-caja">Cta. Corriente</span><span class="sec-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">21003622970 · Banco Caja Social · Cartagena</span></div><span id="cj-per" style="font-size:10px;color:#aaa;white-space:nowrap;padding:0 10px;flex-shrink:0;"></span><label style="cursor:pointer;background:#C2410C;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:10px;font-weight:700;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;box-shadow:0 1px 4px rgba(0,0,0,.25);flex-shrink:0;">📄 Extracto PDF<input type="file" accept=".pdf" style="display:none" onchange="concPdfLoad(this,'caja')"></label></div><div class="section-body" id="body-caja"></div></div>
 
 <div class="section"><div class="section-head s-bold"><div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;"><span class="sec-badge sb-bold">Bold CF</span><span class="sec-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">1700-1155-2371 · Bold Compañía de Financiamiento · Depósito Ordinario</span></div><span id="bl-per" style="font-size:10px;color:#aaa;white-space:nowrap;padding:0 10px;flex-shrink:0;"></span><label style="cursor:pointer;background:#1E3A5F;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:10px;font-weight:700;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;box-shadow:0 1px 4px rgba(0,0,0,.25);flex-shrink:0;">📄 Extracto PDF<input type="file" accept=".pdf" style="display:none" onchange="concPdfLoad(this,'bold')"></label></div><div class="section-body" id="body-bold"></div></div>
 
@@ -14783,6 +14871,66 @@ document.addEventListener('DOMContentLoaded', function() {
 document.getElementById('fecha-gen').textContent='Generado: '+new Date().toLocaleDateString('es-CO',{day:'2-digit',month:'long',year:'numeric'});
 
 /* ══════════════════════ DATA ══════════════════════ */
+DATA['TC ABR-MAY 2026'] = {
+  info:{banco:'TC',titular:'NELSON R. ALVIS ZAKZUK',cta:'4704371054186529',tipo:'Tarjeta de Crédito',ini:'2026-03-31',fin:'2026-04-30',sant:459593,tab:2519196,tcar:2370155,sfin:625944,esTarjeta:true},
+  movs:[
+    {f:'01/04/2026',doc:'000170457284',desc:'DIGITALOCEAN.COM',ab:0,car:46111,saldo:0,tipo:'Gasto TC'},
+    {f:'01/04/2026',doc:'000170504372',desc:'GOOGLE *Workspace_alzak',ab:0,car:280223,saldo:0,tipo:'Gasto TC'},
+    {f:'01/04/2026',doc:'000170504373',desc:'Google Workspace_alzakfou',ab:0,car:264136,saldo:0,tipo:'Gasto TC'},
+    {f:'01/04/2026',doc:'000170470975',desc:'GMF TC EMPRESARIAL',ab:0,car:184,saldo:0,tipo:'Comisión TC'},
+    {f:'02/04/2026',doc:'000170510778',desc:'GMF TC EMPRESARIAL',ab:0,car:1121,saldo:0,tipo:'Comisión TC'},
+    {f:'02/04/2026',doc:'000170510779',desc:'GMF TC EMPRESARIAL',ab:0,car:1057,saldo:0,tipo:'Comisión TC'},
+    {f:'06/04/2026',doc:'000170632964',desc:'POSIT SOFTWARE, PBC',ab:0,car:219041,saldo:0,tipo:'Gasto TC'},
+    {f:'07/04/2026',doc:'000170645800',desc:'GMF TC EMPRESARIAL',ab:0,car:876,saldo:0,tipo:'Comisión TC'},
+    {f:'09/04/2026',doc:'000170708742',desc:'LATAM AIRLINES COLOMBIA',ab:0,car:213090,saldo:0,tipo:'Gasto TC'},
+    {f:'09/04/2026',doc:'000170708743',desc:'UBER RIDES',ab:0,car:48680,saldo:0,tipo:'Gasto TC'},
+    {f:'09/04/2026',doc:'000170710116',desc:'HOTEL SANTA BARBARA BOUTIQU',ab:0,car:276101,saldo:0,tipo:'Gasto TC'},
+    {f:'09/04/2026',doc:'000170710120',desc:'PAYMENTS WAY',ab:0,car:418026,saldo:0,tipo:'Gasto TC'},
+    {f:'09/04/2026',doc:'000170710121',desc:'UBER RIDES',ab:0,car:8331,saldo:0,tipo:'Gasto TC'},
+    {f:'09/04/2026',doc:'000170761347',desc:'UBER RIDES',ab:0,car:8361,saldo:0,tipo:'Gasto TC'},
+    {f:'10/04/2026',doc:'000170733213',desc:'GMF TC EMPRESARIAL',ab:0,car:852,saldo:0,tipo:'Comisión TC'},
+    {f:'10/04/2026',doc:'000170733214',desc:'GMF TC EMPRESARIAL',ab:0,car:195,saldo:0,tipo:'Comisión TC'},
+    {f:'10/04/2026',doc:'000170733393',desc:'GMF TC EMPRESARIAL',ab:0,car:1104,saldo:0,tipo:'Comisión TC'},
+    {f:'10/04/2026',doc:'000170733395',desc:'GMF TC EMPRESARIAL',ab:0,car:1672,saldo:0,tipo:'Comisión TC'},
+    {f:'10/04/2026',doc:'000170733396',desc:'GMF TC EMPRESARIAL',ab:0,car:33,saldo:0,tipo:'Comisión TC'},
+    {f:'10/04/2026',doc:'000170741265',desc:'UBER RIDES',ab:0,car:8236,saldo:0,tipo:'Gasto TC'},
+    {f:'10/04/2026',doc:'000170761679',desc:'UBER RIDES',ab:0,car:50662,saldo:0,tipo:'Gasto TC'},
+    {f:'11/04/2026',doc:'000170760596',desc:'GMF TC EMPRESARIAL',ab:0,car:33,saldo:0,tipo:'Comisión TC'},
+    {f:'12/04/2026',doc:'000170786912',desc:'GMF TC EMPRESARIAL',ab:0,car:33,saldo:0,tipo:'Comisión TC'},
+    {f:'12/04/2026',doc:'000170786921',desc:'GMF TC EMPRESARIAL',ab:0,car:203,saldo:0,tipo:'Comisión TC'},
+    {f:'19/04/2026',doc:'000171026630',desc:'GOOGLE *Google One',ab:0,car:8900,saldo:0,tipo:'Gasto TC'},
+    {f:'20/04/2026',doc:'000171035549',desc:'GMF TC EMPRESARIAL',ab:0,car:36,saldo:0,tipo:'Comisión TC'},
+    {f:'22/04/2026',doc:'000171078552',desc:'MICROSOFT#G154110834',ab:0,car:53053,saldo:0,tipo:'Gasto TC'},
+    {f:'22/04/2026',doc:'000171084655',desc:'GMF TC EMPRESARIAL',ab:0,car:212,saldo:0,tipo:'Comisión TC'},
+    {f:'23/04/2026',doc:'000171110632',desc:'Mi Pago Amigo (pago liquidacion TC)',ab:2370155,car:0,saldo:0,tipo:'Pago TC'},
+    {f:'23/04/2026',doc:'000171124303',desc:'MERCADO PAGO*MERCADOPA',ab:0,car:194435,saldo:0,tipo:'Gasto TC'},
+    {f:'24/04/2026',doc:'000171141768',desc:'GMF TC EMPRESARIAL',ab:0,car:778,saldo:0,tipo:'Comisión TC'},
+    {f:'26/04/2026',doc:'000171212832',desc:'ADOBE',ab:0,car:32940,saldo:0,tipo:'Gasto TC'},
+    {f:'27/04/2026',doc:'000171237590',desc:'GMF TC EMPRESARIAL',ab:0,car:132,saldo:0,tipo:'Comisión TC'},
+    {f:'27/04/2026',doc:'000171251075',desc:'MERCADO PAGO*MERCADOPA',ab:0,car:194435,saldo:0,tipo:'Gasto TC'},
+    {f:'27/04/2026',doc:'000171251411',desc:'MERCADO PAGO*MERCADOPA',ab:0,car:194435,saldo:0,tipo:'Gasto TC'},
+    {f:'28/04/2026',doc:'000171265170',desc:'GMF TC EMPRESARIAL',ab:0,car:778,saldo:0,tipo:'Comisión TC'},
+    {f:'28/04/2026',doc:'000171265205',desc:'GMF TC EMPRESARIAL',ab:0,car:778,saldo:0,tipo:'Comisión TC'},
+    {f:'04/04/2026',doc:'000170000001',desc:'LA MILAGROSA DEL MAR',ab:0,car:240370,saldo:0,tipo:'Gasto TC'},
+    {f:'14/01',doc:'POS0153076',desc:'FRITOCARIBE CARTAGENA',ab:0,car:86400,saldo:0,tipo:'Gasto TC'},
+    {f:'10/01',doc:'FC-2-302',desc:'GODADDY',ab:0,car:90780,saldo:0,tipo:'Gasto TC'},
+    {f:'22/01',doc:'FC-2-308',desc:'MICROSOFT',ab:0,car:54681,saldo:0,tipo:'Gasto TC'},
+    {f:'22/01',doc:'19854095',desc:'LUCID SOFTWARE INC',ab:0,car:40700,saldo:0,tipo:'Gasto TC'},
+    {f:'30/01',doc:'FQ35235687',desc:'PLAN B INVESTMENTS ISIMO',ab:0,car:21250,saldo:0,tipo:'Gasto TC'},
+    {f:'30/01',doc:'FELE3165',desc:'ACICLINICAL',ab:0,car:185000,saldo:0,tipo:'Gasto TC'},
+    {f:'01/02',doc:'FC-2-343',desc:'DIGITALOCEAN.COM',ab:0,car:48221,saldo:0,tipo:'Gasto TC'},
+    {f:'09/02',doc:'FC-2-347',desc:'OPENAI CHATGPT SUBSCR',ab:0,car:74573,saldo:0,tipo:'Gasto TC'},
+    {f:'19/02',doc:'FC-2-348',desc:'UBER RIDES',ab:0,car:50918,saldo:0,tipo:'Gasto TC'},
+    {f:'19/02',doc:'FC-2-350',desc:'UBER RIDES',ab:0,car:41470,saldo:0,tipo:'Gasto TC'},
+    {f:'22/02',doc:'FC-2-352',desc:'MICROSOFT',ab:0,car:54870,saldo:0,tipo:'Gasto TC'},
+    {f:'09/03',doc:'1P00349134',desc:'MERCADOLIBRE COLOMBIA',ab:0,car:108708,saldo:0,tipo:'Gasto TC'},
+    {f:'12/03',doc:'H4K0237672',desc:'D1 SAS',ab:0,car:45250,saldo:0,tipo:'Gasto TC'},
+    {f:'16/03',doc:'HC344219',desc:'HACEMOS BUENOS MOMENTOS VENECIA',ab:0,car:39400,saldo:0,tipo:'Gasto TC'},
+    {f:'31/03',doc:'FELE3273',desc:'ACICLINICAL',ab:0,car:370000,saldo:0,tipo:'Gasto TC'},
+    {f:'30/04',doc:'FELE3317',desc:'ACICLINICAL',ab:0,car:583305,saldo:0,tipo:'Gasto TC'}
+  ]
+};
+
 const P=[
 {label:'Enero 2026',desde:'2025/12/31',hasta:'2026/01/31',
  sA:11325.27,tAb:75260267.37,tCar:48484155.12,sF:26787437.52,
@@ -14893,7 +15041,9 @@ const P=[
   {f:'30/01',d:'Débito ACH',v:-4000000,t:'egreso'},
   {f:'31/01',d:'Gravamen movimientos financieros',v:-126144,t:'impto'},
  ]},
- bold:{sA:0,sF:0,tAb:0,tCar:0,intereses:0,movs:[]}
+ bold:{sA:0,sF:0,tAb:0,tCar:3134,intereses:0,movs:[
+  {f:'27/01',d:'Pago Red Balloon Butanta — anualidad',v:-3134,t:'egreso'}
+ ]}
 },
 {label:'Febrero 2026',desde:'2026/01/31',hasta:'2026/02/28',
  sA:26787437.52,tAb:127503088.60,tCar:108947682.87,sF:45342843.25,
@@ -14982,6 +15132,7 @@ const P=[
   {f:'28/02',d:'Cobro IVA Pagos Automáticos',v:-1442.10,t:'comision'},
   {f:'28/02',d:'Cobro IVA Pagos Automáticos',v:-1442.10,t:'comision'},
   {f:'28/02',d:'Cobro IVA Pagos Automáticos',v:-1442.10,t:'comision'},
+  {f:'27/02',d:'Transferencia CTA SUC Virtual',v:-2550000,t:'transf'},
  ],
  fid:{sA:130314331.49,sF:52623118.18,adiciones:0,retiros:78043763,rendNetos:369299.15,retencion:16749.46,movs:[
   {f:'02/02',d:'Retiro traslado → Cta. Ahorros',v:-10000000,t:'retiro'},
@@ -15127,6 +15278,83 @@ const P=[
  ]},
  caja:{sA:72169980.84,sF:15648594.84,tAb:0,tCar:56521386,movs:[]},
  bold:{sA:19657053.36,sF:36614121.45,tAb:20068865.69,tCar:3111797.60,intereses:68865.69,movs:[]}
+},
+{label:'Abril 2026',desde:'2026/03/31',hasta:'2026/04/30',
+ sA:94578.95,tAb:48000308.58,tCar:47737176.94,sF:357710.59,
+ movs:[
+  {f:'07/04',d:'Abono intereses ahorros',v:0.84,t:'interes'},
+  {f:'08/04',d:'Traslado Fiducuenta → Ahorros',v:8000000,t:'fondo'},
+  {f:'08/04',d:'Abono intereses ahorros',v:11.08,t:'interes'},
+  {f:'09/04',d:'Traslado Fiducuenta → Ahorros',v:30000000,t:'fondo'},
+  {f:'09/04',d:'Impto Gobierno 4x1000',v:-114048.78,t:'impto'},
+  {f:'09/04',d:'Pago PSE Impuesto DIAN',v:-5000000,t:'egreso'},
+  {f:'09/04',d:'Transferencia CTA SUC Virtual',v:-240370,t:'transf'},
+  {f:'09/04',d:'Transferencia CTA SUC Virtual',v:-5138880,t:'transf'},
+  {f:'09/04',d:'Transferencia CTA SUC Virtual',v:-2192982,t:'transf'},
+  {f:'09/04',d:'Transferencia CTA SUC Virtual',v:-1588205,t:'transf'},
+  {f:'09/04',d:'Transferencia CTA SUC Virtual',v:-3180000,t:'transf'},
+  {f:'09/04',d:'Transferencia CTA SUC Virtual',v:-6249760,t:'transf'},
+  {f:'09/04',d:'Transferencia CTA SUC Virtual',v:-4350000,t:'transf'},
+  {f:'09/04',d:'Transferencia CTA SUC Virtual',v:-572000,t:'transf'},
+  {f:'12/04',d:'Abono intereses ahorros',v:51.88,t:'interes'},
+  {f:'13/04',d:'Abono intereses ahorros',v:9.65,t:'interes'},
+  {f:'13/04',d:'Impto Gobierno 4x1000',v:-9635.42,t:'impto'},
+  {f:'13/04',d:'Pago PSE Aguas de Cartagena',v:-271383,t:'egreso'},
+  {f:'13/04',d:'Pago PSE Surtidora de Gas del Caribe',v:-4627,t:'egreso'},
+  {f:'13/04',d:'Transferencia CTA SUC Virtual',v:-1897925,t:'transf'},
+  {f:'13/04',d:'Transferencia CTA SUC Virtual',v:-234922,t:'transf'},
+  {f:'14/04',d:'Abono intereses ahorros',v:9.64,t:'interes'},
+  {f:'14/04',d:'Impto Gobierno 4x1000',v:-48.40,t:'impto'},
+  {f:'14/04',d:'Pago PSE Cámara de Comercio Cartagena',v:-12100,t:'egreso'},
+  {f:'15/04',d:'Traslado Fiducuenta → Ahorros',v:10000000,t:'fondo'},
+  {f:'15/04',d:'Abono intereses ahorros',v:17.08,t:'interes'},
+  {f:'15/04',d:'Impto Gobierno 4x1000',v:-18204.30,t:'impto'},
+  {f:'15/04',d:'Transferencia CTA SUC Virtual',v:-4551075,t:'transf'},
+  {f:'16/04',d:'Impto Gobierno 4x1000',v:-324,t:'impto'},
+  {f:'16/04',d:'Transferencia SUC Virtual',v:-81000,t:'transf'},
+  {f:'23/04',d:'Abono intereses ahorros',v:135.68,t:'interes'},
+  {f:'24/04',d:'Impto Gobierno 4x1000',v:-14327.04,t:'impto'},
+  {f:'24/04',d:'Transferencia SUC Virtual',v:-3249760,t:'transf'},
+  {f:'24/04',d:'Transferencia SUC Virtual',v:-332000,t:'transf'},
+  {f:'29/04',d:'Abono intereses ahorros',v:72.24,t:'interes'},
+  {f:'30/04',d:'Abono intereses ahorros',v:0.49,t:'interes'},
+  {f:'30/04',d:'Impto Gobierno 4x1000',v:-33600,t:'impto'},
+  {f:'30/04',d:'Transferencia SUC Virtual',v:-1700000,t:'transf'},
+  {f:'30/04',d:'Transferencia SUC Virtual',v:-5000000,t:'transf'},
+  {f:'30/04',d:'Transferencia SUC Virtual',v:-1700000,t:'transf'},
+  {f:'12/04',d:'Transferencia CTA SUC Virtual',v:-6449000,t:'egreso'}
+ ],
+ fid:{sA:78147690.75,sF:30524992.57,adiciones:0,retiros:48000000,rendNetos:425574.50,retencion:48272.68,movs:[
+  {f:'08/04',d:'Retiro traslado → Cta. Ahorros Bancolombia',v:-8000000,t:'retiro'},
+  {f:'08/04',d:'Retefuente sobre rendimientos',v:-37324.46,t:'retefte'},
+  {f:'09/04',d:'Retiro traslado → Cta. Ahorros Bancolombia',v:-30000000,t:'retiro'},
+  {f:'09/04',d:'Retefuente sobre rendimientos',v:-4255.86,t:'retefte'},
+  {f:'15/04',d:'Retiro traslado → Cta. Ahorros Bancolombia',v:-10000000,t:'retiro'},
+  {f:'15/04',d:'Retefuente sobre rendimientos',v:-6692.36,t:'retefte'}
+ ]},
+ caja:{sA:15648594.84,tCred:117490802,tDeb:-91394276,sF:41745120.84,movs:[
+  {f:'13/04',d:'TRANSFERENCIA OTRA ENTIDAD ACH FEE2288',v:96555016,t:'ingreso'},
+  {f:'15/04',d:'TRANSFERENCIA OTRA ENTIDAD ACH FEE2286',v:20935786,t:'ingreso'},
+  {f:'15/04',d:'COMPRA INTERNET 4911102594618 A/O 2025 PERIODO 2',v:-36405000,t:'egreso'},
+  {f:'15/04',d:'COMPRA INTERNET 4911102596993 A/O 2025 PERIODO 3',v:-52005000,t:'egreso'},
+  {f:'23/04',d:'Pago tarjeta de crédito BCS VISA',v:-2370155,t:'egreso'},
+  {f:'23/04',d:'DEBITO PAGO NOMINA Y/O PROVEEDORES ACH',v:-250000,t:'egreso'},
+  {f:'30/04',d:'Gravamen movimientos financieros',v:-364121,t:'impto'}
+ ]},
+ bold:{sA:36614121.45,sF:18845059.24,tAb:219741.21,tCar:17988803.42,intereses:219741.21,movs:[
+  {f:'01/04',d:'Abono de intereses (Ahorro)',v:219741.21,t:'interes'},
+  {f:'01/04',d:'GMF + Retefuente',v:-15443.41,t:'impto'},
+  {f:'01/04',d:'Envío por Llaves',v:-338867,t:'egreso'},
+  {f:'01/04',d:'Envío por Llaves',v:-201067,t:'egreso'},
+  {f:'01/04',d:'Envío por Llaves',v:-321000,t:'egreso'},
+  {f:'01/04',d:'Envío por Llaves',v:-3249760,t:'egreso'},
+  {f:'01/04',d:'Transferencia ACH a escuela taller Divertiarte - Bancolombia',v:-760196,t:'egreso'},
+  {f:'09/04',d:'Envío por Llaves',v:-5139380,t:'egreso'},
+  {f:'16/04',d:'Envío por Llaves',v:-150000,t:'egreso'},
+  {f:'16/04',d:'Envío por Llaves',v:-2162371,t:'egreso'},
+  {f:'24/04',d:'Envío por Llaves',v:-3670400,t:'egreso'},
+  {f:'30/04',d:'Envío por Llaves',v:-1908712,t:'egreso'}
+ ]}
 }];
 
 // ── Tarjeta de Credito BCS — datos por periodo ───────────────────────────
@@ -15206,6 +15434,30 @@ const TC_DATA = [
     {f:'26/03',d:'MERCADO PAGO x2',v:-370000,t:'compra'},
     {f:'26/03',d:'Adobe.com',v:-32940,t:'compra'},
   ]},
+  {label:'Abril 2026', desde:'2026/03/31', hasta:'2026/04/30',
+   saldoAnterior:459593, compras:2519196, otrosCargos:10077, pagos:2370155,
+   saldoCierre:625944, diferidos:616245, cupo:4000000,
+   movimientos:[
+    {f:'01/04',d:'DIGITALOCEAN.COM',v:-46111,t:'compra'},
+    {f:'01/04',d:'GOOGLE Workspace alzak.co',v:-280223,t:'compra'},
+    {f:'01/04',d:'Google Workspace alzakfou',v:-264136,t:'compra'},
+    {f:'06/04',d:'POSIT SOFTWARE, PBC',v:-219041,t:'compra'},
+    {f:'09/04',d:'LATAM AIRLINES COLOMBIA',v:-213090,t:'compra'},
+    {f:'09/04',d:'UBER RIDES',v:-48680,t:'compra'},
+    {f:'09/04',d:'HOTEL SANTA BARBARA BOUTIQU',v:-276101,t:'compra'},
+    {f:'09/04',d:'PAYMENTS WAY',v:-418026,t:'compra'},
+    {f:'09/04',d:'UBER RIDES',v:-8331,t:'compra'},
+    {f:'09/04',d:'UBER RIDES',v:-8361,t:'compra'},
+    {f:'10/04',d:'UBER RIDES',v:-8236,t:'compra'},
+    {f:'10/04',d:'UBER RIDES',v:-50662,t:'compra'},
+    {f:'19/04',d:'GOOGLE *Google One',v:-8900,t:'compra'},
+    {f:'22/04',d:'MICROSOFT#G154110834',v:-53053,t:'compra'},
+    {f:'23/04',d:'Mi Pago Amigo',v:2370155,t:'pago'},
+    {f:'23/04',d:'MERCADO PAGO*MERCADOPA',v:-194435,t:'compra'},
+    {f:'26/04',d:'ADOBE',v:-32940,t:'compra'},
+    {f:'27/04',d:'MERCADO PAGO*MERCADOPA',v:-194435,t:'compra'},
+    {f:'27/04',d:'MERCADO PAGO*MERCADOPA',v:-194435,t:'compra'},
+  ]},
 ];
 
 /* ══════════════ TIPOS ══════════════ */
@@ -15236,10 +15488,14 @@ function drawBars(id,datasets,xLabels){
     const y=pad.top+cH*(1-t);ctx.strokeStyle=cG;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+cW,y);ctx.stroke();
     ctx.fillStyle=cM;ctx.font='9px Montserrat,sans-serif';ctx.textAlign='right';ctx.fillText(fmtM(mx*t),pad.left-4,y+3);
   });
-  const nG=xLabels.length,nB=datasets.length,gW=cW/nG,bW=Math.min((gW-6)/(nB+0.5),24),gGap=(gW-bW*nB)/(nB+1);
+  const nG=xLabels.length,nB=datasets.length,gW=cW/nG;
+  // Alineación: centrar el grupo de barras dentro de cada slot de grupo
+  const bW=Math.min((gW*0.75)/nB,22);
+  const groupTotalW=bW*nB+(nB-1)*2; // ancho total del grupo + gaps internos
+  const groupOffset=(gW-groupTotalW)/2; // offset para centrar el grupo en el slot
   datasets.forEach((ds,di)=>{
     ds.data.forEach((val,gi)=>{
-      const x=pad.left+gi*gW+gGap*(di+1)+bW*di,bH=(Math.abs(val)/mx)*cH,y=pad.top+cH-bH;
+      const x=pad.left+gi*gW+groupOffset+di*(bW+2),bH=(Math.abs(val)/mx)*cH,y=pad.top+cH-bH;
       ctx.fillStyle=ds.color;ctx.globalAlpha=0.88;
       ctx.beginPath();if(ctx.roundRect)ctx.roundRect(x,y,bW,bH,[3,3,0,0]);else ctx.rect(x,y,bW,bH);
       ctx.fill();ctx.globalAlpha=1;
@@ -15260,7 +15516,7 @@ function toggleBoldMovsConc(){_boldOpen=!_boldOpen;var p=document.getElementById
 /* ══════════════ RENDER GLOBAL ══════════════ */
 function renderGlobal(p){
   const idx=pi(),m=p.movs,fid=p.fid,cj=p.caja,bl=p.bold;
-  const labels=['Ene 26','Feb 26','Mar 26'].slice(0,idx+1);
+  const labels=P.slice(0,idx+1).map(p=>p.label.replace(' 2026','').replace(' 2025','').substring(0,3)+' '+p.label.slice(-2));
   const ingAh=st(m,'ingreso'),ingCj=st(cj.movs,'ingreso');
   const ingTotal=ingAh+ingCj;
   const int_=st(m,'interes'),intBl=bl.intereses,rend=fid.rendNetos;
@@ -15351,6 +15607,71 @@ function renderGlobal(p){
 }
 
 /* ══════════════ RENDER AHORROS ══════════════ */
+
+var _ahVista='mes', _cjVista='mes', _blVista='mes', _fidVista='mes';
+
+function getMovsAcum(tipo) {
+  var idx = pi(), todos = [];
+  for (var i = 0; i <= idx; i++) {
+    var per = P[i];
+    var src = tipo==='ahorros' ? per.movs :
+              tipo==='caja'    ? (per.caja&&per.caja.movs)||[] :
+              tipo==='bold'    ? (per.bold&&per.bold.movs)||[] :
+                                 (per.fid&&per.fid.movs)||[];
+    var lab = per.label.replace(' 2026','').replace(' 2025','');
+    src.forEach(function(mv){ todos.push({f:mv.f+'('+lab+')',d:mv.d,v:mv.v,t:mv.t}); });
+  }
+  return todos;
+}
+
+function renderMovsPanel(panelId, movs, fBusq, fTipo) {
+  var panel = document.getElementById(panelId);
+  if (!panel) return;
+  var rows = movs.filter(function(mv) {
+    if (fBusq && !mv.d.toLowerCase().includes(fBusq) && !mv.f.toLowerCase().includes(fBusq)) return false;
+    if (fTipo && mv.t !== fTipo) return false;
+    return true;
+  });
+  var tbody = rows.map(function(mv) {
+    var meta = TM[mv.t]||{l:mv.t,c:'pz'};
+    var sg = mv.v>=0?'+':'-';
+    return '<tr><td style="color:#888;white-space:nowrap">'+mv.f+'</td>'
+      +'<td>'+mv.d+'</td>'
+      +'<td><span class="pill '+meta.c+'">'+meta.l+'</span></td>'
+      +'<td style="text-align:right"><span class="'+(mv.v>=0?'ap':'an')+'">'+sg+fc(mv.v)+'</span></td></tr>';
+  }).join('') || '<tr><td colspan="4" style="text-align:center;padding:16px;color:#aaa">Sin resultados</td></tr>';
+  var tbl = panel.querySelector('table tbody');
+  if (tbl) tbl.innerHTML = tbody;
+  var cnt = panel.querySelector('.cbadge');
+  if (cnt) cnt.textContent = rows.length + ' mov.';
+}
+
+function switchVista(banco, vista) {
+  var vistas = {ahorros:'_ahVista', caja:'_cjVista', bold:'_blVista', fid:'_fidVista'};
+  var paneles = {ahorros:'movs-panel', caja:'caja-panel', bold:'bold-panel', fid:'fid-panel'};
+  var filtros_b = {ahorros:function(){return (document.getElementById('ah-busq')||{value:''}).value.toLowerCase();},
+                   caja:function(){return (document.getElementById('cj-busq')||{value:''}).value.toLowerCase();},
+                   bold:function(){return (document.getElementById('bl-busq')||{value:''}).value.toLowerCase();},
+                   fid:function(){return '';}};
+  var filtros_t = {ahorros:function(){return (document.getElementById('ah-tipo')||{value:''}).value;},
+                   caja:function(){return (document.getElementById('cj-tipo')||{value:''}).value;},
+                   bold:function(){return (document.getElementById('bl-tipo')||{value:''}).value;},
+                   fid:function(){return '';}};
+  window[vistas[banco]] = vista;
+  var movs = vista==='acum' ? getMovsAcum(banco) : (
+    banco==='ahorros' ? P[pi()].movs :
+    banco==='caja'    ? (P[pi()].caja&&P[pi()].caja.movs)||[] :
+    banco==='bold'    ? (P[pi()].bold&&P[pi()].bold.movs)||[] :
+                        (P[pi()].fid&&P[pi()].fid.movs)||[]
+  );
+  renderMovsPanel(paneles[banco], movs, filtros_b[banco](), filtros_t[banco]());
+  // Actualizar botones
+  ['mes','acum'].forEach(function(v) {
+    var btn = document.getElementById(banco+'-btn-'+v);
+    if (btn) { btn.style.background = v===vista ? '' : 'transparent'; btn.style.opacity = v===vista ? '1' : '0.6'; }
+  });
+}
+
 function renderAhorros(p){
   const m=p.movs;
   const ing=st(m,'ingreso'),int_=st(m,'interes'),intn=st(m,'interno');
@@ -15371,7 +15692,9 @@ function renderAhorros(p){
       <div class="ac"><div class="ac-lbl">Intereses</div><div class="ac-val green">+${fc(int_)}</div></div>
       <div class="ac"><div class="ac-lbl">Entradas Fiducuenta</div><div class="ac-val purple">+${fc(fE)}</div></div>
       <div class="ac bt-red"><div class="ac-lbl">Total cargos (extracto)</div><div class="ac-val red">${fc(p.tCar)}</div></div>
-      <div class="ac bt-cyan"><div class="ac-lbl">Saldo cierre · ${p.hasta}</div><div class="ac-val cyan">${fc(p.sF)}</div></div>
+      <div class="ac" style="opacity:0;border:none;"></div>
+     <div class="ac" style="opacity:0;border:none;"></div>
+     <div class="ac bt-cyan"><div class="ac-lbl">Saldo cierre · ${p.hasta}</div><div class="ac-val cyan">${fc(p.sF)}</div></div>
     </div>
     <div class="two-col">
       <div class="inner-panel"><div class="inner-title bar-cyan">Entradas</div>
@@ -15395,9 +15718,13 @@ function renderAhorros(p){
       <span class="tb-arrow" id="movs-arrow">▼</span>
     </button>
     <div id="movs-panel" style="display:none;margin-top:10px">
-      <div class="toolbar">
-        <input type="text" placeholder="Buscar…" oninput="fB=this.value;renderAhorros(P[pi()])" value="${fB}">
-        <select onchange="fT=this.value;renderAhorros(P[pi()])">
+      <div class="toolbar" style="flex-wrap:wrap;gap:6px">
+        <span>
+          <button id="ahorros-btn-mes"  onclick="switchVista('ahorros','mes')"  style="font-size:10px;padding:3px 9px;border-radius:5px;border:1px solid #5BC8CD;background:#5BC8CD;color:#fff;cursor:pointer;font-weight:700;margin-right:3px">Este mes</button>
+          <button id="ahorros-btn-acum" onclick="switchVista('ahorros','acum')" style="font-size:10px;padding:3px 9px;border-radius:5px;border:1px solid #5BC8CD;background:transparent;color:#5BC8CD;cursor:pointer;font-weight:700;opacity:0.6">Todos los períodos</button>
+        </span>
+        <input id="ah-busq" type="text" placeholder="Buscar…" oninput="fB=this.value;renderAhorros(P[pi()])" value="${fB}">
+        <select id="ah-tipo" onchange="fT=this.value;renderAhorros(P[pi()])">
           <option value="">Todos</option>
           <option value="ingreso" ${fT==='ingreso'?'selected':''}>Ingreso externo</option>
           <option value="interno" ${fT==='interno'?'selected':''}>Traslado interno</option>
@@ -15493,9 +15820,13 @@ function renderCaja(p){
       <span class="tb-arrow" id="caja-arrow">▼</span>
     </button>
     <div id="caja-panel" style="display:none;margin-top:10px">
-      <div class="toolbar">
-        <input type="text" placeholder="Buscar…" oninput="fBc=this.value;renderCaja(P[pi()])" value="${fBc}">
-        <select onchange="fTc=this.value;renderCaja(P[pi()])">
+      <div class="toolbar" style="flex-wrap:wrap;gap:6px">
+        <span>
+          <button id="caja-btn-mes"  onclick="switchVista('caja','mes')"  style="font-size:10px;padding:3px 9px;border-radius:5px;border:1px solid #C2410C;background:#C2410C;color:#fff;cursor:pointer;font-weight:700;margin-right:3px">Este mes</button>
+          <button id="caja-btn-acum" onclick="switchVista('caja','acum')" style="font-size:10px;padding:3px 9px;border-radius:5px;border:1px solid #C2410C;background:transparent;color:#C2410C;cursor:pointer;font-weight:700;opacity:0.6">Todos los períodos</button>
+        </span>
+        <input id="cj-busq" type="text" placeholder="Buscar…" oninput="fBc=this.value;renderCaja(P[pi()])" value="${fBc}">
+        <select id="cj-tipo" onchange="fTc=this.value;renderCaja(P[pi()])">
           <option value="">Todos</option>
           <option value="ingreso"  ${fTc==='ingreso'?'selected':''}>Ingreso externo</option>
           <option value="traslado" ${fTc==='traslado'?'selected':''}>Traslado a Bancolombia</option>
@@ -15532,7 +15863,9 @@ function renderBold(p){
       <div class="ac ${int_>0?'bt-green':''}"><div class="ac-lbl">Intereses (Ahorro Bold)</div><div class="ac-val ${int_>0?'green':'dim'}">${int_>0?'+'+fc(int_):'$0,00'}</div></div>
       <div class="ac bt-red"><div class="ac-lbl">Total cargos (extracto)</div><div class="ac-val ${Math.abs(bl.tCar)>0?'red':'dim'}">${Math.abs(bl.tCar)>0?fc(bl.tCar):'$0,00'}</div></div>
       <div class="ac"><div class="ac-lbl">Egresos + GMF</div><div class="ac-val red">${fc(Math.abs(eg+imp))}</div></div>
-      <div class="ac bt-navy"><div class="ac-lbl">Saldo cierre · ${p.hasta}</div><div class="ac-val navy ${bl.sF===0?'dim':''}">${bl.sF>0?fc(bl.sF):'$0,00'}</div></div>
+      <div class="ac" style="opacity:0;border:none;"></div>
+     <div class="ac" style="opacity:0;border:none;"></div>
+     <div class="ac bt-navy"><div class="ac-lbl">Saldo cierre · ${p.hasta}</div><div class="ac-val navy ${bl.sF===0?'dim':''}">${bl.sF>0?fc(bl.sF):'$0,00'}</div></div>
     </div>
     <div class="two-col">
       <div class="inner-panel"><div class="inner-title bar-navy">Entradas</div>
@@ -15552,9 +15885,13 @@ function renderBold(p){
       <span class="tb-arrow" id="bold-arrow">▼</span>
     </button>
     <div id="bold-panel" style="display:none;margin-top:10px">
-      <div class="toolbar">
-        <input type="text" placeholder="Buscar…" oninput="fBb=this.value;renderBold(P[pi()])" value="${fBb}">
-        <select onchange="fTb=this.value;renderBold(P[pi()])">
+      <div class="toolbar" style="flex-wrap:wrap;gap:6px">
+        <span>
+          <button id="bold-btn-mes"  onclick="switchVista('bold','mes')"  style="font-size:10px;padding:3px 9px;border-radius:5px;border:1px solid #1E3A5F;background:#1E3A5F;color:#fff;cursor:pointer;font-weight:700;margin-right:3px">Este mes</button>
+          <button id="bold-btn-acum" onclick="switchVista('bold','acum')" style="font-size:10px;padding:3px 9px;border-radius:5px;border:1px solid #1E3A5F;background:transparent;color:#1E3A5F;cursor:pointer;font-weight:700;opacity:0.6">Todos los períodos</button>
+        </span>
+        <input id="bl-busq" type="text" placeholder="Buscar…" oninput="fBb=this.value;renderBold(P[pi()])" value="${fBb}">
+        <select id="bl-tipo" onchange="fTb=this.value;renderBold(P[pi()])">
           <option value="">Todos</option>
           <option value="traslado" ${fTb==='traslado'?'selected':''}>Traslado desde Bancolombia</option>
           <option value="egreso"   ${fTb==='egreso'?'selected':''}>Egresos / pagos</option>
@@ -15594,6 +15931,10 @@ function renderConc(){
   _movsOpen=false;_fidOpen=false;_cajaOpen=false;_boldOpen=false;
   const p=P[pi()];
   renderGlobal(p);renderAhorros(p);renderFondo(p);renderCaja(p);renderBold(p);
+  // Re-renderizar facturas radicadas si hay datos cargados (cruce automático)
+  if (typeof FR_DATA !== 'undefined' && FR_DATA.length > 0) {
+    setTimeout(function(){ if(typeof frRender==='function') frRender(); }, 100);
+  }
 }
 // init on demand
 </script>
@@ -16705,7 +17046,7 @@ Extrae todos los movimientos del extracto bancario adjunto.`;
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 4000,
         messages: [{
           role: 'user',
@@ -17084,7 +17425,7 @@ Responde ÚNICAMENTE con JSON válido sin markdown, con esta estructura exacta:
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
+        model:'claude-sonnet-4-6',
         max_tokens:800,
         messages:[{role:'user',content:[
           {type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}},
@@ -17188,6 +17529,12 @@ document.getElementById('fact-pdf-modal').addEventListener('click',function(e){i
 var FC_MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 var FC_MESES_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
+function fcToggleDet(id) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'table-row' : 'none';
+}
+
 function fcRender() {
   var el = document.getElementById('fc-container');
   if(!el) return;
@@ -17264,14 +17611,49 @@ function fcRender() {
     var esMes = m===mesActual;
     var rowBg = esMes ? '#FFFBEB' : (m<mesActual?'#fafffe':'#fff');
     var allFacts = buckets[m].pagado.concat(buckets[m].pendiente).concat(buckets[m].vencido);
-    var factTags = allFacts.slice(0,4).map(function(f){
+    var fcDetId = 'fc-det-'+m;
+    var factTags = allFacts.map(function(f){
       var col = f.pagada?'#2E7D32':(new Date(f.vence||f.fecha)<new Date()?'#A32D2D':'#B45309');
-      var cli  = escapeHtml((f.cliente||'').length>30?(f.cliente||'').substring(0,30)+'…':f.cliente||'');
-      var desc = escapeHtml((f.descripcion||'').length>55?(f.descripcion||'').substring(0,55)+'…':f.descripcion||'');
       var fmtV = '$'+(Math.round(f.total||0)).toLocaleString('es-CO');
-      var tip  = cli+(desc?'&#10;'+desc:'')+'&#10;'+fmtV+(f.vence?'&#10;Vence: '+f.vence:'');
-      return '<span title="'+tip+'" style="display:inline-block;background:'+col+'18;color:'+col+';border-radius:4px;padding:2px 7px;margin:1px;font-size:9px;font-weight:700;cursor:default;border:1px solid '+col+'33;">'+escapeHtml(f.num||'')+'</span>';
-    }).join('')+(allFacts.length>4?'<span style="color:#aaa;font-size:9px;"> +'+(allFacts.length-4)+' más</span>':'');
+      var tip = escapeHtml(f.cliente||'')+'&#10;'+fmtV+(f.vence?'&#10;Vence: '+f.vence:'');
+      return '<span title="'+tip+'" onclick="fcToggleDet(&quot;'+fcDetId+'&quot;)" style="display:inline-block;background:'+col+'18;color:'+col+';border-radius:4px;padding:2px 7px;margin:1px;font-size:9px;font-weight:700;cursor:pointer;border:1px solid '+col+'33;">'+escapeHtml(f.num||'')+'</span>';
+    }).join('');
+
+    // Fila de detalle oculta — muestra fecha de cobro esperada por factura
+    var detHtml = '<tr id="'+fcDetId+'" style="display:none;background:#FAFAFA;">'
+      +'<td colspan="6" style="padding:0 10px 10px 22px;">'
+      +'<table style="width:100%;font-size:10px;border-collapse:collapse;margin-top:6px;">'
+      +'<thead><tr style="background:#F0F0F0;">'
+        +'<th style="padding:4px 8px;text-align:left;color:#555;font-weight:700;">Factura</th>'
+        +'<th style="padding:4px 8px;text-align:left;color:#555;font-weight:700;">Cliente</th>'
+        +'<th style="padding:4px 8px;text-align:left;color:#555;font-weight:700;">Emisión</th>'
+        +'<th style="padding:4px 8px;text-align:left;color:#0C447C;font-weight:700;">📅 Fecha cobro esp.</th>'
+        +'<th style="padding:4px 8px;text-align:right;color:#555;font-weight:700;">Total</th>'
+        +'<th style="padding:4px 8px;text-align:center;color:#555;font-weight:700;">Estado</th>'
+      +'</tr></thead><tbody>';
+
+    allFacts.forEach(function(f){
+      var col = f.pagada?'#2E7D32':(new Date(f.vence||f.fecha)<new Date()?'#A32D2D':'#B45309');
+      var est = f.pagada ? '✅ Pagada' : (new Date(f.vence||f.fecha)<new Date() ? '🔴 Vencida' : '⏳ Pendiente');
+      var fechaCobro = f.pagada && f.fecha_pago ? f.fecha_pago : (f.vence||'—');
+      var diasText = '';
+      if (!f.pagada && f.vence) {
+        var dias = Math.ceil((new Date(f.vence)-new Date())/(1000*60*60*24));
+        diasText = dias > 0 ? ' (en '+dias+' días)' : ' (hace '+Math.abs(dias)+' días)';
+      } else if (f.pagada && f.fecha_pago) {
+        diasText = ' ✓ cobrada';
+      }
+      var fmtTotal = '$'+(Math.round(f.total||0)).toLocaleString('es-CO');
+      detHtml += '<tr style="border-bottom:1px solid #F0F0F0;">'
+        +'<td style="padding:4px 8px;font-weight:700;color:'+col+';">'+escapeHtml(f.num||'')+'</td>'
+        +'<td style="padding:4px 8px;color:#374151;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escapeHtml((f.cliente||'').substring(0,35))+'</td>'
+        +'<td style="padding:4px 8px;color:#6B7280;white-space:nowrap;">'+escapeHtml(f.fecha||'')+'</td>'
+        +'<td style="padding:4px 8px;font-weight:700;color:#0C447C;white-space:nowrap;">'+escapeHtml(fechaCobro)+escapeHtml(diasText)+'</td>'
+        +'<td style="padding:4px 8px;text-align:right;font-weight:700;color:'+col+';">'+fmtTotal+'</td>'
+        +'<td style="padding:4px 8px;text-align:center;white-space:nowrap;">'+est+'</td>'
+        +'</tr>';
+    });
+    detHtml += '</tbody></table></td></tr>';
 
     html += '<tr style="background:'+rowBg+';border-bottom:1px solid #f0eeec;"'+(esMes?' class="fc-mes-actual"':'')+'>'
       +'<td style="padding:7px 10px;font-weight:'+(esMes?'700':'500')+';color:#333;white-space:nowrap;">'
@@ -17282,6 +17664,7 @@ function fcRender() {
       +'<td style="padding:7px 10px;text-align:right;font-weight:700;color:#0C447C;">'+(tot?fmtM(tot):'—')+'</td>'
       +'<td style="padding:7px 10px;">'+factTags+'</td>'
       +'</tr>';
+    html += detHtml;
   }
 
   // Totals row
@@ -17729,6 +18112,9 @@ function alzakImportarDatos(input) {
       }
       if (backup.datos['alzak_gastos'] && typeof GASTOS_DATA !== 'undefined') {
         GASTOS_DATA = backup.datos['alzak_gastos'];
+      if (typeof frResetPool==='function') frResetPool();
+      if (typeof _FR_FUENTE_CACHE!=='undefined') _FR_FUENTE_CACHE={};
+      if (typeof frRender==='function' && typeof FR_DATA!=='undefined' && FR_DATA.length>0) setTimeout(frRender,200);
       }
 
       // Refresh UI
@@ -17886,6 +18272,9 @@ function alzakRestaurarDesdeDrive() {
       FACTURAS.forEach(function(f){ f.estado = typeof estadoFact==='function'?estadoFact(f):f.estado; });
     }
     if(datos['alzak_gastos'] && typeof GASTOS_DATA!=='undefined') GASTOS_DATA=datos['alzak_gastos'];
+    if (typeof frResetPool==='function') frResetPool();
+    if (typeof _FR_FUENTE_CACHE!=='undefined') _FR_FUENTE_CACHE={};
+    if (typeof frRender==='function' && typeof FR_DATA!=='undefined' && FR_DATA.length>0) setTimeout(frRender,200);
     // Refresh UI
     try{if(typeof actualizarTodo==='function')actualizarTodo();}catch(e){}
     try{if(typeof renderFacturas==='function')renderFacturas();}catch(e){}
@@ -18439,7 +18828,7 @@ function concPdfAnalizar(base64, cfg) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 4000,
       messages: [{
         role: 'user',
@@ -19075,19 +19464,194 @@ function frEsDIAN(r) {
   return FR_CATS_DIAN_OBLIG.indexOf(cat) >= 0 || prov.includes('dian');
 }
 
-function frEstadoReal(r) {
-  // Estado real basado en las 3 fuentes (igual que frBadgeEstado)
-  // — no usa el campo Estado del CSV como fuente de verdad
-  var total   = frTotalVal(r);
-  var fuente  = frFuentePago(r);
-  var abonado = frCalcularAbonado(r);
-  if (total <= 0) return 'PENDIENTE';
-  if (fuente === null && abonado === 0) return 'PENDIENTE';
-  if (abonado >= total) return 'PAGADO';
-  if (abonado > 0) return 'ABONO';
-  return 'PENDIENTE';
+function frPeriodoTieneExtracto(r) {
+  if (typeof P === 'undefined' || !P.length) return false;
+  var fecha = r['Fecha'] || '';
+  var parts = fecha.split('/');
+  if (parts.length < 3) return false;
+  var mes = parseInt(parts[1]), anio = parseInt(parts[2]);
+  var meses = {Enero:1,Febrero:2,Marzo:3,Abril:4,Mayo:5,Junio:6,
+               Julio:7,Agosto:8,Septiembre:9,Octubre:10,Noviembre:11,Diciembre:12};
+  for (var i = 0; i < P.length; i++) {
+    var lparts = (P[i].label||'').split(' ');
+    if (lparts.length >= 2 && (meses[lparts[0]]||0) === mes && parseInt(lparts[1]) === anio) return true;
+  }
+  return false;
 }
 
+function frEstadoReal(r) {
+  var total = frTotalVal(r);
+  if (total <= 0) return 'PAGADO';
+
+  var fuente = frFuentePago(r);
+  var ab     = frCalcularAbonado(r);
+
+  // Con extracto del período → cruce estricto
+  if (frPeriodoTieneExtracto(r)) {
+    if (fuente !== null || ab > 0) return ab >= total ? 'PAGADO' : 'ABONO';
+    return 'PENDIENTE';
+  }
+
+  // Sin extracto del período → pendiente de cargar extracto
+  return 'SIN-EXTRACTO';
+}
+
+
+
+function frRender() {
+  // Resetear pool y caché para cruce fresco
+  frResetPool();
+  _FR_FUENTE_CACHE = {};
+
+  // PRE-CALCULAR fuentes para TODAS las facturas ANTES de cualquier filtrado
+  // Esto garantiza que el pool se consuma en orden correcto
+  // y que frGetFiltered use el caché, sin tocar el pool de nuevo
+  if (typeof FR_DATA !== 'undefined' && FR_DATA.length > 0) {
+    FR_DATA.forEach(function(r) { frFuentePago(r); });
+  }
+
+  var filtered = frGetFiltered();
+  var kpiEl    = document.getElementById('fr-kpis');
+  var tablaEl  = document.getElementById('fr-tabla');
+  var countEl  = document.getElementById('fr-count');
+  var tabCount = document.getElementById('fr-tabla-count');
+
+  if (countEl) countEl.textContent = filtered.length + ' registros';
+
+  // ── KPIs ──────────────────────────────────────────────────────────────
+  // Pre-calcular fuentes para coherencia del pool
+  filtered.forEach(function(r){ frFuentePago(r); });
+
+  var totalOblig = 0, totalPagado = 0, totalDeuda = 0, totalSinExtr = 0, nDIAN = 0;
+  filtered.forEach(function(r) {
+    var tot    = frTotalVal(r);
+    var est    = frEstadoReal(r);
+    var ab     = frCalcularAbonado(r);
+    var fuente = frFuentePago(r);
+    totalOblig += tot;
+    if (est === 'PAGADO')       totalPagado  += (ab > 0 ? ab : tot);
+    else if (est === 'ABONO')   totalPagado  += ab;
+    else if (est === 'SIN-EXTRACTO') totalSinExtr += tot;
+    else                        totalDeuda   += tot;
+    if (frEsDIAN && frEsDIAN(r)) nDIAN++;
+  });
+
+  function kpiCard(label, val, sub, bg, col, onclick) {
+    var oc = onclick ? ' onclick="'+onclick+'" style="cursor:pointer;background:'+bg+';border-radius:12px;padding:14px 16px;"' 
+                     : ' style="background:'+bg+';border-radius:12px;padding:14px 16px;"';
+    return '<div'+oc+'>'
+      +'<div style="font-size:10px;font-weight:700;color:'+col+';text-transform:uppercase;margin-bottom:4px;letter-spacing:.5px;">'+label+'</div>'
+      +'<div style="font-size:20px;font-weight:700;color:'+col+';">'+frFmt(val)+'</div>'
+      +'<div style="font-size:10px;color:'+col+';opacity:.7;margin-top:2px;">'+sub+'</div>'
+      +'</div>';
+  }
+
+  var selEst = (document.getElementById('fr-fil-estado')||{}).value||'';
+  if (kpiEl) kpiEl.innerHTML =
+    kpiCard('Total obligaciones', totalOblig, filtered.length+' registros', '#EBF3FB', '#0C447C', "frFiltrarKPI('')")
+    + kpiCard('✅ Pagado confirmado', totalPagado, 'Verificado en extractos', '#DCFCE7', '#166534', "frFiltrarKPI('PAGADO')")
+    + kpiCard('🔴 Lo que debes hoy', totalDeuda, 'Extracto cargado, sin pago', '#FEE2E2', '#991B1B', "frFiltrarKPI('PENDIENTE')")
+    + kpiCard('⏳ Sin extracto', totalSinExtr, 'Cargar extracto del período', '#F8FAFC', '#64748B', "frFiltrarKPI('SIN-EXTRACTO')");
+
+  // ── Tabla por categorías ─────────────────────────────────────────────
+  if (!tablaEl) return;
+
+  if (!filtered.length) {
+    tablaEl.innerHTML = '<div style="padding:30px;text-align:center;color:#aaa;font-size:12px;">Carga las facturas radicadas con el botón CSV / Excel</div>';
+    return;
+  }
+
+  // Agrupar por categoría
+  var grupos = {};
+  filtered.forEach(function(r) {
+    var cat = r['Categoria'] || 'Sin categoría';
+    if (!grupos[cat]) grupos[cat] = { total:0, pagado:0, saldo:0, rows:[] };
+    var tot = frTotalVal(r);
+    var est = frEstadoReal(r);
+    var ab  = frCalcularAbonado(r);
+    var pg  = (est === 'PAGADO') ? (ab>0?ab:tot) : (est === 'ABONO' ? ab : 0);
+    grupos[cat].total  += tot;
+    grupos[cat].pagado += pg;
+    grupos[cat].saldo  += Math.max(0, tot - pg);
+    grupos[cat].rows.push(r);
+  });
+
+  var cats = Object.keys(grupos).sort(function(a,b){ return grupos[b].saldo - grupos[a].saldo; });
+  var CAT_COLS = {
+    'Nómina y Honorarios':'#0C447C','Gastos de Viaje':'#2E7D32',
+    'Equipos de Oficina':'#B45309','Gastos de Representación':'#6950B8',
+    'Servicios Generales':'#0F6E56','Procesamiento Electrónico de Datos':'#1D4ED8',
+    'Capacitación e Investigación':'#7C3AED','Gastos Legales y Notariales':'#991B1B',
+    'Obligación Tributaria DIAN':'#C2410C','Préstamos':'#64748B',
+    'Mobiliario y Enseres':'#A16207','Compras de Oficina':'#0369A1',
+  };
+
+  var html = '';
+  cats.forEach(function(cat) {
+    var gd  = grupos[cat];
+    var col = CAT_COLS[cat] || '#888';
+    var open = _frOpenGrupos && _frOpenGrupos[encodeURIComponent(cat)];
+    var ek  = encodeURIComponent(cat);
+
+    html += '<div style="border:1px solid #e0ddd8;border-radius:10px;overflow:hidden;margin-bottom:8px;">';
+    html += '<div data-cat="'+ek+'" onclick="frToggleGrupo(this.dataset.cat)" '
+      +'style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;background:#fafaf9;">'
+      +'<div style="display:flex;align-items:center;gap:8px;">'
+      +'<span style="width:4px;height:20px;background:'+col+';border-radius:2px;display:inline-block;"></span>'
+      +'<span style="font-size:11px;font-weight:700;color:'+col+';">'+frEsc(cat)+'</span>'
+      +'<span style="font-size:10px;color:#aaa;">'+gd.rows.length+' registros</span>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:16px;">'
+      +'<span style="font-size:10px;color:#aaa;">Saldo: <strong style="color:'+(gd.saldo>0?'#991B1B':'#166534')+';">'+frFmt(gd.saldo)+'</strong></span>'
+      +'<span style="font-size:12px;font-weight:700;color:'+col+';">'+frFmt(gd.total)+'</span>'
+      +'<span style="font-size:11px;color:#888;" id="fr-arrow-'+ek+'">'+(open?'&#9650;':'&#9660;')+'</span>'
+      +'</div>'
+      +'</div>';
+
+    html += '<div id="fr-panel-'+ek+'" style="display:'+(open?'block':'none')+';">';
+    html += '<table style="width:100%;border-collapse:collapse;font-size:10px;">';
+    html += '<thead><tr style="background:#F8F9FA;">'
+      +'<th style="padding:6px 10px;text-align:left;color:#555;font-weight:700;">Fecha</th>'
+      +'<th style="padding:6px 10px;text-align:left;color:#555;font-weight:700;">Proveedor / Contratista</th>'
+      +'<th style="padding:6px 10px;text-align:left;color:#555;font-weight:700;">Concepto</th>'
+      +'<th style="padding:6px 10px;text-align:left;color:#555;font-weight:700;">N° Comp.</th>'
+      +'<th style="padding:6px 10px;text-align:right;color:#555;font-weight:700;">Total</th>'
+      +'<th style="padding:6px 10px;text-align:right;color:#555;font-weight:700;">Saldo</th>'
+      +'<th style="padding:6px 10px;text-align:center;color:#555;font-weight:700;">Estado / Fuente</th>'
+      +'</tr></thead><tbody>';
+
+    gd.rows.forEach(function(r, ri) {
+      var tot    = frTotalVal(r);
+      var est    = frEstadoReal(r);
+      var ab     = frCalcularAbonado(r);
+      var saldo  = Math.max(0, tot - (est==='PAGADO'?(ab>0?ab:tot):ab));
+      var badge  = frBadgeEstado(r);
+      var bg     = ri%2===0 ? '#fff' : '#FAFAF9';
+      var sCol   = saldo > 0 ? '#991B1B' : '#166534';
+      html += '<tr style="background:'+bg+';border-bottom:1px solid #F0EEEC;">'
+        +'<td style="padding:6px 10px;color:#6B7280;white-space:nowrap;">'+frEsc(r['Fecha']||'')+'</td>'
+        +'<td style="padding:6px 10px;font-weight:600;color:#374151;">'+frEsc((r['Proveedor / Beneficiario']||'').substring(0,35))+'</td>'
+        +'<td style="padding:6px 10px;color:#6B7280;">'+frEsc((r['Concepto']||'').substring(0,50))+'</td>'
+        +'<td style="padding:6px 10px;color:#6B7280;white-space:nowrap;">'+frEsc(r['N Comprobante']||r['N_Comprobante']||'')+'</td>'
+        +'<td style="padding:6px 10px;text-align:right;font-weight:700;color:#374151;">'+frFmt(tot)+'</td>'
+        +'<td style="padding:6px 10px;text-align:right;font-weight:700;color:'+sCol+';">'+frFmt(saldo)+'</td>'
+        +'<td style="padding:6px 10px;text-align:center;">'+badge+'</td>'
+        +'</tr>';
+    });
+
+    html += '</tbody></table></div></div>';
+  });
+
+    tablaEl.innerHTML = html;
+  if (tabCount) tabCount.textContent = filtered.length + ' registros';
+}
+
+var _frOpenGrupos = {};
+function frFiltrarKPI(tipo) {
+  var selEst = document.getElementById('fr-fil-estado');
+  if (selEst) selEst.value = tipo;
+  frRender();
+}
 function frGetFiltered() {
   var anio  = (document.getElementById('fr-fil-anio')||{}).value || '';
   var mes   = (document.getElementById('fr-fil-mes')||{}).value || '';
@@ -19100,8 +19664,8 @@ function frGetFiltered() {
     // Usar estado real (cruce TC + Egresos), no el campo del CSV
     if (est) {
       var estadoReal = frEstadoReal(r);
-      if (est === 'PAGADO'    && estadoReal !== 'PAGADO')  return false;
-      if (est === 'PENDIENTE' && estadoReal === 'PAGADO')  return false;
+      if (est === 'PAGADO'    && estadoReal !== 'PAGADO') return false;
+      if (est === 'PENDIENTE' && estadoReal === 'PAGADO') return false;
     }
     if (bus) {
       // Filtro especial DIAN — busca en categoría
@@ -19152,6 +19716,36 @@ var FR_TC_MAP = [
   ['AVIANCA',           'AVIANCA'],
   ['ASOCIACION300',     'ACICLINICAL'],
   ['MP*ASOCIACION',     'ACICLINICAL'],
+  // Nuevos proveedores identificados en auditoría Mayo 2026
+  ['FRITOCARIBE',       'FRITOCARIBE'],
+  ['FRITO',             'FRITOCARIBE'],
+  ['SODIMAC',           'SODIMAC'],
+  ['HOMECENTER',        'SODIMAC'],
+  ['CUEROS VEL',        'CUEROS'],
+  ['DORIAUTOS',         'DORISA'],
+  ['INFORMATICA',       'INFORMATICA'],
+  ['INFORMAT',          'INFORMATICA'],
+  ['LUCID',             'LUCID'],
+  ['ISIMO',             'ISIMO'],
+  ['PLAN B',            'ISIMO'],
+  ['IKEA',              'IKEA'],
+  ['LE CABRERA',        'CABRERA'],
+  ['CABRERA',           'CABRERA'],
+  ['AEROREP',           'WINGO'],
+  ['LATAM',             'AERO'],
+  ['EXITO',             'EXITO'],
+  ['ALMACENES',         'EXITO'],
+  ['HOTEL',             'HOTEL'],
+  ['SANTA BARBARA',     'HOTEL'],
+  ['D1 ',               'D1'],
+  ['DIGITAL OCEAN',     'DIGITAL'],
+  ['DIGITALOCEAN',      'DIGITAL'],
+  ['POSIT',             'POSIT'],
+  ['CONFORT',           'CONFORTFRESH'],
+  ['PADEL',             'PADEL'],
+  ['ATRIUM',            'ATRIUM'],
+  ['MILAGROSA',         'MILAGROSA'],
+  ['LA MILAGROSA',      'MILAGROSA'],
 ];
 
 // Obtener todos los movimientos Gasto TC de todos los periodos cargados
@@ -19195,21 +19789,35 @@ function frCalcularAbonado(r) {
   var proveedor = (r['Proveedor / Beneficiario'] || '').trim().toUpperCase();
   var abonado   = 0;
 
-  // ── FUENTE 1: GASTOS_DATA (CSV egresos) ─────────────────
-  // Solo si el usuario ha cargado egresos
+  // ── FUENTE 1: GASTOS_DATA — si el egreso existe, está pagado ──────────
   if (typeof GASTOS_DATA !== 'undefined' && GASTOS_DATA.length > 0) {
+    var SKIP2 = {S:1,A:1,SAS:1,DE:1,LA:1,EL:1,LOS:1,Y:1,DEL:1,LTDA:1};
+    var pWords = proveedor.split(/\s+/).filter(function(w){ return w.length>3 && !SKIP2[w]; });
     for (var i = 0; i < GASTOS_DATA.length; i++) {
-      var gx = GASTOS_DATA[i];
-      var gFact  = (gx['N_Factura'] || gx['Concepto'] || '').toLowerCase();
-      var gTotal = parseFloat(gx['Total_COP'] || 0);
-      // Cruce por N° comprobante (incluye cuotas: CST25946-C1, CST25946-C2...)
-      if (ncomp && ncomp.length > 2 && gFact.indexOf(ncomp) >= 0) {
-        abonado += gTotal;
+      var gx2   = GASTOS_DATA[i];
+      var gComp2 = (gx2['N_Comprobante']||gx2['N Comprobante']||gx2['N_Factura']||gx2['Concepto']||'').toLowerCase();
+      var gProv2 = (gx2['Beneficiario']||gx2['Proveedor / Beneficiario']||gx2['Proveedor_Beneficiario']||'').toUpperCase();
+      var gTot2  = parseFloat(gx2['Total ($)']||gx2['Total_COP']||gx2['Total (COP)']||0);
+      // Modo A: N° comprobante
+      if (ncomp.length > 2 && gComp2.indexOf(ncomp.toLowerCase()) >= 0) { abonado = total; break; }
+      // Modo B: monto + proveedor
+      if (Math.abs(gTot2 - total) <= 100 && pWords.some(function(w){ return gProv2.indexOf(w)>=0; })) {
+        abonado = total; break;
       }
     }
   }
 
-  // ── FUENTE 2: Extractos TC BCS (DATA en el tablero) ─────
+    // ── FUENTE 2: Extractos bancarios P[] — via caché de frFuentePago
+  // frCalcularAbonado NO toca el pool directamente para evitar desincronización.
+  // Si frFuentePago ya fue llamada para esta fila, usa su resultado cacheado.
+  if (abonado < total) {
+    var _cacheKey = (r['N Comprobante']||r['N_Comprobante']||'') + '|' + frTotalVal(r);
+    if (typeof _FR_FUENTE_CACHE !== 'undefined' && _FR_FUENTE_CACHE[_cacheKey]) {
+      abonado = total; // ya tiene fuente confirmada
+    }
+  }
+
+  // ── FUENTE 3: Extractos TC BCS (DATA en el tablero) ─────
   // Siempre disponible — cruce por monto exacto O por proveedor normalizado
   var tcGastos = frGetAllTCGastos();
   if (tcGastos.length > 0 && abonado < total) {
@@ -19244,31 +19852,196 @@ function frCalcularAbonado(r) {
 }
 
 // Fuente del pago para mostrar en el badge
-function frFuentePago(r) {
-  var total = frTotalVal(r);
-  if (total <= 0) return null;
-  var ncomp = (r['N Comprobante'] || r['N_Comprobante'] || '').trim().toLowerCase();
-  var proveedor = (r['Proveedor / Beneficiario'] || '').trim().toUpperCase();
-
-  // ¿Está en GASTOS_DATA?
-  if (typeof GASTOS_DATA !== 'undefined' && GASTOS_DATA.length > 0 && ncomp.length > 2) {
-    for (var i = 0; i < GASTOS_DATA.length; i++) {
-      var gFact = (GASTOS_DATA[i]['N_Factura'] || GASTOS_DATA[i]['Concepto'] || '').toLowerCase();
-      if (gFact.indexOf(ncomp) >= 0) return 'egreso';
+// ── Pool de movimientos bancarios — cruce ESTRICTO uno a uno ──────────────
+// Regla: si hay 3 facturas de $X, se necesitan 3 movimientos de $X en extractos.
+var _FR_MOVS_POOL = null;
+function frBuildPool() {
+  _FR_MOVS_POOL = [];
+  if (typeof P === 'undefined') return;
+  for (var _pi=0;_pi<P.length;_pi++) {
+    var _per=P[_pi],_lbl=_per.label;
+    if (_per.movs) _per.movs.forEach(function(mv){if(mv.v<0)_FR_MOVS_POOL.push({v:Math.abs(mv.v),d:mv.d,f:mv.f,banco:'BCOL',cuenta:'Bancolombia Ah *6556',label:'BCOL AH',color:'#0C6EAF',periodo:_lbl,usado:false});});
+    if (_per.caja&&_per.caja.movs) _per.caja.movs.forEach(function(mv){if(mv.v<0)_FR_MOVS_POOL.push({v:Math.abs(mv.v),d:mv.d,f:mv.f,banco:'BCS',cuenta:'BCS Cte *2970',label:'BCS CTE',color:'#C2410C',periodo:_lbl,usado:false});});
+    if (_per.bold&&_per.bold.movs) _per.bold.movs.forEach(function(mv){if(mv.v<0)_FR_MOVS_POOL.push({v:Math.abs(mv.v),d:mv.d,f:mv.f,banco:'BOLD',cuenta:'Bold CF *2371',label:'BOLD CF',color:'#1E3A5F',periodo:_lbl,usado:false});});
+  }
+}
+function frResetPool(){if(_FR_MOVS_POOL)_FR_MOVS_POOL.forEach(function(m){m.usado=false;});else frBuildPool();}
+function frConsumir(total){
+  if(!_FR_MOVS_POOL)frBuildPool();
+  for(var _i=0;_i<_FR_MOVS_POOL.length;_i++){var _mv=_FR_MOVS_POOL[_i];if(!_mv.usado&&Math.abs(_mv.v-total)<=100){_mv.usado=true;return _mv;}}
+  return null;
+}
+// ── Cruce USD: tolerancia porcentual ±FR_TOL_USD_PCT% ────────────────────
+// Usado para suscripciones digitales (Google, Microsoft, DigitalOcean, etc.)
+// cuyo cargo en extracto puede diferir del Total_COP por variación de TRM.
+var FR_TOL_USD_PCT = 8; // % tolerancia por defecto
+var FR_USD_PROVEEDORES = [
+  'GOOGLE','MICROSOFT','DIGITALOCEAN','DIGITAL OCEAN','OPENAI','ADOBE',
+  'HOSTINGER','GODADDY','LUCID','POSIT','ATLASSIAN','SLACK','ZOOM',
+  'DROPBOX','GITHUB','NOTION','HUBSPOT','CANVA','FIGMA','VERCEL',
+  'NETLIFY','CLOUDFLARE','AWS','AMAZON WEB','LINODE','TWILIO',
+  'SENDGRID','MAILCHIMP','STRIPE','SHOPIFY'
+];
+function frEsProveedorUSD(proveedor) {
+  var p = proveedor.toUpperCase();
+  for (var i=0; i<FR_USD_PROVEEDORES.length; i++) {
+    if (p.indexOf(FR_USD_PROVEEDORES[i]) >= 0) return true;
+  }
+  return false;
+}
+// Busca en el pool con tolerancia porcentual (para montos USD convertidos a COP)
+function frConsumirUSD(total) {
+  if (!_FR_MOVS_POOL) frBuildPool();
+  var tol = FR_TOL_USD_PCT / 100;
+  var best = null, bestDiff = Infinity;
+  for (var _i=0; _i<_FR_MOVS_POOL.length; _i++) {
+    var _mv = _FR_MOVS_POOL[_i];
+    if (_mv.usado) continue;
+    var diff = Math.abs(_mv.v - total);
+    var pctDiff = total > 0 ? diff / total : 1;
+    if (pctDiff <= tol && diff < bestDiff) {
+      best = _mv; bestDiff = diff;
     }
   }
-  // ¿Está en TC?
-  var tcGastos = frGetAllTCGastos();
-  for (var j = 0; j < tcGastos.length; j++) {
-    var tc = tcGastos[j];
-    if (Math.abs(tc.car - total) < 10) {
-      for (var m2 = 0; m2 < FR_TC_MAP.length; m2++) {
-        if (tc.desc.indexOf(FR_TC_MAP[m2][0]) >= 0 &&
-            proveedor.indexOf(FR_TC_MAP[m2][1]) >= 0) return 'tc';
+  if (best) { best.usado = true; return best; }
+  return null;
+}
+// Cache de resultados de frFuentePago para coherencia con frCalcularAbonado
+var _FR_FUENTE_CACHE = {};
+
+// Retorna objeto {tipo, cuenta, label, color, fecha} o null
+// Cruce automático con extractos bancarios P[] — por monto exacto
+function frFuentePago(r) {
+  // Verificar caché primero
+  var _ck = (r['N Comprobante']||r['N_Comprobante']||'') + '|' + frTotalVal(r);
+  if (_FR_FUENTE_CACHE[_ck] !== undefined) return _FR_FUENTE_CACHE[_ck];
+  var total     = frTotalVal(r);
+  if (total <= 0) return null;
+  var ncomp     = (r['N Comprobante'] || r['N_Comprobante'] || '').trim().toLowerCase();
+  var proveedor = (r['Proveedor / Beneficiario'] || '').trim().toUpperCase();
+  var fechaFR   = (r['Fecha'] || '');
+
+  // Extraer mes/año de la fecha de la factura para acotar búsqueda
+  var frMes = -1, frAnio = -1;
+  var fp = fechaFR.split('/');
+  if (fp.length >= 3) { frMes = parseInt(fp[1])-1; frAnio = parseInt(fp[2]); }
+
+  // ── FUENTE 1: GASTOS_DATA (CSV egresos = reporte de todos los pagos bancarios)
+  // El CSV de egresos ES la fuente de verdad de pagos — cualquier registro ahí = PAGADO
+  if (typeof GASTOS_DATA !== 'undefined' && GASTOS_DATA.length > 0) {
+    // Palabras clave del proveedor (evitar palabras genéricas)
+    var SKIP = {S:1,A:1,SAS:1,'S.A.S':1,'S.A':1,DE:1,LA:1,EL:1,LOS:1,Y:1,DEL:1,LTDA:1};
+    var provWords = proveedor.split(/[\s.]+/).filter(function(w){
+      return w.length > 3 && !SKIP[w];
+    });
+
+    for (var i = 0; i < GASTOS_DATA.length; i++) {
+      var gx   = GASTOS_DATA[i];
+      var gComp = (gx['N_Comprobante'] || gx['N Comprobante'] || gx['N_Factura'] || gx['Concepto'] || '').toLowerCase();
+      var gProv = (gx['Beneficiario'] || gx['Proveedor / Beneficiario'] || gx['Proveedor_Beneficiario'] || '').toUpperCase();
+      var gTot  = parseFloat(gx['Total ($)'] || gx['Total_COP'] || gx['Total (COP)'] || 0);
+      var cta   = (gx['Cuenta_Origen'] || '').trim();
+
+      // MODO A: N° comprobante de la factura radicada aparece en el egreso
+      if (ncomp.length > 2 && gComp.indexOf(ncomp.toLowerCase()) >= 0) {
+        var _ra = frParseCuenta(cta, 'egreso');
+        _FR_FUENTE_CACHE[_ck] = _ra; return _ra;
+      }
+
+      // MODO B: monto exacto (±100) + al menos 1 palabra clave del proveedor
+      if (Math.abs(gTot - total) <= 100 && gProv.length > 3) {
+        if (provWords.some(function(w){ return gProv.indexOf(w) >= 0; })) {
+          var _rb = frParseCuenta(cta, 'egreso');
+          _FR_FUENTE_CACHE[_ck] = _rb; return _rb;
+        }
       }
     }
   }
+
+    // ── FUENTE 2: Extractos bancarios P[] — cruce ESTRICTO con pool ────────
+  // Usa frConsumir() que marca cada movimiento como usado — evita que el mismo
+  // movimiento bancario pague múltiples facturas del mismo monto
+  var poolMatch = frConsumir(total);
+  // Si no hubo match exacto (±100 COP), intentar cruce porcentual para USD
+  if (!poolMatch && frEsProveedorUSD(proveedor)) {
+    poolMatch = frConsumirUSD(total);
+    if (poolMatch) poolMatch._usdMatch = true; // marcar para mostrar nota en badge
+  }
+  if (poolMatch) {
+    var _usdNota = poolMatch._usdMatch ? ' ~USD' : '';
+    var _r2 = {tipo:'extracto', cuenta: poolMatch.cuenta,
+            label: poolMatch.label + _usdNota, color: poolMatch.color,
+            fecha: poolMatch.f + ' (' + poolMatch.periodo + ')',
+            desc:  poolMatch.d, usdMatch: !!poolMatch._usdMatch};
+    _FR_FUENTE_CACHE[_ck] = _r2; return _r2;
+  }
+
+  // ── FUENTE 3: TC BCS — cruce por monto + proveedor ───────────────────
+  var tcGastos = frGetAllTCGastos();
+  var tcExacto = null, tcAprox = null;
+  var esUSD = frEsProveedorUSD(proveedor);
+  var tolTC  = esUSD ? (FR_TOL_USD_PCT / 100 * total) : 100; // tolerancia en COP
+  for (var j = 0; j < tcGastos.length; j++) {
+    var tc = tcGastos[j];
+    var diff = Math.abs(tc.car - total);
+    if (diff > Math.max(100, tolTC)) continue;
+
+    var provMatch = false;
+    // Modo 1: FR_TC_MAP — descripción TC ↔ proveedor factura
+    for (var m2 = 0; m2 < FR_TC_MAP.length; m2++) {
+      if (tc.desc.toUpperCase().indexOf(FR_TC_MAP[m2][0]) >= 0 &&
+          proveedor.indexOf(FR_TC_MAP[m2][1]) >= 0) {
+        provMatch = true; break;
+      }
+    }
+    // Modo 2: palabras de la descripción TC en el proveedor
+    if (!provMatch) {
+      var tcWords = tc.desc.replace(/[^A-Z0-9 ]/gi,' ').toUpperCase().split(' ')
+                     .filter(function(w){return w.length>3;});
+      for (var tw=0; tw<tcWords.length; tw++) {
+        if (proveedor.indexOf(tcWords[tw]) >= 0) { provMatch=true; break; }
+      }
+    }
+    // Modo 3: palabras del proveedor en la descripción TC
+    if (!provMatch) {
+      var provWords2 = proveedor.split(' ').filter(function(w){return w.length>3;});
+      for (var pw=0; pw<provWords2.length; pw++) {
+        if (tc.desc.toUpperCase().indexOf(provWords2[pw]) >= 0) { provMatch=true; break; }
+      }
+    }
+
+    if (provMatch && diff < 10) { tcExacto = tc; break; }
+    if (provMatch && !tcAprox)  { tcAprox  = tc; }
+    // Monto exacto sin proveedor — guardar como último recurso
+    if (diff < 2 && !tcExacto)  { tcAprox  = tcAprox || tc; }
+  }
+
+  var tcMatch = tcExacto || tcAprox;
+  if (tcMatch) {
+    var _tcLabel = 'TC BCS' + (esUSD && Math.abs(tcMatch.car-total)>100 ? ' ~USD' : '');
+    var _r3={tipo:'tc',cuenta:'TC BCS VISA *6529',label:_tcLabel,color:'#DC2626',fecha:tcMatch.f||'',desc:tcMatch.desc};
+    _FR_FUENTE_CACHE[_ck]=_r3; return _r3;
+  }
+  _FR_FUENTE_CACHE[_ck] = null;
   return null;
+}
+
+
+// Parsear Cuenta_Origen del CSV de egresos a objeto de fuente
+function frParseCuenta(cta, tipo) {
+  var ctaU = cta.toUpperCase();
+  if (ctaU.indexOf('BANCOLOMBIA') >= 0 || ctaU.indexOf('6556') >= 0)
+    return {tipo:tipo, cuenta:'Bancolombia Ah *6556', label:'BCOL AH', color:'#0C6EAF'};
+  if (ctaU.indexOf('CAJA SOCIAL') >= 0 || ctaU.indexOf('BCS') >= 0 || ctaU.indexOf('2970') >= 0)
+    return {tipo:tipo, cuenta:'BCS Cte *2970',        label:'BCS CTE', color:'#C2410C'};
+  if (ctaU.indexOf('BOLD') >= 0 || ctaU.indexOf('2371') >= 0)
+    return {tipo:tipo, cuenta:'Bold CF *2371',         label:'BOLD CF', color:'#1E3A5F'};
+  if (ctaU.indexOf('FIDUCIARIA') >= 0 || ctaU.indexOf('1771') >= 0)
+    return {tipo:tipo, cuenta:'Fiducuenta *1771',      label:'FIDUCIA', color:'#6950B8'};
+  // Si tiene algo pero no reconocemos la cuenta
+  if (cta.length > 0)
+    return {tipo:tipo, cuenta:cta, label:'EGRESO', color:'#0C447C'};
+  return {tipo:'egreso', cuenta:'', label:'EGRESO', color:'#0C447C'};
 }
 
 function frToggleGrupo(key) {
@@ -19287,1340 +20060,244 @@ function frTotalVal(r) {
 
 function frBadgeEstado(r) {
   var total   = frTotalVal(r);
-  var fuente  = frFuentePago(r);   // null si no hay ninguna fuente
+  var fuente  = frFuentePago(r);
   var abonado = frCalcularAbonado(r);
+  var estado  = frEstadoReal(r);
 
-  // Sin ninguna fuente confirmada → siempre PENDIENTE, sin importar el CSV
-  if (fuente === null && abonado === 0) {
-    return '<span style="background:#FEE2E2;color:#991B1B;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;">PENDIENTE</span>';
+  // Badge de fuente bancaria
+  var fTag = '';
+  if (fuente) {
+    var fColor = fuente.color || '#0C447C';
+    var fLabel = fuente.label || 'EGRESO';
+    var fTitle = fuente.cuenta ? ' title="Pagado desde: '+fuente.cuenta+'"' : '';
+    fTag = ' <span'+fTitle+' style="font-size:8px;background:'+fColor+';color:#fff;padding:1px 5px;border-radius:4px;margin-left:2px;font-weight:700;">'+fLabel+'</span>';
   }
 
-  var fTag = fuente === 'tc'
-    ? ' <span style="font-size:8px;background:#DC2626;color:#fff;padding:1px 4px;border-radius:4px;margin-left:2px;">TC BCS</span>'
-    : fuente === 'egreso'
-    ? ' <span style="font-size:8px;background:#0C447C;color:#fff;padding:1px 4px;border-radius:4px;margin-left:2px;">EGRESO</span>'
-    : '';
-
-  if (abonado >= total && total > 0) {
-    return '<span style="background:#DCFCE7;color:#166534;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;">PAGADO'+fTag+'</span>';
+  if (estado === 'PAGADO') {
+    var fechaTag = '';
+    if (fuente && fuente.fecha) fechaTag = ' <span style="font-size:8px;color:#166534;opacity:0.8;">'+fuente.fecha+'</span>';
+    return '<span style="background:#DCFCE7;color:#166534;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;">PAGADO'+fTag+'</span>'+fechaTag;
   }
-  if (abonado > 0) {
-    var pct = Math.round(abonado / total * 100);
+  if (estado === 'ABONO') {
+    var pct = Math.round(abonado/total*100);
     return '<span style="background:#FEF3C7;color:#92400E;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;">ABONO '+pct+'%'+fTag+'</span>';
   }
+  if (estado === 'SIN-EXTRACTO') {
+    return '<span style="background:#F1F5F9;color:#64748B;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;" title="Cargar extracto bancario del período para verificar">⏳ Sin extracto</span>';
+  }
+  // PENDIENTE
   return '<span style="background:#FEE2E2;color:#991B1B;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;">PENDIENTE</span>';
 }
 
-function frRender() {
-  var tabla = document.getElementById('fr-tabla');
-  var kpis  = document.getElementById('fr-kpis');
-  var count = document.getElementById('fr-count');
-  if (!tabla) return;
 
-  var filtered = frGetFiltered();
-  if (count) count.textContent = filtered.length + ' registros';
-
-  var bd = document.getElementById('fr-balance-deuda');
-
-  if (!filtered.length) {
-    tabla.innerHTML = '<div style="color:#aaa;font-size:12px;padding:20px;text-align:center;">'
-      + (FR_DATA.length ? 'Sin resultados.' : 'Carga el CSV/Excel con el bot\u00f3n \uD83D\uDCCA CSV / Excel')
-      + '</div>';
-    if (kpis) kpis.innerHTML = '';
-    if (bd) bd.style.display = 'none';
-    return;
-  }
-
-  // ── Totales globales ──────────────────────────────────────
-  var totalAll = filtered.reduce(function(a,r){ return a + frTotalVal(r); }, 0);
-
-  // Pagado confirmado: solo fuentes reales, nunca el campo Estado del CSV
-  var pagadoConfirmado = 0;
-  var abonosParciales  = [];
-  filtered.forEach(function(r) {
-    var abonado = frCalcularAbonado(r);
-    var total   = frTotalVal(r);
-    var fuente  = frFuentePago(r);
-    if (abonado > 0 && fuente !== null) {
-      pagadoConfirmado += abonado;
-      if (abonado < total) {
-        abonosParciales.push({
-          prov:    (r['Proveedor / Beneficiario']||'').substring(0,32),
-          ncomp:   r['N Comprobante']||r['N_Comprobante']||'',
-          fuente:  fuente,
-          abonado: abonado,
-          total:   total,
-          saldo:   total - abonado
-        });
-      }
-    }
-  });
-
-  var deudaTotal = Math.max(0, totalAll - pagadoConfirmado);
-
-  // Separar deuda por año para contexto (2025 no es pérdida, es cartera anterior)
-  var deuda2025 = Math.max(0, filtered.filter(function(r){
-    return (r['Fecha']||'').indexOf('/2025')>=0 || (r['Fecha']||'').indexOf('2025')===6;
-  }).reduce(function(a,r){
-    var ab = frCalcularAbonado(r); var tot = frTotalVal(r); var fu = frFuentePago(r);
-    return a + Math.max(0, tot - (fu!==null?ab:0));
-  },0));
-  var deuda2026 = Math.max(0, deudaTotal - deuda2025);
-  var pctPend    = totalAll ? Math.round(deudaTotal / totalAll * 100) : 0;
-
-  // Conteos
-  var nPag  = filtered.filter(function(r){ var ab=frCalcularAbonado(r); return ab>=frTotalVal(r)&&ab>0&&frFuentePago(r)!==null; }).length;
-  var nPend = filtered.length - nPag;
-  var totalDian = filtered.filter(frEsDIAN).reduce(function(a,r){ return a+frTotalVal(r); },0);
-
-  // ── KPIs ──────────────────────────────────────────────────
-  // KPI style base — clickeable
-  var kS = 'border:2px solid transparent;cursor:pointer;font-family:inherit;text-align:left;border-radius:10px;padding:14px 16px;width:100%;transition:border-color .15s;display:block;';
-  var selEst = (document.getElementById('fr-fil-estado')||{}).value || '';
-
-  if (kpis) {
-    kpis.innerHTML =
-      '<button onclick="frFiltrarKPI(\'\')" style="'+kS+'background:#EBF3FB;'+(selEst===''?'border-color:#0C447C;':'')+'">'
-        +'<div style="font-size:10px;color:#0C447C;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Total obligaciones</div>'
-        +'<div style="font-size:20px;font-weight:700;color:#0C447C;">'+frFmt(totalAll)+'</div>'
-        +'<div style="font-size:10px;color:#888;">'+filtered.length+' registros · ver todos</div>'
-      +'</button>'
-      +'<button onclick="frFiltrarKPI(\'PAGADO\')" style="'+kS+'background:#DCFCE7;'+(selEst==='PAGADO'?'border-color:#166534;':'')+'">'
-        +'<div style="font-size:10px;color:#166534;font-weight:700;text-transform:uppercase;margin-bottom:4px;">✅ Pagado confirmado</div>'
-        +'<div style="font-size:20px;font-weight:700;color:#166534;">'+frFmt(pagadoConfirmado)+'</div>'
-        +'<div style="font-size:10px;color:#166534;opacity:.7;">'+nPag+' liquidados · TC+Egresos</div>'
-      +'</button>'
-      +'<button onclick="frFiltrarKPI(\'PENDIENTE\')" style="'+kS+'background:#FEE2E2;'+(selEst==='PENDIENTE'?'border-color:#991B1B;':'')+'">'
-        +'<div style="font-size:10px;color:#991B1B;font-weight:700;text-transform:uppercase;margin-bottom:4px;">🔴 Lo que debes hoy</div>'
-        +'<div style="font-size:20px;font-weight:700;color:#991B1B;">'+frFmt(deudaTotal)+'</div>'
-        +'<div style="font-size:10px;color:#991B1B;opacity:.7;">'+pctPend+'% pendiente · '+nPend+' facturas</div>'
-        +(deuda2025>0?'<div style="font-size:9px;color:#B45309;margin-top:3px;">Incluye '+frFmt(deuda2025)+' de cartera 2025</div>':'')
-      +'</button>'
-      +'<button onclick="frFiltrarKPI(\'DIAN\')" style="'+kS+'background:#FEF3C7;'+(selEst==='DIAN'?'border-color:#B45309;':'')+'">'
-        +'<div style="font-size:10px;color:#B45309;font-weight:700;text-transform:uppercase;margin-bottom:4px;">⚠️ Obligaciones DIAN</div>'
-        +'<div style="font-size:20px;font-weight:700;color:#B45309;">'+frFmt(totalDian)+'</div>'
-        +'<div style="font-size:10px;color:#B45309;opacity:.7;">'+filtered.filter(frEsDIAN).length+' registros · ver detalle</div>'
-      +'</button>';
-  }
-
-  // ── Card de cierre ────────────────────────────────────────
-  if (bd && totalAll > 0) {
-    bd.style.display = 'block';
-    var els = {
-      rad:  document.getElementById('frb-radicado'),
-      pag:  document.getElementById('frb-pagado'),
-      deu:  document.getElementById('frb-deuda'),
-      radn: document.getElementById('frb-radicado-n'),
-      pagn: document.getElementById('frb-pagado-n'),
-      deup: document.getElementById('frb-deuda-pct'),
-      det:  document.getElementById('frb-detalle-abonos')
-    };
-    if (els.rad)  els.rad.textContent  = frFmt(totalAll);
-    if (els.pag)  els.pag.textContent  = frFmt(pagadoConfirmado);
-    if (els.deu)  els.deu.textContent  = frFmt(deudaTotal);
-    if (els.radn) els.radn.textContent = filtered.length + ' obligaciones';
-    if (els.pagn) els.pagn.textContent = pagadoConfirmado > 0 ? 'TC BCS + Egresos cargados' : 'Carga egresos para ver pagos';
-    if (els.deup) els.deup.textContent = pctPend + '% pendiente de pago';
-    if (els.det) {
-      if (abonosParciales.length) {
-        var dh = '<div style="font-size:10px;font-weight:700;color:#94a3b8;margin-bottom:6px;">Facturas con abonos parciales ('+abonosParciales.length+'):</div>';
-        dh += abonosParciales.map(function(ap) {
-          var pctAb = Math.round(ap.abonado/ap.total*100);
-          var fTag  = ap.fuente==='tc'
-            ? '<span style="background:#DC2626;color:#fff;font-size:8px;padding:1px 4px;border-radius:3px;margin-left:4px;">TC BCS</span>'
-            : '<span style="background:#0C447C;color:#fff;font-size:8px;padding:1px 4px;border-radius:3px;margin-left:4px;">EGRESO</span>';
-          return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.06);">'
-            +'<span style="color:#cbd5e1;">'+ap.prov+(ap.ncomp?' <span style="color:#64748b;font-size:9px;">['+ap.ncomp+']</span>':'')+fTag+'</span>'
-            +'<span style="color:#fbbf24;font-weight:700;">'+pctAb+'% abonado \u00b7 Saldo: '+frFmt(ap.saldo)+'</span>'
-            +'</div>';
-        }).join('');
-        els.det.innerHTML = dh;
-      } else {
-        els.det.innerHTML = pagadoConfirmado > 0
-          ? '<div style="color:#4ade80;font-size:10px;">Todas las facturas con cruce est\u00e1n liquidadas.</div>'
-          : '<div style="color:#64748b;font-size:10px;">Carga el CSV de egresos para ver cruces autom\u00e1ticos. Los gastos TC BCS ya est\u00e1n disponibles.</div>';
-      }
-    }
-  } else if (bd) {
-    bd.style.display = 'none';
-  }
-
-  // ── Agrupación por categoría (igual que egresos) ──────────
-  // Definir colores por categoría
-  var CAT_COLOR = {
-    'Nomina y Honorarios':              '#6950B8',
-    'Procesamiento Electronico de Datos': '#0891B2',
-    'Equipos de Oficina':               '#1D4ED8',
-    'Mobiliario y Enseres':             '#0C447C',
-    'Gastos de Viaje':                  '#6EA1BA',
-    'Gastos de Representacion':         '#854F0B',
-    'Mantenimiento y Reparaciones':     '#993C1D',
-    'Materiales y Construccion':        '#993C1D',
-    'Servicios Generales':              '#065A82',
-    'Servicios Publicos':               '#085041',
-    'Arrendamientos y Administracion':  '#5B21B6',
-    'Gastos de Personal y Dotaciones':  '#7C3AED',
-    'Gastos Legales y Notariales':      '#5B21B6',
-    'Compras de Oficina':               '#92400E',
-    'Capacitacion e Investigacion':     '#0C447C',
-    'Obligacion Tributaria DIAN':       '#B45309',
-    'Prestamos':                        '#374151',
-    'Seguros':                          '#059669',
-  };
-  function frCatColor(cat) { return CAT_COLOR[cat] || '#54504F'; }
-
-  // Agrupar por categoría
-  var grupos = {};
-  filtered.forEach(function(r) {
-    var cat = r['Categoria'] || 'Sin categoría';
-    if (!grupos[cat]) grupos[cat] = { total:0, pagado:0, saldo:0, items:[] };
-    var tot = frTotalVal(r);
-    var ab  = frCalcularAbonado(r);
-    var fu  = frFuentePago(r);
-    grupos[cat].total += tot;
-    if (fu !== null) grupos[cat].pagado += ab;
-    grupos[cat].saldo  += Math.max(0, tot - (fu !== null ? ab : 0));
-    grupos[cat].items.push(r);
-  });
-
-  // Ordenar categorías: primero con saldo pendiente, luego por total desc
-  var catKeys = Object.keys(grupos).sort(function(a,b) {
-    if (grupos[b].saldo !== grupos[a].saldo) return grupos[b].saldo - grupos[a].saldo;
-    return grupos[b].total - grupos[a].total;
-  });
-
-  var html = '';
-  catKeys.forEach(function(cat) {
-    var grp   = grupos[cat];
-    var color = frCatColor(cat);
-    var key   = 'frg-' + cat.replace(/[^a-zA-Z0-9]/g,'');
-    var bg    = 'F8F9FA';
-
-    // Header del grupo
-    html += '<div style="margin-bottom:14px;">';
-    html += '<button onclick="frToggleGrupo(\''+key+'\')" '
-          + 'style="width:100%;background:#'+bg+';border-left:4px solid '+color
-          + ';border-top:none;border-right:none;border-bottom:1px solid #E5E7EB;'
-          + 'padding:9px 14px;display:flex;justify-content:space-between;align-items:center;'
-          + 'cursor:pointer;font-family:inherit;">';
-
-    html += '<span style="font-size:11px;font-weight:700;color:'+color+';">'
-          + frEsc(cat)
-          + ' <span style="font-size:10px;font-weight:400;color:#888;">'+grp.items.length+' registros</span>'
-          + '</span>';
-
-    html += '<div style="display:flex;align-items:center;gap:12px;">';
-    if (grp.saldo > 0) {
-      html += '<span style="font-size:10px;font-weight:700;color:#991B1B;background:#FEE2E2;padding:2px 8px;border-radius:8px;">Saldo: '+frFmt(grp.saldo)+'</span>';
-    } else if (grp.pagado > 0) {
-      html += '<span style="font-size:10px;color:#166534;background:#DCFCE7;padding:2px 8px;border-radius:8px;">Al d\u00eda</span>';
-    }
-    html += '<span style="font-size:12px;font-weight:700;color:'+color+';">'+frFmt(grp.total)+'</span>';
-    html += '<span id="fr-arrow-'+key+'" style="color:'+color+';font-size:11px;">&#9660;</span>';
-    html += '</div></button>';
-
-    // Panel colapsable con tabla
-    html += '<div id="fr-panel-'+key+'" style="display:none;overflow-x:auto;">';
-    html += '<table style="width:100%;border-collapse:collapse;font-size:11px;">';
-    html += '<thead><tr style="background:#F9FAFB;">'
-          + '<th style="padding:5px 10px;text-align:left;font-size:10px;color:#6B7280;border-bottom:1px solid #E5E7EB;white-space:nowrap;">Fecha</th>'
-          + '<th style="padding:5px 10px;text-align:left;font-size:10px;color:#6B7280;border-bottom:1px solid #E5E7EB;">Proveedor / Contratista</th>'
-          + '<th style="padding:5px 10px;text-align:left;font-size:10px;color:#6B7280;border-bottom:1px solid #E5E7EB;">Concepto</th>'
-          + '<th style="padding:5px 10px;text-align:left;font-size:10px;color:#6B7280;border-bottom:1px solid #E5E7EB;white-space:nowrap;">N\u00b0 Comp.</th>'
-          + '<th style="padding:5px 10px;text-align:right;font-size:10px;color:#6B7280;border-bottom:1px solid #E5E7EB;white-space:nowrap;">Total</th>'
-          + '<th style="padding:5px 10px;text-align:right;font-size:10px;color:#6B7280;border-bottom:1px solid #E5E7EB;white-space:nowrap;">Abonado/Saldo</th>'
-          + '<th style="padding:5px 10px;text-align:center;font-size:10px;color:#6B7280;border-bottom:1px solid #E5E7EB;">Estado</th>'
-          + '<th style="padding:5px 6px;width:26px;border-bottom:1px solid #E5E7EB;"></th>'
-          + '</tr></thead><tbody>';
-
-    grp.items.forEach(function(r, idx) { var idx2 = FR_DATA.indexOf(r);
-      var tot = frTotalVal(r);
-      var ab  = frCalcularAbonado(r);
-      var fu  = frFuentePago(r);
-      var sal = Math.max(0, tot - (fu!==null ? ab : 0));
-      var rowBg = idx%2===0 ? '#FFFFFF' : '#F9FAFB';
-
-      html += '<tr style="border-bottom:1px solid #F3F4F6;background:'+rowBg+';">';
-      html += '<td style="padding:5px 10px;white-space:nowrap;color:#6B7280;">'+frEsc(r['Fecha']||'')+'</td>';
-      html += '<td style="padding:5px 10px;font-weight:600;color:#1E293B;">'+frEsc((r['Proveedor / Beneficiario']||'').substring(0,38))+'</td>';
-      html += '<td style="padding:5px 10px;color:#475569;max-width:200px;">'+frEsc((r['Concepto']||'').substring(0,55))+(r['Concepto']&&r['Concepto'].length>55?'\u2026':'')+'</td>';
-      html += '<td style="padding:5px 10px;color:#888;font-size:10px;white-space:nowrap;">'+frEsc(r['N Comprobante']||r['N_Comprobante']||'')+'</td>';
-      html += '<td style="padding:5px 10px;text-align:right;font-weight:700;white-space:nowrap;">'+frFmt(tot)+'</td>';
-
-      // Columna abonado/saldo
-      if (fu !== null && ab > 0 && ab < tot) {
-        html += '<td style="padding:5px 10px;text-align:right;white-space:nowrap;">'
-              + '<div style="font-size:10px;color:#92400E;">Ab. '+frFmt(ab)+'</div>'
-              + '<div style="font-size:10px;color:#991B1B;font-weight:600;">Saldo: '+frFmt(sal)+'</div>'
-              + '</td>';
-      } else if (fu !== null && ab >= tot) {
-        html += '<td style="padding:5px 10px;text-align:right;"><span style="font-size:10px;color:#166534;">\u2713 Liquidado</span></td>';
-      } else {
-        html += '<td style="padding:5px 10px;text-align:right;"><span style="font-size:10px;color:#D1D5DB;">\u2014</span></td>';
-      }
-
-      html += '<td style="padding:5px 10px;text-align:center;">'+frBadgeEstado(r)+'</td>'
-            +'<td style="padding:3px 5px;text-align:center;"><button onclick="frEliminarFila('+idx2+')" title="Eliminar" style="background:none;border:none;cursor:pointer;color:#D1D5DB;font-size:12px;padding:2px 5px;border-radius:4px;" onmouseover="this.style.color=\'#A32D2D\'" onmouseout="this.style.color=\'#D1D5DB\'">&#10005;</button></td>';
-      html += '</tr>';
-    });
-
-    // Subtotal del grupo
-    html += '<tr style="background:#F5F4F0;font-weight:700;border-top:2px solid #E5E7EB;">';
-    html += '<td colspan="4" style="padding:5px 10px;font-size:10px;text-transform:uppercase;color:#54504F;">Subtotal '+frEsc(cat)+'</td>';
-    html += '<td style="padding:5px 10px;text-align:right;font-size:11px;">'+frFmt(grp.total)+'</td>';
-    html += '<td style="padding:5px 10px;text-align:right;font-size:11px;">'
-          + (grp.saldo>0 ? '<span style="color:#991B1B;">Saldo: '+frFmt(grp.saldo)+'</span>' : '<span style="color:#166534;">\u2713</span>')
-          + '</td>';
-    html += '<td></td></tr>';
-    html += '</tbody></table></div></div>';
-  });
-
-  tabla.innerHTML = html;
-  // Actualizar el contador del botón colapsable
-  var tcEl = document.getElementById('fr-tabla-count');
-  if (tcEl) tcEl.textContent = '— ' + filtered.length + ' registros en ' + catKeys.length + ' categorías';
-  frRenderIVA();
+function frToggleGrupo(key) {
+  var panel = document.getElementById('fr-panel-' + key);
+  var arrow = document.getElementById('fr-arrow-' + key);
+  if (!panel) return;
+  var isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  if (arrow) arrow.innerHTML = isOpen ? '&#9660;' : '&#9650;';
+  if (typeof _frOpenGrupos !== 'undefined') _frOpenGrupos[key] = !isOpen;
 }
 
-// ── IVA Descontable ────────────────────────────────────────────────────
-
-function frIVAGetData() {
-  var anio   = (document.getElementById('fr-iva-anio')   || {}).value || '2026';
-  var cuatri = (document.getElementById('fr-iva-cuatri') || {}).value || '';
-  return FR_DATA.filter(function(r) {
-    var fecha = r['Fecha'] || '';
-    var parts = fecha.split('/');
-    if (parts.length < 3) return !anio && !cuatri;
-    var mes  = parseInt(parts[1]) || 0;
-    var yr   = (parts[2] || '').substring(0,4);
-    if (anio && yr !== anio) return false;
-    if (cuatri === 'q1' && !(mes >= 1 && mes <= 4)) return false;
-    if (cuatri === 'q2' && !(mes >= 5 && mes <= 8)) return false;
-    if (cuatri === 'q3' && !(mes >= 9 && mes <= 12)) return false;
-    return true;
-  });
+function frTotalVal(r) {
+  return parseFloat(String(r['Total (COP)']||r['Total_COP']||'0').replace(/[^0-9.]/g,''))||0;
 }
 
-function frIVAAños() {
-  var años = {};
-  FR_DATA.forEach(function(r) {
-    var f = (r['Fecha'] || '').split('/');
-    if (f.length >= 3) años[(f[2]||'').substring(0,4)] = 1;
-  });
-  return Object.keys(años).sort();
+function frEsc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-function frRenderIVA() {
-  var panel = document.getElementById('fr-iva-panel');
-  if (!panel || !FR_DATA.length) return;
-  panel.style.display = 'block';
-
-  // Poblar filtro año dinámico
-  var selAnio = document.getElementById('fr-iva-anio');
-  // Poblar selector de años — 2026 ya viene en HTML, agregar otros
-  if (selAnio && selAnio.options.length <= 3) {
-    var yearsEnData = frIVAAños().filter(function(a){ return a!=='2026'&&a!=='2025'; });
-    yearsEnData.forEach(function(a) {
-      var op = document.createElement('option');
-      op.value = a; op.textContent = a;
-      selAnio.insertBefore(op, selAnio.options[selAnio.options.length-1]);
-    });
-  }
-
-  var base   = frIVAGetData();
-  var conIVA = base.filter(function(r) { return parseFloat(r['IVA (COP)'] || 0) > 0; });
-  var sinIVA = base.filter(function(r) { return parseFloat(r['IVA (COP)'] || 0) === 0; });
-
-  var tBase    = conIVA.reduce(function(a,r){ return a + parseFloat(r['Subtotal (COP)']||0); }, 0);
-  var tIVA     = conIVA.reduce(function(a,r){ return a + parseFloat(r['IVA (COP)']||0); }, 0);
-  var tSinBase = sinIVA.reduce(function(a,r){ return a + parseFloat(r['Total (COP)']||0); }, 0);
-  var pct      = base.length ? Math.round(conIVA.length / base.length * 100) : 0;
-
-  // Labels dinámicos en headers colapsables
-  var tl = document.getElementById('fr-iva-total-label');
-  if (tl) tl.textContent = frFmt(tIVA) + ' IVA';
-  var stl = document.getElementById('fr-iva-sin-total-label');
-  if (stl) stl.textContent = frFmt(tSinBase);
-
-  var nConEl = document.getElementById('fr-iva-n-con');
-  if (nConEl) nConEl.textContent = conIVA.length;
-  var nSinEl = document.getElementById('fr-iva-n-sin');
-  if (nSinEl) nSinEl.textContent = sinIVA.length;
-
-  // KPIs
-  // Actualizar summary del header colapsable
-  var sumEl = document.getElementById('fr-iva-panel-sum');
-  if (sumEl) sumEl.textContent = frFmt(tIVA) + ' IVA descontable · ' + conIVA.length + ' facturas';
-
-  var kEl = document.getElementById('fr-iva-kpis');
-  if (kEl) kEl.innerHTML =
-    '<div style="background:#fff;border-radius:8px;padding:12px;border:1px solid #a8d5c2;">'
-      +'<div style="font-size:10px;color:#0F6E56;font-weight:700;text-transform:uppercase;margin-bottom:4px;">IVA descontable</div>'
-      +'<div style="font-size:20px;font-weight:700;color:#0F6E56;">'+frFmt(tIVA)+'</div>'
-      +'<div style="font-size:10px;color:#888;">'+conIVA.length+' facturas con IVA</div>'
-    +'</div>'
-    +'<div style="background:#fff;border-radius:8px;padding:12px;border:1px solid #d0cec8;">'
-      +'<div style="font-size:10px;color:#0C447C;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Base de compras</div>'
-      +'<div style="font-size:20px;font-weight:700;color:#0C447C;">'+frFmt(tBase)+'</div>'
-      +'<div style="font-size:10px;color:#888;">Subtotal facturado c/IVA</div>'
-    +'</div>'
-    +'<div style="background:#fff;border-radius:8px;padding:12px;border:1px solid #d0cec8;">'
-      +'<div style="font-size:10px;color:#888;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Sin IVA (excluidas)</div>'
-      +'<div style="font-size:20px;font-weight:700;color:#888;">'+frFmt(tSinBase)+'</div>'
-      +'<div style="font-size:10px;color:#888;">'+sinIVA.length+' facturas no gravan</div>'
-    +'</div>'
-    +'<div style="background:#fff;border-radius:8px;padding:12px;border:1px solid #d0cec8;">'
-      +'<div style="font-size:10px;color:#B45309;font-weight:700;text-transform:uppercase;margin-bottom:4px;">% con IVA</div>'
-      +'<div style="font-size:20px;font-weight:700;color:#B45309;">'+pct+'%</div>'
-      +'<div style="font-size:10px;color:#888;">del periodo seleccionado</div>'
-    +'</div>';
-
-  // ── Tabla CON IVA ──────────────────────────────────────────
-  var sorted = conIVA.slice().sort(function(a,b){
-    return parseFloat(b['IVA (COP)']||0) - parseFloat(a['IVA (COP)']||0);
-  });
-
-  var tH = '<table style="width:100%;border-collapse:collapse;font-size:11px;">'
-    +'<thead><tr style="background:#D1FAE5;">'
-    +'<th style="padding:5px 8px;text-align:left;font-size:10px;color:#065F46;border-bottom:1px solid #a8d5c2;white-space:nowrap;">Fecha</th>'
-    +'<th style="padding:5px 8px;text-align:left;font-size:10px;color:#065F46;border-bottom:1px solid #a8d5c2;">Proveedor</th>'
-    +'<th style="padding:5px 8px;text-align:left;font-size:10px;color:#065F46;border-bottom:1px solid #a8d5c2;">Categoría</th>'
-    +'<th style="padding:5px 8px;text-align:left;font-size:10px;color:#065F46;border-bottom:1px solid #a8d5c2;white-space:nowrap;">N° Comp.</th>'
-    +'<th style="padding:5px 8px;text-align:right;font-size:10px;color:#065F46;border-bottom:1px solid #a8d5c2;white-space:nowrap;">Base</th>'
-    +'<th style="padding:5px 8px;text-align:right;font-size:10px;color:#065F46;border-bottom:1px solid #a8d5c2;white-space:nowrap;">IVA descontable</th>'
-    +'<th style="padding:5px 8px;text-align:right;font-size:10px;color:#065F46;border-bottom:1px solid #a8d5c2;white-space:nowrap;">Total factura</th>'
-    +'<th style="padding:5px 8px;text-align:center;font-size:10px;color:#065F46;border-bottom:1px solid #a8d5c2;">% IVA</th>'
-    +'</tr></thead><tbody>';
-
-  var rBase=0, rIVA=0, rTotal=0;
-  sorted.forEach(function(r, i) {
-    var b2 = parseFloat(r['Subtotal (COP)']||0);
-    var v2 = parseFloat(r['IVA (COP)']||0);
-    var t2 = parseFloat(r['Total (COP)']||0);
-    var pi = b2 ? Math.round(v2/b2*100) : 0;
-    rBase+=b2; rIVA+=v2; rTotal+=t2;
-    var bg = i%2===0 ? '#fff':'#F0FDF4';
-    tH += '<tr style="background:'+bg+';border-bottom:1px solid #e8f5ee;">'
-      +'<td style="padding:5px 8px;color:#64748B;white-space:nowrap;">'+frEsc(r['Fecha']||'')+'</td>'
-      +'<td style="padding:5px 8px;font-weight:600;color:#1E293B;">'+frEsc((r['Proveedor / Beneficiario']||'').substring(0,36))+'</td>'
-      +'<td style="padding:5px 8px;color:#475569;font-size:10px;">'+frEsc((r['Categoria']||'').substring(0,26))+'</td>'
-      +'<td style="padding:5px 8px;color:#888;font-size:10px;white-space:nowrap;">'+frEsc(r['N Comprobante']||r['N_Comprobante']||'')+'</td>'
-      +'<td style="padding:5px 8px;text-align:right;color:#374151;">'+frFmt(b2)+'</td>'
-      +'<td style="padding:5px 8px;text-align:right;font-weight:700;color:#0F6E56;">'+frFmt(v2)+'</td>'
-      +'<td style="padding:5px 8px;text-align:right;color:#374151;">'+frFmt(t2)+'</td>'
-      +'<td style="padding:5px 8px;text-align:center;">'
-        +'<span style="background:#D1FAE5;color:#065F46;font-size:10px;font-weight:700;padding:1px 6px;border-radius:8px;">'+pi+'%</span>'
-      +'</td></tr>';
-  });
-  tH += '<tr style="background:#D1FAE5;font-weight:700;border-top:2px solid #0F6E56;">'
-    +'<td colspan="4" style="padding:6px 8px;font-size:11px;color:#065F46;text-transform:uppercase;">TOTAL IVA DESCONTABLE</td>'
-    +'<td style="padding:6px 8px;text-align:right;color:#0C447C;">'+frFmt(rBase)+'</td>'
-    +'<td style="padding:6px 8px;text-align:right;font-size:13px;color:#0F6E56;">'+frFmt(rIVA)+'</td>'
-    +'<td style="padding:6px 8px;text-align:right;color:#374151;">'+frFmt(rTotal)+'</td>'
-    +'<td></td></tr>'
-    +'</tbody></table>';
-
-  var tcEl = document.getElementById('fr-iva-tabla-con');
-  if (tcEl) tcEl.innerHTML = tH;
-
-  // ── Tabla SIN IVA — solo excluidos/exentos (sin honorarios/DIAN/préstamos) ──
-  function esExcluidoValidar(r) {
-    var cat = (r['Categoria']||'').toLowerCase();
-    if (cat.indexOf('honorar') >= 0) return false;
-    if (cat.indexOf('nomina') >= 0 || cat.indexOf('n\u00f3mina') >= 0) return false;
-    if (cat.indexOf('dian') >= 0 || cat.indexOf('tributari') >= 0) return false;
-    if (cat.indexOf('prestamo') >= 0 || cat.indexOf('pr\u00e9stamo') >= 0) return false;
-    return true;
-  }
-  var sinIVAValidar = sinIVA.filter(esExcluidoValidar);
-  var nSinEl2 = document.getElementById('fr-iva-n-sin');
-  if (nSinEl2) nSinEl2.textContent = sinIVAValidar.length;
-  var stl = document.getElementById('fr-iva-sin-total-label');
-  if (stl) stl.textContent = frFmt(sinIVAValidar.reduce(function(a,r){return a+parseFloat(r['Total (COP)']||0);},0));
-
-  var sH = '';
-  if (!sinIVAValidar.length) {
-    sH = '<div style="padding:14px;color:#9CA3AF;font-size:11px;text-align:center;">No hay facturas excluidas/exentas para validar en este per\u00edodo.</div>';
-  } else {
-    sH = '<div style="padding:8px 12px;font-size:10px;color:#92400E;background:#FEF9EC;border-bottom:1px solid #FDE68A;">'
-      +'\u26a0\ufe0f Revisar con contador \/  revisor fiscal — posibles IVA excluido o exento (Art. 424, 476, 481 E.T.)'
-      +'</div>'
-      +'<table style="width:100%;border-collapse:collapse;font-size:11px;">'
-      +'<thead><tr style="background:#FEF3C7;">'
-      +'<th style="padding:5px 8px;text-align:left;font-size:10px;color:#92400E;border-bottom:1px solid #FDE68A;white-space:nowrap;">Fecha</th>'
-      +'<th style="padding:5px 8px;text-align:left;font-size:10px;color:#92400E;border-bottom:1px solid #FDE68A;">Proveedor</th>'
-      +'<th style="padding:5px 8px;text-align:left;font-size:10px;color:#92400E;border-bottom:1px solid #FDE68A;">Categor\u00eda</th>'
-      +'<th style="padding:5px 8px;text-align:left;font-size:10px;color:#92400E;border-bottom:1px solid #FDE68A;">Concepto</th>'
-      +'<th style="padding:5px 8px;text-align:right;font-size:10px;color:#92400E;border-bottom:1px solid #FDE68A;white-space:nowrap;">Total</th>'
-      +'<th style="padding:5px 8px;text-align:center;font-size:10px;color:#92400E;border-bottom:1px solid #FDE68A;">Ref. legal</th>'
-      +'</tr></thead><tbody>';
-    sinIVAValidar.forEach(function(r, i) {
-      var cat = r['Categoria']||'';
-      var t2  = parseFloat(r['Total (COP)']||0);
-      var catL = cat.toLowerCase();
-      var ref, refCol;
-      if (catL.indexOf('arrendamiento') >= 0)                          { ref='Art. 476 E.T.'; refCol='#059669'; }
-      else if (catL.indexOf('seguro') >= 0)                            { ref='Art. 476 E.T.'; refCol='#059669'; }
-      else if (catL.indexOf('salud') >= 0 || catL.indexOf('m\u00e9dic') >= 0) { ref='Art. 476 E.T.'; refCol='#059669'; }
-      else if (catL.indexOf('educaci') >= 0 || catL.indexOf('capacita') >= 0) { ref='Art. 476 E.T.'; refCol='#059669'; }
-      else if (catL.indexOf('viaje') >= 0)                             { ref='Revisar transporte'; refCol='#D97706'; }
-      else if (catL.indexOf('represent') >= 0)                         { ref='Revisar exportaci\u00f3n'; refCol='#D97706'; }
-      else                                                              { ref='Validar con contador'; refCol='#6B7280'; }
-      var bg = i%2===0?'#fff':'#FFFBEB';
-      sH += '<tr style="background:'+bg+';border-bottom:1px solid #FEF3C7;">'
-        +'<td style="padding:5px 8px;color:#9CA3AF;white-space:nowrap;">'+frEsc(r['Fecha']||'')+'</td>'
-        +'<td style="padding:5px 8px;font-weight:600;color:#374151;">'+frEsc((r['Proveedor / Beneficiario']||'').substring(0,32))+'</td>'
-        +'<td style="padding:5px 8px;color:#9CA3AF;font-size:10px;">'+frEsc(cat.substring(0,20))+'</td>'
-        +'<td style="padding:5px 8px;color:#6B7280;font-size:10px;">'+frEsc((r['Concepto']||'').substring(0,34))+'</td>'
-        +'<td style="padding:5px 8px;text-align:right;font-weight:600;color:#374151;">'+frFmt(t2)+'</td>'
-        +'<td style="padding:5px 8px;text-align:center;">'
-          +'<span style="background:#FEF3C7;color:'+refCol+';font-size:9px;padding:2px 6px;border-radius:8px;font-weight:600;">'+ref+'</span>'
-        +'</td></tr>';
-    });
-    sH += '</tbody></table>';
-  }
-  var tsEl = document.getElementById('fr-iva-tabla-sin');
-  if (tsEl) tsEl.innerHTML = sH;
-
-  // ── Posición estimada de declaración IVA ────────────────────
-  frRenderDeclIVA(conIVA, tIVA);
+function frToggleIVAPanel(){
+  var p=document.getElementById('fr-iva-panel');
+  var b=document.getElementById('fr-iva-body');
+  var a=document.getElementById('fr-iva-panel-arr');
+  if(!p)return;
+  var open=b&&b.style.display!=='none';
+  if(b)b.style.display=open?'none':'block';
+  if(a)a.innerHTML=open?'&#9660;':'&#9650;';
 }
 
-function frRenderDeclIVA(conIVA, ivaDescontableTotal) {
-  var dEl  = document.getElementById('fr-iva-decl');
-  var gEl  = document.getElementById('fr-iva-decl-grid');
-  var nEl  = document.getElementById('fr-iva-decl-nota');
-  if (!dEl || !gEl) return;
-
-  // ── Reglas descontabilidad Colombia (Art. 485-498 E.T.) ─────
-  var DESC_REGLAS = {
-    'Equipos de Oficina':               { pct:1.00, nota:'100% descontable — activos productivos' },
-    'Procesamiento Electronico de Datos':{ pct:1.00, nota:'100% descontable — servicios tecnológicos' },
-    'Capacitacion e Investigacion':     { pct:1.00, nota:'100% descontable — objeto social ALZAK' },
-    'Mantenimiento y Reparaciones':     { pct:1.00, nota:'100% descontable — gastos operativos' },
-    'Servicios Generales':              { pct:1.00, nota:'100% descontable' },
-    'Compras de Oficina':               { pct:1.00, nota:'100% descontable' },
-    'Servicios Publicos':               { pct:1.00, nota:'100% descontable' },
-    'Materiales y Construccion':        { pct:1.00, nota:'100% descontable' },
-    'Mobiliario y Enseres':             { pct:1.00, nota:'100% descontable — uso oficina' },
-    'Gastos de Personal y Dotaciones':  { pct:1.00, nota:'100% descontable' },
-    'Gastos de Viaje':                  { pct:1.00, nota:'100% descontable — viaje laboral documentado' },
-    'Arrendamientos y Administracion':  { pct:1.00, nota:'100% descontable' },
-    'Gastos de Representacion':         { pct:0.50, nota:'50% sugerido — Art. 107-1 E.T. (validar con contador)' },
-    'Gastos de Viaje y Representacion': { pct:0.50, nota:'50% sugerido — Art. 107-1 E.T. (validar con contador)' },
-    'Nomina y Honorarios':              { pct:0.00, nota:'No aplica IVA — honorarios' },
-    'Obligacion Tributaria DIAN':       { pct:0.00, nota:'No descontable — impuesto' },
-    'Prestamos':                        { pct:0.00, nota:'No descontable — operación financiera' },
-  };
-
-  // Calcular IVA descontable sugerido por reglas
-  var ivaDescSug  = 0;
-  var ivaDescPend = 0; // requiere validación
-  var ivaNoDesc   = 0;
-
-  conIVA.forEach(function(r) {
-    var cat  = r['Categoria'] || '';
-    var iva2 = parseFloat(r['IVA (COP)'] || 0);
-    var reg  = DESC_REGLAS[cat];
-    var pct  = reg ? reg.pct : 1.00; // default 100% si no hay regla
-    if (pct === 1.00)      ivaDescSug  += iva2;
-    else if (pct === 0.50) { ivaDescSug += iva2*0.50; ivaDescPend += iva2*0.50; }
-    else                   ivaNoDesc   += iva2;
-  });
-
-  // IVA generado en ventas — desde FACTURAS
-  var ivaGenVentas  = FACTURAS.reduce(function(a,f){ return a+(f.iva||0); }, 0);
-  var rteIVAVentas  = FACTURAS.reduce(function(a,f){ return a+(f.reteiva||0); }, 0);
-  var ivaNetoCargo  = ivaGenVentas - rteIVAVentas;
-  var saldoIVA      = ivaNetoCargo - ivaDescSug;
-
-  // Actualizar KPIs de la sección principal
-  var kEl = document.getElementById('fr-iva-kpis');
-  if (kEl) kEl.innerHTML =
-    '<div style="background:#fff;border-radius:8px;padding:12px;border:1px solid #a8d5c2;">'
-      +'<div style="font-size:10px;color:#0F6E56;font-weight:700;text-transform:uppercase;margin-bottom:4px;">IVA descontable</div>'
-      +'<div style="font-size:20px;font-weight:700;color:#0F6E56;">'+frFmt(ivaDescontableTotal)+'</div>'
-      +'<div style="font-size:10px;color:#888;">'+conIVA.length+' facturas con IVA</div>'
-    +'</div>'
-    +'<div style="background:#fff;border-radius:8px;padding:12px;border:1px solid #d0cec8;">'
-      +'<div style="font-size:10px;color:#0C447C;font-weight:700;text-transform:uppercase;margin-bottom:4px;">IVA sugerido desc.</div>'
-      +'<div style="font-size:20px;font-weight:700;color:#0C447C;">'+frFmt(ivaDescSug)+'</div>'
-      +'<div style="font-size:10px;color:#888;">Según Art. 485 E.T.</div>'
-    +'</div>'
-    +'<div style="background:#fff;border-radius:8px;padding:12px;border:'+(ivaDescPend>0?'1px solid #F59E0B':'1px solid #d0cec8')+'">'
-      +'<div style="font-size:10px;color:#B45309;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Pendiente validar</div>'
-      +'<div style="font-size:20px;font-weight:700;color:#B45309;">'+frFmt(ivaDescPend)+'</div>'
-      +'<div style="font-size:10px;color:#888;">Representación 50%</div>'
-    +'</div>'
-    +'<div style="background:#fff;border-radius:8px;padding:12px;border:1px solid #d0cec8;">'
-      +'<div style="font-size:10px;color:#888;font-weight:700;text-transform:uppercase;margin-bottom:4px;">No descontable</div>'
-      +'<div style="font-size:20px;font-weight:700;color:#888;">'+frFmt(ivaNoDesc)+'</div>'
-      +'<div style="font-size:10px;color:#888;">Validar con contador</div>'
-    +'</div>';
-
-  // Panel de declaración
-  dEl.style.display = 'block';
-  if (gEl) gEl.innerHTML =
-    '<div style="background:rgba(255,255,255,.1);border-radius:8px;padding:10px;">'
-      +'<div style="font-size:9px;color:#7DD3FC;font-weight:700;text-transform:uppercase;margin-bottom:4px;">IVA generado</div>'
-      +'<div style="font-size:17px;font-weight:700;color:#fff;">'+frFmt(ivaGenVentas)+'</div>'
-      +'<div style="font-size:9px;color:#93C5FD;">En facturas emitidas</div>'
-    +'</div>'
-    +'<div style="background:rgba(255,255,255,.08);border-radius:8px;padding:10px;">'
-      +'<div style="font-size:9px;color:#FCA5A5;font-weight:700;text-transform:uppercase;margin-bottom:4px;">ReteIVA ventas</div>'
-      +'<div style="font-size:17px;font-weight:700;color:#FCA5A5;">−'+frFmt(rteIVAVentas)+'</div>'
-      +'<div style="font-size:9px;color:#FCA5A5;opacity:.8;">Ya retenido por clientes</div>'
-    +'</div>'
-    +'<div style="background:rgba(255,255,255,.08);border-radius:8px;padding:10px;">'
-      +'<div style="font-size:9px;color:#86EFAC;font-weight:700;text-transform:uppercase;margin-bottom:4px;">IVA descontable</div>'
-      +'<div style="font-size:17px;font-weight:700;color:#86EFAC;">−'+frFmt(ivaDescSug)+'</div>'
-      +'<div style="font-size:9px;color:#86EFAC;opacity:.8;">Art. 485 E.T.</div>'
-    +'</div>'
-    +'<div style="background:rgba(255,255,255,.05);border-radius:8px;padding:10px;border:1px dashed rgba(255,255,255,.2);">'
-      +'<div style="font-size:9px;color:#FDE68A;font-weight:700;text-transform:uppercase;margin-bottom:4px;">óptimo c/ validación</div>'
-      +'<div style="font-size:17px;font-weight:700;color:#FDE68A;">−'+frFmt(ivaDescSug+ivaDescPend)+'</div>'
-      +'<div style="font-size:9px;color:#FDE68A;opacity:.8;">Si validan representación</div>'
-    +'</div>'
-    +'<div style="background:'+(saldoIVA>0?'rgba(220,38,38,.25)':'rgba(34,197,94,.2)')+';border-radius:8px;padding:10px;border:1.5px solid '+(saldoIVA>0?'#EF4444':'#22C55E')+'">'
-      +'<div style="font-size:9px;color:'+(saldoIVA>0?'#FCA5A5':'#86EFAC')+';font-weight:700;text-transform:uppercase;margin-bottom:4px;">'+(saldoIVA>0?'SALDO A PAGAR':'SALDO A FAVOR')+'</div>'
-      +'<div style="font-size:19px;font-weight:700;color:#fff;">'+frFmt(Math.abs(saldoIVA))+'</div>'
-      +'<div style="font-size:9px;color:rgba(255,255,255,.7);">Estimado — borrador</div>'
-    +'</div>';
-
-  if (nEl) nEl.innerHTML =
-    '<strong style="color:#BAE6FD;">Nota para el contador:</strong> '
-    +'IVA generado $'+frFmt(ivaGenVentas)+' − ReteIVA $'+frFmt(rteIVAVentas)+' = Neto a cargo $'+frFmt(ivaNetoCargo)+'. '
-    +'IVA descontable sugerido $'+frFmt(ivaDescSug)+'  (100% operativos + 50% representación). '
-    +(ivaDescPend>0 ? 'Pendiente validar $'+frFmt(ivaDescPend)+' de representación (Art. 107-1 E.T.). ' : '')
-    +'Saldo estimado: <strong style="color:'+(saldoIVA>0?'#FCA5A5':'#86EFAC')+'">'+(saldoIVA>0?'a pagar':'a favor')+' $'+frFmt(Math.abs(saldoIVA))+'</strong>. '
-    +'Este es un borrador para discusión — la declaración oficial la prepara el contador.';
+function frToggleTabla(){
+  var t=document.getElementById('fr-tabla');
+  var a=document.getElementById('fr-tabla-arr');
+  if(!t)return;
+  var open=t.style.display!=='none';
+  t.style.display=open?'none':'block';
+  if(a)a.innerHTML=open?'&#9660;':'&#9650;';
 }
 
-function frFiltrarKPI(tipo) {
-  // Activar filtro de estado
-  var selEst = document.getElementById('fr-fil-estado');
-  var buscar  = document.getElementById('fr-buscar');
+function frRenderIVA(){}
 
-  if (tipo === 'DIAN') {
-    // Filtrar por categoría DIAN en el buscador
-    if (selEst) { selEst.value = ''; }
-    if (buscar)  { buscar.value = 'DIAN'; }
-  } else {
-    // Filtrar por estado
-    if (selEst) selEst.value = tipo;
-    if (buscar && buscar.value.toLowerCase().indexOf('dian') >= 0) buscar.value = '';
-  }
-
-  // Limpiar año/mes si se filtra por estado para ver todo
-  if (tipo !== '') {
-    // mantener filtros de año/mes actuales
-  }
-
-  // Abrir el detalle automáticamente
-  var tabla = document.getElementById('fr-tabla');
-  var arr   = document.getElementById('fr-tabla-arr');
-  if (tabla && tabla.style.display === 'none') {
-    tabla.style.display = 'block';
-    if (arr) arr.textContent = '▲';
-  }
-
-  frRender();
-
-  // Scroll suave al detalle
-  setTimeout(function() {
-    var toggle = document.getElementById('fr-tabla-toggle');
-    if (toggle) toggle.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 100);
-}
-
-function frToggleTabla() {
-  var el  = document.getElementById('fr-tabla');
-  var arr = document.getElementById('fr-tabla-arr');
-  if (!el) return;
-  var open = el.style.display !== 'none';
-  el.style.display = open ? 'none' : 'block';
-  if (arr) arr.textContent = open ? '▼' : '▲';
-}
-
-function frToggleIVAPanel() {
-  var body = document.getElementById('fr-iva-body');
-  var arr  = document.getElementById('fr-iva-panel-arr');
-  if (!body) return;
-  var open = body.style.display !== 'none';
-  body.style.display = open ? 'none' : 'block';
-  if (arr) arr.innerHTML = open ? '&#9660;' : '&#9650;';
-}
-
-function frToggleIVACon() {
-  var el  = document.getElementById('fr-iva-tabla-con');
-  var arr = document.getElementById('fr-iva-con-arrow');
-  if (!el) return;
-  var vis = el.style.display !== 'none';
-  el.style.display = vis ? 'none' : 'block';
-  if (arr) arr.innerHTML = vis ? '&#9660;' : '&#9650;';
-}
-
-function frToggleIVASin() {
-  var el  = document.getElementById('fr-iva-tabla-sin');
-  var arr = document.getElementById('fr-iva-sin-arrow');
-  if (!el) return;
-  var vis = el.style.display !== 'none';
-  el.style.display = vis ? 'none' : 'block';
-  if (arr) arr.innerHTML = vis ? '&#9660;' : '&#9650;';
-}
-
-function frExportIVAExcel() {
-  var base   = frIVAGetData();
-  var conIVA = base.filter(function(r){ return parseFloat(r['IVA (COP)']||0) > 0; });
-  var sinIVA = base.filter(function(r){ return parseFloat(r['IVA (COP)']||0) === 0; });
-  if (!base.length) { if(typeof mostrarToast==='function') mostrarToast('No hay datos para exportar','#993C1D'); return; }
-
-  var anio   = (document.getElementById('fr-iva-anio')  ||{}).value || 'Todos';
-  var cuatri = (document.getElementById('fr-iva-cuatri')||{}).value || 'todos';
-
-  if (typeof XLSX === 'undefined') {
-    if(typeof mostrarToast==='function') mostrarToast('SheetJS no disponible, descargando CSV...','#B45309');
-    frExportIVACSV(); return;
-  }
-
-  var wb = XLSX.utils.book_new();
-
-  // ── Hoja 1: Facturas CON IVA ────────────────────────────────
-  var hdr1 = ['Fecha','Proveedor / Beneficiario','Categoria','N Comprobante','Base (COP)','IVA Descontable (COP)','Total (COP)','Estado','% IVA','Descontable (Art.485)'];
-  var rows1 = [hdr1];
-  var DESC_REGLAS_XL = {
-    'Equipos de Oficina':'100%','Procesamiento Electronico de Datos':'100%',
-    'Capacitacion e Investigacion':'100%','Mantenimiento y Reparaciones':'100%',
-    'Servicios Generales':'100%','Compras de Oficina':'100%','Servicios Publicos':'100%',
-    'Materiales y Construccion':'100%','Mobiliario y Enseres':'100%',
-    'Gastos de Personal y Dotaciones':'100%','Gastos de Viaje':'100%',
-    'Arrendamientos y Administracion':'100%',
-    'Gastos de Representacion':'50% (validar Art.107-1)',
-    'Nomina y Honorarios':'No aplica','Obligacion Tributaria DIAN':'No descontable','Prestamos':'No descontable'
-  };
-  var tBase=0, tIVA=0, tTot=0;
-  conIVA.slice().sort(function(a,b){ return parseFloat(b['IVA (COP)']||0)-parseFloat(a['IVA (COP)']||0); })
-    .forEach(function(r){
-      var b2 = parseFloat(r['Subtotal (COP)']||0);
-      var v2 = parseFloat(r['IVA (COP)']||0);
-      var t2 = parseFloat(r['Total (COP)']||0);
-      var pi = b2 ? Math.round(v2/b2*100)+'%' : '0%';
-      var cat = r['Categoria']||'';
-      tBase+=b2; tIVA+=v2; tTot+=t2;
-      rows1.push([
-        r['Fecha']||'', r['Proveedor / Beneficiario']||'', cat,
-        r['N Comprobante']||r['N_Comprobante']||'',
-        b2, v2, t2, r['Estado']||'', pi,
-        DESC_REGLAS_XL[cat]||'100%'
-      ]);
-    });
-  // Fila de totales
-  rows1.push(['TOTAL','','','', tBase, tIVA, tTot, '','','']);
-
-  var ws1 = XLSX.utils.aoa_to_sheet(rows1);
-  ws1['!cols'] = [10,36,24,16,14,18,14,12,8,26].map(function(w){ return {wch:w}; });
-  XLSX.utils.book_append_sheet(wb, ws1, 'Con IVA Descontable');
-
-  // ── Hoja 2: Facturas SIN IVA ────────────────────────────────
-  var hdr2 = ['Fecha','Proveedor / Beneficiario','Categoria','N Comprobante','Total (COP)','Motivo'];
-  var rows2 = [hdr2];
-  sinIVA.forEach(function(r){
-    var cat = r['Categoria']||'';
-    var mot = cat.indexOf('Honorarios')>=0||cat.indexOf('Nomina')>=0 ? 'Honorarios - no grava IVA'
-      : cat.indexOf('DIAN')>=0||cat.indexOf('Tributaria')>=0 ? 'Obligación DIAN'
-      : cat.indexOf('Prestamo')>=0 ? 'Préstamo'
-      : cat.indexOf('Arrendamiento')>=0 ? 'Arrendamiento'
-      : 'Excluido / Exento';
-    rows2.push([r['Fecha']||'', r['Proveedor / Beneficiario']||'', cat,
-      r['N Comprobante']||r['N_Comprobante']||'',
-      parseFloat(r['Total (COP)']||0), mot]);
-  });
-  var ws2 = XLSX.utils.aoa_to_sheet(rows2);
-  ws2['!cols'] = [10,36,24,16,14,30].map(function(w){ return {wch:w}; });
-  XLSX.utils.book_append_sheet(wb, ws2, 'Sin IVA (excluidas)');
-
-  // ── Hoja 3: Resumen borrador declaración ────────────────────
-  var ivaGen    = FACTURAS.reduce(function(a,f){ return a+(f.iva||0); },0);
-  var rteIVAV   = FACTURAS.reduce(function(a,f){ return a+(f.reteiva||0); },0);
-  var ivaDesc   = 0, ivaPend = 0;
-  conIVA.forEach(function(r){
-    var v2=parseFloat(r['IVA (COP)']||0), cat=r['Categoria']||'';
-    var pct = cat.indexOf('Representacion')>=0 ? 0.50 : (cat.indexOf('Honorarios')>=0||cat.indexOf('DIAN')>=0||cat.indexOf('Prestamo')>=0 ? 0 : 1.0);
-    ivaDesc += v2*pct; ivaPend += v2*(pct===0.50?0.50:0);
-  });
-  var saldo = (ivaGen - rteIVAV) - ivaDesc;
-  var rows3 = [
-    ['POSICIÓN IVA CUATRIMESTRAL — BORRADOR PARA CONTADOR'],
-    ['ALZAK GROUP SAS · NIT 900.898.741-8 · Cartagena'],
-    ['Período: '+anio+' / '+(cuatri==='q1'?'Ene-Abr':cuatri==='q2'?'May-Ago':cuatri==='q3'?'Sep-Dic':'Todos')],
-    ['Generado: '+new Date().toLocaleDateString('es-CO')],
-    [''],
-    ['CONCEPTO','VALOR'],
-    ['A. IVA GENERADO EN VENTAS (facturas emitidas)',ivaGen],
-    ['   Menos: ReteIVA ya retenido por clientes (15%)',-rteIVAV],
-    ['   IVA NETO A CARGO (A)',ivaGen-rteIVAV],
-    [''],
-    ['B. IVA DESCONTABLE EN COMPRAS (Art. 485 E.T.)',''],
-    ['   IVA descontable 100% (operativos)',-Math.round(ivaDesc-ivaPend)],
-    ['   IVA representación 50% sugerido (Art.107-1 E.T.)',-Math.round(ivaPend)],
-    ['   IVA DESCONTABLE TOTAL (B)',-Math.round(ivaDesc)],
-    [''],
-    [saldo>0?'SALDO A PAGAR ESTIMADO':'SALDO A FAVOR ESTIMADO', Math.abs(saldo)],
-    [''],
-    ['NOTA: Este es un borrador para discusión con el contador.',''],
-    ['La declaración oficial la prepara el contador.',''],
-    ['Art. 107-1 E.T.: Gastos de representación requieren validación.','']
-  ];
-  var ws3 = XLSX.utils.aoa_to_sheet(rows3);
-  ws3['!cols'] = [{wch:55},{wch:20}];
-  XLSX.utils.book_append_sheet(wb, ws3, 'Borrador Declaración IVA');
-
-  XLSX.writeFile(wb, 'IVA_Descontable_ALZAK_'+anio+'_'+new Date().toISOString().slice(0,10)+'.xlsx');
-  if(typeof mostrarToast==='function') mostrarToast('✅ Excel IVA descargado — 3 hojas');
-}
-
-function frExportIVACSV() {
-  var base   = frIVAGetData();
-  var conIVA = base.filter(function(r){ return parseFloat(r['IVA (COP)']||0) > 0; });
-  if (!conIVA.length) { if(typeof mostrarToast==='function') mostrarToast('No hay facturas con IVA para exportar','#993C1D'); return; }
-  var anio   = (document.getElementById('fr-iva-anio')   || {}).value || 'todos';
-  var cuatri = (document.getElementById('fr-iva-cuatri') || {}).value || 'todos';
-  var cols   = ['Fecha','Proveedor / Beneficiario','Categoria','N Comprobante','Subtotal (COP)','IVA (COP)','Total (COP)','Estado'];
-  var rows   = conIVA.map(function(r){ return cols.map(function(c){ var v=(r[c]||'').toString().replace(/"/g,'""'); return '"'+v+'"'; }).join(','); });
-  var csv    = '\uFEFF' + cols.join(',') + String.fromCharCode(10) + rows.join(String.fromCharCode(10));
-
-  var blob   = new Blob([csv], {type:'text/csv;charset=utf-8'});
-  var a      = document.createElement('a');
-  a.href     = URL.createObjectURL(blob);
-  a.download = 'IVA_Descontable_ALZAK_' + anio + '_' + cuatri + '_' + new Date().toISOString().slice(0,10) + '.csv';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  if (typeof mostrarToast==='function') mostrarToast('✅ CSV de IVA descontable descargado');
-}
-
-function frExportIVAPDF() {
-  var base   = frIVAGetData();
-  var conIVA = base.filter(function(r){ return parseFloat(r['IVA (COP)']||0) > 0; });
-  var sinIVA = base.filter(function(r){ return parseFloat(r['IVA (COP)']||0) === 0; });
-  if (!base.length) { if(typeof mostrarToast==='function') mostrarToast('No hay datos para exportar','#993C1D'); return; }
-
-  var anioSel   = (document.getElementById('fr-iva-anio')   || {}).value || 'Todos los años';
-  var cuatriSel = (document.getElementById('fr-iva-cuatri') || {}).value || '';
-  var cuatriLabel = cuatriSel === 'q1' ? 'Enero–Abril'
-                  : cuatriSel === 'q2' ? 'Mayo–Agosto'
-                  : cuatriSel === 'q3' ? 'Septiembre–Diciembre'
-                  : 'Todos los cuatrimestres';
-
-  var tBase = conIVA.reduce(function(a,r){ return a+parseFloat(r['Subtotal (COP)']||0); },0);
-  var tIVA  = conIVA.reduce(function(a,r){ return a+parseFloat(r['IVA (COP)']||0); },0);
-  var tTot  = conIVA.reduce(function(a,r){ return a+parseFloat(r['Total (COP)']||0); },0);
-  var fecha = new Date().toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'});
-  function C(n){ return '$'+Math.round(n||0).toLocaleString('es-CO'); }
-
-  var filas = conIVA.slice().sort(function(a,b){ return parseFloat(b['IVA (COP)']||0)-parseFloat(a['IVA (COP)']||0); })
-    .map(function(r){
-      var b2=parseFloat(r['Subtotal (COP)']||0), v2=parseFloat(r['IVA (COP)']||0), t2=parseFloat(r['Total (COP)']||0);
-      var pi=b2?Math.round(v2/b2*100):0;
-      return '<tr>'
-        +'<td style="white-space:nowrap;color:#555">'+frEsc(r['Fecha']||'')+'</td>'
-        +'<td style="font-weight:600">'+frEsc((r['Proveedor / Beneficiario']||'').substring(0,38))+'</td>'
-        +'<td style="color:#555;font-size:10px">'+frEsc((r['Categoria']||'').substring(0,24))+'</td>'
-        +'<td style="color:#555;font-size:10px;white-space:nowrap">'+frEsc(r['N Comprobante']||r['N_Comprobante']||'')+'</td>'
-        +'<td style="text-align:right">'+C(b2)+'</td>'
-        +'<td style="text-align:right;color:#0F6E56;font-weight:700">'+C(v2)+'</td>'
-        +'<td style="text-align:right">'+C(t2)+'</td>'
-        +'<td style="text-align:center;color:#0F6E56">'+pi+'%</td>'
-        +'</tr>';
-    }).join('');
-
-  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
-    +'<style>body{font-family:Arial,sans-serif;font-size:12px;color:#222;margin:24px}'
-    +'h1{font-size:16px;color:#0C447C;margin:0}h2{font-size:13px;color:#0F6E56;margin:16px 0 6px}'
-    +'table{width:100%;border-collapse:collapse;margin-top:8px}'
-    +'th{background:#D1FAE5;color:#065F46;padding:6px 8px;text-align:left;font-size:11px;border-bottom:2px solid #0F6E56}'
-    +'td{padding:5px 8px;border-bottom:1px solid #e5e7eb}'
-    +'tr:nth-child(even){background:#F0FDF4}'
-    +'.total-row{background:#D1FAE5!important;font-weight:700}'
-    +'.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:14px 0}'
-    +'.kpi{background:#F0FDF4;border:1px solid #a8d5c2;border-radius:6px;padding:10px 12px}'
-    +'.kpi-label{font-size:10px;color:#0F6E56;font-weight:700;text-transform:uppercase;margin-bottom:4px}'
-    +'.kpi-val{font-size:17px;font-weight:700;color:#0F6E56}'
-    +'@media print{body{margin:10px}}</style></head><body>'
-    +'<div style="display:flex;justify-content:space-between;border-bottom:2px solid #0F6E56;padding-bottom:10px;margin-bottom:14px">'
-      +'<div><h1>ALZAK GROUP SAS — IVA Descontable</h1>'
-      +'<div style="font-size:11px;color:#888">NIT 900.898.741-8 · Cartagena, Colombia</div></div>'
-      +'<div style="text-align:right;font-size:11px;color:#555"><div>Período: <strong>'+anioSel+' / '+cuatriLabel+'</strong></div>'
-      +'<div>Generado: '+fecha+'</div><div>Art. 485 E.T. — Responsable del IVA</div></div>'
-    +'</div>'
-    +'<div class="kpi-grid">'
-      +'<div class="kpi"><div class="kpi-label">IVA Descontable</div><div class="kpi-val">'+C(tIVA)+'</div><div style="font-size:10px;color:#888">'+conIVA.length+' facturas</div></div>'
-      +'<div class="kpi"><div class="kpi-label">Base de Compras</div><div class="kpi-val" style="color:#0C447C">'+C(tBase)+'</div></div>'
-      +'<div class="kpi"><div class="kpi-label">Total Facturas</div><div class="kpi-val" style="color:#374151">'+C(tTot)+'</div></div>'
-      +'<div class="kpi"><div class="kpi-label">Sin IVA (excluidas)</div><div class="kpi-val" style="color:#888">'+sinIVA.length+' facturas</div></div>'
-    +'</div>'
-    +'<h2>Facturas con IVA Descontable ('+conIVA.length+')</h2>'
-    +'<table><thead><tr><th>Fecha</th><th>Proveedor</th><th>Categoría</th><th>N° Comp.</th>'
-    +'<th style="text-align:right">Base</th><th style="text-align:right">IVA Descontable</th>'
-    +'<th style="text-align:right">Total</th><th style="text-align:center">% IVA</th></tr></thead>'
-    +'<tbody>'+filas
-    +'<tr class="total-row"><td colspan="4">TOTAL IVA DESCONTABLE</td>'
-    +'<td style="text-align:right">'+C(tBase)+'</td>'
-    +'<td style="text-align:right;color:#0F6E56">'+C(tIVA)+'</td>'
-    +'<td style="text-align:right">'+C(tTot)+'</td><td></td></tr>'
-    +'</tbody></table>'
-    +'<div style="margin-top:20px;padding:10px;background:#FFF3CD;border:1px solid #B45309;border-radius:6px;font-size:11px;color:#7A4F00">'
-    +'<strong>Nota:</strong> Este reporte incluye solo facturas de compra con IVA acreditable (Art. 485 E.T.). '
-    +'Verificar con su contador que todos los IVAs sean descontables según su actividad económica.'
-    +'</div>'
-    +'</body></html>';
-
-  var blob = new Blob([html], {type:'text/html;charset=utf-8'});
-  var a    = document.createElement('a');
-  a.href   = URL.createObjectURL(blob);
-  a.download = 'IVA_Descontable_ALZAK_'+anioSel+'_'+new Date().toISOString().slice(0,10)+'.html';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  if (typeof mostrarToast==='function') mostrarToast('✅ Reporte PDF de IVA descargado');
-}
-
-
-// ── FR: Eliminar fila, exportar Excel y PDF ──────────────────────────────
-
-function frEliminarFila(idx) {
-  if (!confirm('¿Eliminar este registro?')) return;
-  FR_DATA.splice(idx, 1);
-  frActualizarFiltros();
-  frRender();
-  if (typeof mostrarToast === 'function') mostrarToast('Registro eliminado');
-}
-
-function frExportExcel() {
-  if (!FR_DATA.length) {
-    if (typeof mostrarToast==='function') mostrarToast('No hay datos para exportar', '#993C1D');
-    return;
-  }
-  var cols = ['Fecha','Categoria','Proveedor / Beneficiario','Concepto',
-              'N Comprobante','Subtotal (COP)','IVA (COP)','Total (COP)','Estado'];
-  var rows = [cols];
-  FR_DATA.forEach(function(r) {
-    rows.push(cols.map(function(c){ return r[c]||''; }));
-  });
-  // Usar SheetJS si disponible, sino CSV
-  if (typeof XLSX !== 'undefined') {
-    var wb = XLSX.utils.book_new();
-    var ws = XLSX.utils.aoa_to_sheet(rows);
-    // Anchos de columna
-    ws['!cols'] = [8,20,30,40,14,14,12,14,10].map(function(w){ return {wch:w}; });
-    XLSX.utils.book_append_sheet(wb, ws, 'Facturas Radicadas');
-    XLSX.writeFile(wb, 'FacturasRadicadas_ALZAK_' + new Date().toISOString().slice(0,10) + '.xlsx');
-    if (typeof mostrarToast==='function') mostrarToast('\u2705 Excel descargado');
-  } else {
-    // Fallback CSV
-    var csv = '\uFEFF' + rows.map(function(r){
-      return r.map(function(c){ return '"'+String(c).replace(/"/g,'""')+'"'; }).join(',');
-    }).join(String.fromCharCode(10));
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
-    a.download = 'FacturasRadicadas_ALZAK_' + new Date().toISOString().slice(0,10) + '.csv';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  }
-}
-
+// ── Exportar PDF facturas radicadas ──────────────────────────────────────
 function frExportPDF() {
-  if (!FR_DATA.length) {
-    if (typeof mostrarToast==='function') mostrarToast('No hay datos para exportar', '#993C1D');
-    return;
+  if (!FR_DATA || !FR_DATA.length) {
+    mostrarToast('Carga las facturas radicadas primero (CSV / Excel)', '#993C1D'); return;
   }
-  var anioSel   = (document.getElementById('fr-fil-anio')   || {}).value || 'Todos los años';
-  var mesSel    = (document.getElementById('fr-fil-mes')    || {}).value || 'Todos los meses';
-  var estaSel   = (document.getElementById('fr-fil-estado') || {}).value || '';
-  var filtered  = frGetFiltered();
-  var fecha     = new Date().toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'});
+  var fecha = new Date().toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'});
 
-  function C(n){ return '$'+Math.round(n||0).toLocaleString('es-CO'); }
+  // Leer filtros activos
+  var filAnio   = (document.getElementById('fr-fil-anio')   ||{}).value || '';
+  var filMes    = (document.getElementById('fr-fil-mes')    ||{}).value || '';
+  var filEstado = (document.getElementById('fr-fil-estado') ||{}).value || '';
+  var buscar    = ((document.getElementById('fr-buscar')    ||{}).value || '').trim().toLowerCase();
+
+  // Filtrar igual que frRender
+  var datos = FR_DATA.filter(function(r) {
+    if (filAnio) {
+      var fp = (r['Fecha']||'').split('/');
+      var anioR = fp.length >= 3 ? (fp[2]||'').substring(0,4) : '';
+      if (anioR !== filAnio) return false;
+    }
+    if (filMes && (r['Mes']||'') !== filMes) return false;
+    if (buscar) {
+      var haystack = ((r['Proveedor / Beneficiario']||'')+(r['Concepto']||'')).toLowerCase();
+      if (haystack.indexOf(buscar) < 0) return false;
+    }
+    return true;
+  });
+
+  if (!datos.length) { mostrarToast('No hay registros con los filtros actuales', '#993C1D'); return; }
+
+  function Cf(n){ return '$'+Math.round(parseFloat(n)||0).toLocaleString('es-CO'); }
   function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-  var totalRad  = filtered.reduce(function(a,r){ return a+parseFloat(r['Total (COP)']||0); },0);
-  var totalIVA  = filtered.reduce(function(a,r){ return a+parseFloat(r['IVA (COP)']||0); },0);
+  // KPIs
+  var total   = datos.reduce(function(a,r){return a+frTotalVal(r);},0);
+  var pagado  = 0, pendiente = 0, sinExtracto = 0;
+  datos.forEach(function(r){
+    var est = frEstadoReal(r);
+    if (est === 'PAGADO') pagado += frTotalVal(r);
+    else if (est === 'SIN-EXTRACTO') sinExtracto += frTotalVal(r);
+    else pendiente += frTotalVal(r);
+  });
+  var pctPag = total ? Math.round(pagado/total*100) : 0;
 
   // Agrupar por categoría
   var cats = {};
-  filtered.forEach(function(r){
-    var c = r['Categoria']||'Sin categoría';
-    if(!cats[c]) cats[c]={total:0,iva:0,n:0};
-    cats[c].total += parseFloat(r['Total (COP)']||0);
-    cats[c].iva   += parseFloat(r['IVA (COP)']||0);
-    cats[c].n++;
+  datos.forEach(function(r){
+    var cat = r['Categoria']||'Sin categoría';
+    if (!cats[cat]) cats[cat] = {items:[], total:0, pagado:0};
+    cats[cat].items.push(r);
+    cats[cat].total += frTotalVal(r);
+    if (frEstadoReal(r) === 'PAGADO') cats[cat].pagado += frTotalVal(r);
   });
 
-  var filas = filtered.map(function(r,i){
-    var iva  = parseFloat(r['IVA (COP)']||0);
-    var tot  = parseFloat(r['Total (COP)']||0);
-    var est  = (r['Estado']||'PENDIENTE').toUpperCase();
-    var bg   = i%2===0?'#fff':'#F8F9FA';
-    var estStyle = est==='PAGADO'
-      ? 'background:#DCFCE7;color:#166534;'
-      : 'background:#FEE2E2;color:#991B1B;';
-    return '<tr style="background:'+bg+'">'
-      +'<td style="white-space:nowrap;color:#6B7280">'+esc(r['Fecha']||'')+'</td>'
-      +'<td style="font-size:10px;color:#475569">'+esc((r['Categoria']||'').substring(0,22))+'</td>'
-      +'<td style="font-weight:600">'+esc((r['Proveedor / Beneficiario']||'').substring(0,34))+'</td>'
-      +'<td style="font-size:10px;color:#6B7280;white-space:nowrap">'+esc(r['N Comprobante']||r['N_Comprobante']||'')+'</td>'
-      +'<td style="text-align:right">'+(iva>0?'<span style="color:#0F6E56;font-weight:600">'+C(iva)+'</span>':'<span style="color:#ccc">—</span>')+'</td>'
-      +'<td style="text-align:right;font-weight:600">'+C(tot)+'</td>'
-      +'<td style="text-align:center"><span style="font-size:10px;padding:2px 7px;border-radius:8px;font-weight:700;'+estStyle+'">'+est+'</span></td>'
+  // Construir filas por categoría
+  var filasGrupos = '';
+  var catKeys = Object.keys(cats).sort();
+  for (var ci=0; ci<catKeys.length; ci++) {
+    var cat = catKeys[ci];
+    var gd  = cats[cat];
+    filasGrupos += '<tr style="background:#f0ede8;font-weight:700;">'
+      +'<td colspan="6">'+esc(cat)+'</td>'
+      +'<td style="text-align:right">'+Cf(gd.total)+'</td>'
+      +'<td style="text-align:center">'+Math.round(gd.pagado/gd.total*100||0)+'% pagado</td>'
       +'</tr>';
-  }).join('');
+    for (var ri=0; ri<gd.items.length; ri++) {
+      var r = gd.items[ri];
+      var est = frEstadoReal(r);
+      var fuente = frFuentePago(r);
+      var fLabel = fuente ? fuente.label : '';
+      var estColor = est==='PAGADO' ? '#166534' : est==='SIN-EXTRACTO' ? '#64748B' : '#991B1B';
+      var estBg    = est==='PAGADO' ? '#DCFCE7' : est==='SIN-EXTRACTO' ? '#F1F5F9' : '#FEE2E2';
+      var estText  = est==='PAGADO' ? 'PAGADO' : est==='SIN-EXTRACTO' ? '⏳ Sin extracto' : 'PENDIENTE';
+      filasGrupos += '<tr style="border-bottom:1px solid #f5f4f0">'
+        +'<td style="color:#777;font-size:10px">'+esc(r['Fecha']||'')+'</td>'
+        +'<td style="font-weight:600;max-width:160px">'+esc(r['Proveedor / Beneficiario']||'')+'</td>'
+        +'<td style="max-width:200px;font-size:10px;color:#555">'+esc((r['Concepto']||'').substring(0,60))+'</td>'
+        +'<td style="color:#777;font-size:10px">'+esc(r['N Comprobante']||r['N_Comprobante']||'')+'</td>'
+        +'<td style="color:#777;font-size:10px">'+esc(r['Mes']||'')+'</td>'
+        +'<td style="text-align:right;font-weight:700">'+Cf(frTotalVal(r))+'</td>'
+        +'<td style="text-align:right;font-size:10px;color:#555">'+Cf(frTotalVal(r))+'</td>'
+        +'<td style="text-align:center">'
+          +'<span style="background:'+estBg+';color:'+estColor+';padding:2px 7px;border-radius:10px;font-weight:700;font-size:9px">'+estText+'</span>'
+          +(fLabel ? ' <span style="background:#1a1a1a;color:#fff;padding:1px 5px;border-radius:4px;font-size:8px;font-weight:700">'+esc(fLabel)+'</span>' : '')
+        +'</td>'
+        +'</tr>';
+    }
+  }
 
-  var resumenCats = Object.keys(cats).sort(function(a,b){ return cats[b].total-cats[a].total; }).map(function(c){
-    return '<tr><td style="padding:4px 8px">'+esc(c)+'</td>'
-      +'<td style="padding:4px 8px;text-align:right;color:#0F6E56">'+(cats[c].iva>0?C(cats[c].iva):'—')+'</td>'
-      +'<td style="padding:4px 8px;text-align:right;font-weight:600">'+C(cats[c].total)+'</td>'
-      +'<td style="padding:4px 8px;text-align:right;color:#888">'+cats[c].n+'</td>'
-      +'</tr>';
-  }).join('');
+  var periodoLabel = (filAnio || 'Todos los años') + (filMes ? ' · '+filMes : '');
 
-  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Facturas Radicadas ALZAK</title>'
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+    +'<title>Facturas Radicadas ALZAK — '+periodoLabel+'</title>'
     +'<style>'
-    +'*{box-sizing:border-box;margin:0;padding:0}'
-    +'body{font-family:Arial,sans-serif;font-size:12px;color:#222;padding:20px}'
-    +'h1{font-size:17px;color:#0C447C}h2{font-size:13px;color:#0C447C;margin:16px 0 6px}'
-    +'table{width:100%;border-collapse:collapse;margin-top:6px}'
-    +'th{background:#EBF3FB;color:#0C447C;padding:6px 8px;text-align:left;font-size:11px;border-bottom:2px solid #0C447C}'
-    +'td{padding:5px 8px;border-bottom:1px solid #f0f0f0;font-size:11px}'
-    +'.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:12px 0}'
-    +'.kpi{background:#F8F9FA;border-radius:6px;padding:10px 12px;border:1px solid #e0ddd8}'
-    +'.kl{font-size:10px;color:#888;font-weight:700;text-transform:uppercase;margin-bottom:3px}'
-    +'.kv{font-size:16px;font-weight:700;color:#0C447C}'
-    +'@media print{body{padding:8px}.no-print{display:none}}'
+    +'*{font-family:Helvetica,Arial,sans-serif;font-size:11px;margin:0;padding:0;box-sizing:border-box}'
+    +'body{background:#fff;color:#54504F;padding:24px 30px}'
+    +'h2{font-size:12px;font-weight:700;color:#A32D2D;margin:18px 0 7px;padding-bottom:3px;border-bottom:2px solid #A32D2D}'
+    +'table{width:100%;border-collapse:collapse;margin-bottom:6px;font-size:10.5px}'
+    +'th{background:#54504F;color:#fff;padding:6px 7px;text-align:left;font-size:10px;font-weight:700}'
+    +'td{padding:5px 7px;vertical-align:middle}'
+    +'tr:nth-child(even){background:#fafaf8}'
+    +'.kpi{display:inline-block;background:#f5f4f0;border-radius:7px;padding:10px 16px;margin:0 5px 6px 0;min-width:120px}'
+    +'.kl{font-size:9px;color:#888;font-weight:700;text-transform:uppercase;margin-bottom:3px}'
+    +'.kv{font-size:17px;font-weight:700}'
+    +'@media print{'
+    +'  body{padding:14px 18px}'
+    +'  h2{page-break-after:avoid}'
+    +'  tr{page-break-inside:avoid}'
+    +'  .no-print{display:none}'
+    +'}'
     +'</style></head><body>'
-    +'<div style="display:flex;justify-content:space-between;border-bottom:2px solid #0C447C;padding-bottom:10px;margin-bottom:14px">'
-      +'<div><h1>ALZAK GROUP SAS — Facturas Radicadas</h1>'
-      +'<div style="font-size:11px;color:#888;margin-top:3px">NIT 900.898.741-8 · Cartagena · Contratistas y Proveedores</div></div>'
-      +'<div style="text-align:right;font-size:11px;color:#555">'
-      +'<div>Período: <strong>'+esc(anioSel)+' / '+esc(mesSel)+'</strong></div>'
-      +'<div>Generado: '+fecha+'</div>'
-      +'<div>'+filtered.length+' registros</div>'
-      +'</div>'
+    // Encabezado
+    +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;padding-bottom:14px;border-bottom:2px solid #1a1a1a">'
+    +'<div>'
+    +'<div style="font-size:21px;font-weight:700;color:#54504F">ALZAK GROUP SAS</div>'
+    +'<div style="font-size:11px;color:#888;margin-top:1px">NIT 900.898.741-8 · Cartagena, Colombia</div>'
     +'</div>'
-    +'<div class="kpi-grid">'
-      +'<div class="kpi"><div class="kl">Total Obligaciones</div><div class="kv">'+C(totalRad)+'</div></div>'
-      +'<div class="kpi"><div class="kl">IVA Descontable</div><div class="kv" style="color:#0F6E56">'+C(totalIVA)+'</div></div>'
-      +'<div class="kpi"><div class="kl">Registros</div><div class="kv">'+filtered.length+'</div></div>'
-      +'<div class="kpi"><div class="kl">Categorías</div><div class="kv">'+Object.keys(cats).length+'</div></div>'
+    +'<div style="text-align:right">'
+    +'<div style="font-size:15px;font-weight:700;color:#A32D2D">FACTURAS RADICADAS</div>'
+    +'<div style="font-size:10px;color:#888;margin-top:3px">Lo que nos cobran · Obligaciones adquiridas</div>'
+    +'<div style="font-size:10px;color:#888">Período: '+periodoLabel+'</div>'
+    +'<div style="font-size:10px;color:#888">Generado: '+fecha+'</div>'
     +'</div>'
-    +'<h2>Resumen por Categoría</h2>'
-    +'<table><thead><tr><th>Categoría</th><th style="text-align:right">IVA</th><th style="text-align:right">Total</th><th style="text-align:right">Registros</th></tr></thead>'
-    +'<tbody>'+resumenCats+'</tbody></table>'
-    +'<h2>Detalle de Facturas Radicadas</h2>'
+    +'</div>'
+    // KPIs
+    +'<h2>📊 Resumen</h2>'
+    +'<div style="margin-bottom:14px">'
+    +'<div class="kpi"><div class="kl">Total Obligaciones</div><div class="kv" style="color:#54504F">'+Cf(total)+'</div><div style="font-size:9px;color:#aaa">'+datos.length+' registros</div></div>'
+    +'<div class="kpi" style="background:#DCFCE7"><div class="kl">Pagado confirmado</div><div class="kv" style="color:#166534">'+Cf(pagado)+'</div><div style="font-size:9px;color:#166534">'+pctPag+'% del total</div></div>'
+    +'<div class="kpi" style="background:#FEE2E2"><div class="kl">Lo que debes hoy</div><div class="kv" style="color:#991B1B">'+Cf(pendiente)+'</div><div style="font-size:9px;color:#991B1B">Extracto cargado, sin pago</div></div>'
+    +'<div class="kpi" style="background:#F1F5F9"><div class="kl">Sin extracto</div><div class="kv" style="color:#64748B">'+Cf(sinExtracto)+'</div><div style="font-size:9px;color:#64748B">Cargar extracto del período</div></div>'
+    +'</div>'
+    // Tabla
+    +'<h2>📋 Detalle por Categoría</h2>'
     +'<table><thead><tr>'
-    +'<th>Fecha</th><th>Categoría</th><th>Proveedor / Contratista</th><th>N° Comp.</th>'
-    +'<th style="text-align:right">IVA</th><th style="text-align:right">Total</th><th style="text-align:center">Estado</th>'
-    +'</tr></thead><tbody>'+filas+'</tbody>'
+    +'<th>Fecha</th><th>Proveedor / Contratista</th><th>Concepto</th>'
+    +'<th>N° Comp.</th><th>Mes</th><th style="text-align:right">Total</th>'
+    +'<th style="text-align:right">Saldo</th><th style="text-align:center">Estado / Fuente</th>'
+    +'</tr></thead><tbody>'+filasGrupos+'</tbody>'
     +'<tfoot><tr style="background:#EBF3FB;font-weight:700">'
-    +'<td colspan="4" style="padding:6px 8px;color:#0C447C;text-transform:uppercase;font-size:11px">TOTAL '+filtered.length+' REGISTROS</td>'
-    +'<td style="padding:6px 8px;text-align:right;color:#0F6E56">'+C(totalIVA)+'</td>'
-    +'<td style="padding:6px 8px;text-align:right;color:#0C447C;font-size:13px">'+C(totalRad)+'</td>'
-    +'<td></td>'
+    +'<td colspan="5">TOTAL GENERAL ('+datos.length+' registros)</td>'
+    +'<td style="text-align:right">'+Cf(total)+'</td>'
+    +'<td style="text-align:right">'+Cf(total)+'</td>'
+    +'<td style="text-align:center">'+pctPag+'% pagado</td>'
     +'</tr></tfoot></table>'
-    +'<div style="margin-top:16px;padding:10px;background:#EBF3FB;border-radius:6px;font-size:10px;color:#0C447C">'
-    +'ALZAK GROUP SAS · NIT 900.898.741-8 · Tablero Contable Integrado · Generado el '+fecha
+    // Pie
+    +'<div style="margin-top:20px;padding-top:10px;border-top:1px solid #e0ddd8;display:flex;justify-content:space-between;color:#aaa;font-size:9px">'
+    +'<div>ALZAK GROUP SAS · NIT 900.898.741-8 · Tablero Contabilidad Integrado</div>'
+    +'<div>Generado el '+fecha+'</div>'
     +'</div>'
     +'</body></html>';
 
   var blob = new Blob([html], {type:'text/html;charset=utf-8'});
+  var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
-  a.href   = URL.createObjectURL(blob);
-  a.download = 'FacturasRadicadas_ALZAK_' + new Date().toISOString().slice(0,10) + '.html';
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  if (typeof mostrarToast==='function') mostrarToast('\u2705 PDF descargado — ábrelo en el navegador e imprime como PDF');
+  a.href     = url;
+  a.download = 'Facturas_Radicadas_ALZAK_'+new Date().toISOString().slice(0,10)+'.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  mostrarToast('✅ Reporte descargado — ábrelo en Chrome y usa Ctrl+P → Guardar como PDF');
 }
 
-
-// ── Programación de Pagos ──────────────────────────────────────────────
-
-var PROG_DATA = []; // {concepto, valor, fecha, mes, fuente}
-
-function progToggle() {
-  var panel = document.getElementById('prog-pago-panel');
-  var arr   = document.getElementById('prog-toggle-arr');
-  if (!panel) return;
-  var open = panel.style.display !== 'none';
-  panel.style.display = open ? 'none' : 'block';
-  if (arr) arr.innerHTML = open ? '&#9660;' : '&#9650;';
-  // Si abre y hay datos, renderizar
-  if (!open && PROG_DATA.length) progRender();
-}
-
-function progCargarExcel(input) {
-  var file = input.files[0];
-  if (!file) return;
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-      var ws = wb.Sheets[wb.SheetNames[0]];
-      var rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-      PROG_DATA = [];
-      var meses_set = {};
-      rows.forEach(function(row) {
-        // Buscar filas con número de item (col 0 = número), concepto (col 1), valor (col 2), fecha (col 3), fuente (col 4)
-        var item = row[0], conc = row[1], val = row[2], fec = row[3], fue = row[4];
-        if (!item || isNaN(parseInt(item))) return;
-        if (!conc || !val) return;
-        var v = parseFloat(String(val).replace(/[$,\.]/g,'').replace(',',''));
-        if (isNaN(v) || v <= 0) return;
-        var fechaStr = fec ? String(fec) : '';
-        var mesNombre = progExtraerMes(fechaStr);
-        if (mesNombre) meses_set[mesNombre] = 1;
-        PROG_DATA.push({
-          concepto: String(conc).trim(),
-          valor:    v,
-          fecha:    fechaStr,
-          mes:      mesNombre,
-          fuente:   String(fue||'').trim()
-        });
-      });
-      // Poblar filtro de meses
-      var sel = document.getElementById('prog-mes-fil');
-      if (sel) {
-        var cur = sel.value;
-        sel.innerHTML = '<option value="">Todos los meses</option>';
-        Object.keys(meses_set).sort().forEach(function(m) {
-          sel.innerHTML += '<option value="'+m+'"'+(m===cur?' selected':'')+'>'+m+'</option>';
-        });
-      }
-      // Mostrar panel
-      var panel = document.getElementById('prog-pago-panel');
-      if (panel) panel.style.display = 'block';
-      var arr = document.getElementById('prog-toggle-arr');
-      if (arr) arr.innerHTML = '&#9650;';
-      progRender();
-      if (typeof mostrarToast==='function') mostrarToast('\u2705 Programaci\u00f3n cargada: '+PROG_DATA.length+' items');
-    } catch(err) {
-      if (typeof mostrarToast==='function') mostrarToast('Error al leer el archivo: '+err.message, '#993C1D');
-    }
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-var MESES_ES = {'01':'Enero','02':'Febrero','03':'Marzo','04':'Abril','05':'Mayo',
-  '06':'Junio','07':'Julio','08':'Agosto','09':'Septiembre','10':'Octubre','11':'Noviembre','12':'Diciembre'};
-var MESES_NUM = {'enero':'01','febrero':'02','marzo':'03','abril':'04','mayo':'05',
-  'junio':'06','julio':'07','agosto':'08','septiembre':'09','octubre':'10','noviembre':'11','diciembre':'12'};
-
-function progExtraerMes(fechaStr) {
-  if (!fechaStr) return '';
-  var s = String(fechaStr);
-  // DD/MM/YYYY o MM/DD/YYYY
-  var parts = s.split('/');
-  if (parts.length >= 3) {
-    var mm = parts[1].padStart(2,'0');
-    if (MESES_ES[mm]) return MESES_ES[mm];
-    mm = parts[0].padStart(2,'0');
-    if (MESES_ES[mm]) return MESES_ES[mm];
-  }
-  // Texto "Febrero 2026"
-  var lower = s.toLowerCase();
-  for (var k in MESES_NUM) {
-    if (lower.indexOf(k) >= 0) return k.charAt(0).toUpperCase()+k.slice(1);
-  }
-  return '';
-}
-
-function progSimilitud(a, b) {
-  a = String(a||'').toUpperCase().replace(/[^A-Z0-9 ]/g,' ').trim();
-  b = String(b||'').toUpperCase().replace(/[^A-Z0-9 ]/g,' ').trim();
-  var wa = a.split(/\s+/).filter(function(w){return w.length>2;});
-  var wb2 = b.split(/\s+/).filter(function(w){return w.length>2;});
-  if (!wa.length || !wb2.length) return 0;
-  var matches = wa.filter(function(w){return wb2.indexOf(w)>=0;}).length;
-  return matches / Math.max(wa.length, wb2.length);
-}
-
-function progCruzar(progItems, mesNombre) {
-  // Egresos del mes
-  var egr = GASTOS_DATA.filter(function(r){
-    return (r['Mes']||'') === mesNombre;
-  });
-
-  var usados = {};
-  var resultados = [];
-
-  progItems.forEach(function(p) {
-    var pval = p.valor;
-    var mejorScore = 0;
-    var mejorIdx   = -1;
-    var mejorEgr   = null;
-
-    egr.forEach(function(eg, i) {
-      if (usados[i]) return;
-      var eval_ = parseFloat(eg['Total_COP']||0);
-      var tolerancia = Math.abs(eval_ - pval) / Math.max(pval,1);
-      if (tolerancia > 0.02) return; // ±2%
-      var score = Math.max(
-        progSimilitud(p.concepto, eg['Concepto']||''),
-        progSimilitud(p.concepto, eg['Proveedor']||'')
-      );
-      if (score > mejorScore) {
-        mejorScore = score; mejorIdx = i; mejorEgr = eg;
-      }
-    });
-
-    if (mejorEgr && mejorScore >= 0.2) {
-      usados[mejorIdx] = true;
-      resultados.push({
-        estado:       'PAGADO',
-        prog:         p,
-        egr:          mejorEgr,
-        diferencia:   parseFloat(mejorEgr['Total_COP']||0) - pval
-      });
-    } else {
-      resultados.push({
-        estado:       'NO EJECUTADO',
-        prog:         p,
-        egr:          null,
-        diferencia:   -pval
-      });
-    }
-  });
-
-  // Sin programar
-  egr.forEach(function(eg, i) {
-    if (usados[i]) return;
-    // Excluir traslados
-    if (!esOpDash(eg)) return;
-    resultados.push({
-      estado:   'SIN PROGRAMAR',
-      prog:     null,
-      egr:      eg,
-      diferencia: parseFloat(eg['Total_COP']||0)
-    });
-  });
-
-  return resultados;
-}
-
-function progRender() {
-  var panel = document.getElementById('prog-pago-panel');
-  if (!PROG_DATA.length || !panel) return;
-  panel.style.display = 'block';
-
-  var mesFil = (document.getElementById('prog-mes-fil')||{}).value || '';
-  var items  = mesFil ? PROG_DATA.filter(function(p){return p.mes===mesFil;}) : PROG_DATA;
-  var meses  = mesFil ? [mesFil] : Object.keys(
-    PROG_DATA.reduce(function(a,p){a[p.mes]=1;return a;},{})
-  ).sort(function(a,b){
-    var ord = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-    return ord.indexOf(a) - ord.indexOf(b);
-  });
-
-  // Hacer cruce por mes
-  var todos = [];
-  meses.forEach(function(m) {
-    var pMes = PROG_DATA.filter(function(p){return p.mes===m;});
-    progCruzar(pMes, m).forEach(function(r){ r.mes = m; todos.push(r); });
-  });
-
-  var pagados    = todos.filter(function(r){return r.estado==='PAGADO';});
-  var noEjec     = todos.filter(function(r){return r.estado==='NO EJECUTADO';});
-  var sinProg    = todos.filter(function(r){return r.estado==='SIN PROGRAMAR';});
-
-  var totalProg  = items.reduce(function(a,p){return a+p.valor;},0);
-  var totalPagado= pagados.reduce(function(a,r){return a+parseFloat(r.egr['Total_COP']||0);},0);
-  var totalNoEj  = noEjec.reduce(function(a,r){return a+r.prog.valor;},0);
-  var totalSinP  = sinProg.reduce(function(a,r){return a+parseFloat(r.egr['Total_COP']||0);},0);
-
-  // Header summary
-  var hSum = document.getElementById('prog-header-sum');
-  if (hSum) hSum.textContent = frFmt(totalProg)+' programado · '+pagados.length+' ejecutados';
-
-  // KPIs
-  var kEl = document.getElementById('prog-kpis');
-  if (kEl) kEl.innerHTML =
-    '<div style="background:#EBF3FB;border-radius:8px;padding:12px;border:1px solid #93C5FD;">'
-      +'<div style="font-size:10px;color:#0C447C;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Total programado</div>'
-      +'<div style="font-size:19px;font-weight:700;color:#0C447C;">'+frFmt(totalProg)+'</div>'
-      +'<div style="font-size:10px;color:#888;">'+items.length+' items</div>'
-    +'</div>'
-    +'<div style="background:#DCFCE7;border-radius:8px;padding:12px;border:1px solid #86EFAC;">'
-      +'<div style="font-size:10px;color:#166534;font-weight:700;text-transform:uppercase;margin-bottom:4px;">✅ Ejecutados</div>'
-      +'<div style="font-size:19px;font-weight:700;color:#166534;">'+frFmt(totalPagado)+'</div>'
-      +'<div style="font-size:10px;color:#888;">'+pagados.length+' encontrados en egresos</div>'
-    +'</div>'
-    +'<div style="background:#FEE2E2;border-radius:8px;padding:12px;border:1px solid #FCA5A5;">'
-      +'<div style="font-size:10px;color:#991B1B;font-weight:700;text-transform:uppercase;margin-bottom:4px;">⚠️ No ejecutados</div>'
-      +'<div style="font-size:19px;font-weight:700;color:#991B1B;">'+frFmt(totalNoEj)+'</div>'
-      +'<div style="font-size:10px;color:#888;">'+noEjec.length+' programados sin registrar</div>'
-    +'</div>'
-    +'<div style="background:#EFF6FF;border-radius:8px;padding:12px;border:1px solid #93C5FD;">'
-      +'<div style="font-size:10px;color:#1D4ED8;font-weight:700;text-transform:uppercase;margin-bottom:4px;">🔵 Sin programar</div>'
-      +'<div style="font-size:19px;font-weight:700;color:#1D4ED8;">'+frFmt(totalSinP)+'</div>'
-      +'<div style="font-size:10px;color:#888;">'+sinProg.length+' egresos no estaban en programación</div>'
-    +'</div>';
-
-  // Tabla cruce
-  var html = '<table style="width:100%;border-collapse:collapse;font-size:11px;">'
-    +'<thead><tr style="background:#EBF3FB;">'
-    +'<th style="padding:6px 8px;text-align:center;font-size:10px;color:#0C447C;border-bottom:1px solid #BFDBFE;width:100px;">Estado</th>'
-    +'<th style="padding:6px 8px;text-align:left;font-size:10px;color:#0C447C;border-bottom:1px solid #BFDBFE;">Concepto programado</th>'
-    +'<th style="padding:6px 8px;text-align:right;font-size:10px;color:#0C447C;border-bottom:1px solid #BFDBFE;white-space:nowrap;">Valor prog.</th>'
-    +'<th style="padding:6px 8px;text-align:left;font-size:10px;color:#0C447C;border-bottom:1px solid #BFDBFE;">Concepto ejecutado</th>'
-    +'<th style="padding:6px 8px;text-align:right;font-size:10px;color:#0C447C;border-bottom:1px solid #BFDBFE;white-space:nowrap;">Valor ejec.</th>'
-    +'<th style="padding:6px 8px;text-align:left;font-size:10px;color:#0C447C;border-bottom:1px solid #BFDBFE;white-space:nowrap;">Fuente</th>'
-    +'<th style="padding:6px 8px;text-align:left;font-size:10px;color:#0C447C;border-bottom:1px solid #BFDBFE;white-space:nowrap;">Mes</th>'
-    +'</tr></thead><tbody>';
-
-  todos.forEach(function(r, i) {
-    var bg, badge, badgeCol;
-    if (r.estado === 'PAGADO') {
-      bg='#fff'; badge='✅ Pagado'; badgeCol='166534';
-    } else if (r.estado === 'NO EJECUTADO') {
-      bg='#FFF7F7'; badge='⚠️ No ejecutado'; badgeCol='991B1B';
-    } else {
-      bg='#F0F6FF'; badge='🔵 Sin programar'; badgeCol='1D4ED8';
-    }
-    if (i%2===1 && r.estado==='PAGADO') bg='#F0FDF4';
-
-    var progConc = r.prog ? r.prog.concepto : '—';
-    var progVal  = r.prog ? frFmt(r.prog.valor) : '—';
-    var progFue  = r.prog ? (r.prog.fuente||'—') : '—';
-    var egrConc  = r.egr  ? (r.egr['Concepto']||r.egr['Proveedor']||'').substring(0,42) : '—';
-    var egrVal   = r.egr  ? frFmt(parseFloat(r.egr['Total_COP']||0)) : '—';
-
-    html += '<tr style="background:'+bg+';border-bottom:1px solid #E5E7EB;">'
-      +'<td style="padding:5px 8px;text-align:center;">'
-        +'<span style="font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px;background:'
-          +(r.estado==='PAGADO'?'#DCFCE7':r.estado==='NO EJECUTADO'?'#FEE2E2':'#DBEAFE')+';color:#'+badgeCol+';">'
-          +badge+'</span>'
-      +'</td>'
-      +'<td style="padding:5px 8px;color:#374151;font-size:10px;">'+frEsc(progConc.substring(0,42))+'</td>'
-      +'<td style="padding:5px 8px;text-align:right;font-weight:600;color:#0C447C;">'+progVal+'</td>'
-      +'<td style="padding:5px 8px;color:#374151;font-size:10px;font-style:'+(r.egr?'normal':'italic')+';color:'+(r.egr?'#374151':'#9CA3AF')+';">'+frEsc(egrConc)+'</td>'
-      +'<td style="padding:5px 8px;text-align:right;font-weight:600;color:'+(r.estado==='PAGADO'?'#166534':r.estado==='SIN PROGRAMAR'?'#1D4ED8':'#9CA3AF')+';">'+egrVal+'</td>'
-      +'<td style="padding:5px 8px;font-size:10px;color:#6B7280;">'+frEsc(progFue.substring(0,18))+'</td>'
-      +'<td style="padding:5px 8px;font-size:10px;color:#6B7280;">'+frEsc(r.mes||'')+'</td>'
-      +'</tr>';
-  });
-
-  html += '</tbody></table>';
-
-  var tEl = document.getElementById('prog-tabla');
-  if (tEl) tEl.innerHTML = html;
-}
-
-
-// Start empty — user loads CSV manually
-document.addEventListener('DOMContentLoaded', function(){
-  setTimeout(frRender, 300);
-});
-
-// Load SheetJS for Excel support if not already loaded
-if (typeof XLSX === 'undefined') {
-  var s = document.createElement('script');
-  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-  document.head.appendChild(s);
-}
+// init on demand
 </script>
 
 </body>
-
-</html>
+</html,
+  {f:'14/01',d:'Débito Fritocaribe Cartagena',v:-86400,t:'egreso'},
+  {f:'06/01',d:'Débito Ferretería Electrosol',v:-181000,t:'egreso'},
+  {f:'10/02',d:'Pago Sodimac Homecenter',v:-9900,t:'egreso'}>

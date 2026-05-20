@@ -5718,15 +5718,28 @@ function factOrdenar(campo) {
 }
 
 function diasHasta(fechaStr) {
-
+  if (!fechaStr) return 9999;
   var hoy = new Date(); hoy.setHours(0,0,0,0);
-
-  var parts = fechaStr.split('-');
-
-  var target = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
-
+  var s = String(fechaStr).trim();
+  var target;
+  if (s.indexOf('T') >= 0) {
+    // ISO timestamp — usar solo la parte de fecha en zona Bogotá
+    var datePart = s.substring(0, 10); // yyyy-MM-dd
+    var p = datePart.split('-');
+    target = new Date(parseInt(p[0]), parseInt(p[1])-1, parseInt(p[2]));
+  } else if (s.indexOf('/') >= 0) {
+    // dd/MM/yyyy
+    var p = s.split('/');
+    target = new Date(parseInt(p[2]), parseInt(p[1])-1, parseInt(p[0]));
+  } else if (s.indexOf('-') >= 0) {
+    // yyyy-MM-dd
+    var p = s.split('-');
+    target = new Date(parseInt(p[0]), parseInt(p[1])-1, parseInt(p[2]));
+  } else {
+    return 9999;
+  }
+  if (!target || isNaN(target.getTime())) return 9999;
   return Math.round((target - hoy) / 86400000);
-
 }
 
 function cerrarDetalle() {
@@ -18323,15 +18336,38 @@ function alzakCargarDatosSheets(callback) {
         // Solo carga si no hay facturas manuales ya cargadas
         if (!FACTURAS || FACTURAS.length === 0) {
           FACTURAS = data.facturacion.map(function(r, idx) {
+            var bruto = parseFloat(r['Subtotal_COP']||r['Subtotal (COP)']||r['Subtotal']||r['Base gravable']||r['Valor']||0);
+            var iva   = parseFloat(r['IVA_COP']||r['IVA (COP)']||r['IVA']||0);
+            var total = parseFloat(r['Total_COP']||r['Total (COP)']||r['Total']||bruto+iva||0);
+            var rete  = parseFloat(r['Retefuente']||r['RteFuente']||r['Retención']||0);
+            var vence = r['Vencimiento']||r['Fecha Vencimiento']||r['Vence']||'';
+            // Normalizar vence: timestamp ISO → yyyy-MM-dd, dd/MM/yyyy → yyyy-MM-dd
+            if (vence) {
+              var vs = String(vence).trim();
+              if (vs.indexOf('T') >= 0) {
+                vence = vs.substring(0, 10); // yyyy-MM-dd
+              } else if (vs.indexOf('/') >= 0) {
+                var vp = vs.split('/');
+                if (vp.length === 3) vence = vp[2]+'-'+vp[1]+'-'+vp[0];
+              }
+            }
+            var pagada = (r['Estado']||'').toLowerCase().indexOf('pagad') >= 0 ||
+                         (r['Estado']||'').toLowerCase() === 'cobrada';
             return {
-              id:       'GS-' + idx,
-              fecha:    alzakFechaAISO(r['Fecha']||''),
-              cliente:  r['Cliente']||r['Proveedor']||'',
-              concepto: r['Concepto']||r['Descripcion']||'',
-              num:      r['Factura']||r['N Factura']||'',
-              valor:    parseFloat(r['Valor']||r['Subtotal']||r['Total']||0),
-              iva:      parseFloat(r['IVA']||0),
-              estado:   r['Estado']||'pendiente'
+              id:          'GS-' + idx,
+              num:         r['N_Factura']||r['N Factura']||r['Factura']||r['N°']||'',
+              fecha:       alzakFechaAISO(r['Fecha']||''),
+              vence:       vence,
+              cliente:     r['Cliente']||'',
+              nit:         r['NIT']||'',
+              descripcion: r['Concepto']||r['Descripcion']||'',
+              bruto:       bruto,
+              iva:         iva,
+              retefuente:  rete,
+              reteiva:     Math.round(iva * 0.15),
+              total:       total,
+              pagada:      pagada,
+              estado:      r['Estado']||'pendiente'
             };
           });
           if (typeof renderDashFacturas === 'function') renderDashFacturas();

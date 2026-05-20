@@ -18261,11 +18261,14 @@ function alzakCargarDatosSheets(callback) {
   fetch(url, { mode: 'cors' })
     .then(function(r){ return r.json(); })
     .then(function(data) {
+      console.log('ALZAK Sheets response:', JSON.stringify(data).substring(0, 500));
       if (!data.ok) { mostrarToast('⚠️ Error al cargar Sheets: ' + (data.error||''), '#993C1D'); return; }
+      console.log('Radicadas:', data.radicadas ? data.radicadas.length : 'vacío', '| Egresos:', data.egresos ? data.egresos.length : 'vacío', '| Facturación:', data.facturacion ? data.facturacion.length : 'vacío');
 
       var cargados = [];
 
       // Facturas Radicadas → FR_DATA
+      // Columnas exactas: Fecha, Categoria, Proveedor / Beneficiario, Concepto, N Comprobante, Subtotal (COP), IVA (COP), Total (COP)
       if (data.radicadas && data.radicadas.length) {
         FR_DATA = data.radicadas.map(function(r) {
           return {
@@ -18284,22 +18287,27 @@ function alzakCargarDatosSheets(callback) {
       }
 
       // Egresos → GASTOS_DATA
+      // Columnas exactas: Sección, Mes, Fecha, Categoría, Beneficiario, Concepto, N_Comprobante, Subtotal ($), IVA ($), Total ($), Cuenta_Origen, N_Transaccion, Medio_Pago, Tipo_Movimiento, Estado, Observaciones
       if (data.egresos && data.egresos.length) {
         GASTOS_DATA = data.egresos.map(function(r) {
           return {
-            'Mes':                      r['Mes']||'',
-            'Fecha':                    r['Fecha']||'',
-            'Categoria':                r['Categoría']||r['Categoria']||'',
-            'Beneficiario':             r['Beneficiario']||'',
-            'Concepto':                 r['Concepto']||'',
-            'N_Comprobante':            r['N_Comprobante']||'',
-            'Total ($)':                parseFloat(r['Total ($)']||0),
-            'Subtotal ($)':             parseFloat(r['Subtotal ($)']||0),
-            'IVA ($)':                  parseFloat(r['IVA ($)']||0),
-            'Cuenta_Origen':            r['Cuenta_Origen']||'',
-            'N_Transaccion':            r['N_Transaccion']||'',
-            'Estado':                   r['Estado']||'',
-            'Observaciones':            r['Observaciones']||''
+            'Sección':        r['Sección']||r['Seccion']||r['Sección']||'',
+            'Mes':            r['Mes']||'',
+            'Fecha':          r['Fecha']||'',
+            'Categoria':      r['Categoría']||r['Categoria']||'',
+            'Beneficiario':   r['Beneficiario']||'',
+            'Concepto':       r['Concepto']||'',
+            'N_Comprobante':  r['N_Comprobante']||'',
+            'Subtotal ($)':   parseFloat(r['Subtotal ($)']||0),
+            'IVA ($)':        parseFloat(r['IVA ($)']||0),
+            'Total ($)':      parseFloat(r['Total ($)']||0),
+            'Total_COP':      parseFloat(r['Total ($)']||0),
+            'Cuenta_Origen':  r['Cuenta_Origen']||'',
+            'N_Transaccion':  r['N_Transaccion']||'',
+            'Medio_Pago':     r['Medio_Pago']||'',
+            'Tipo_Movimiento':r['Tipo_Movimiento']||'',
+            'Estado':         r['Estado']||'',
+            'Observaciones':  r['Observaciones']||''
           };
         });
         if (typeof renderDashGastos === 'function') renderDashGastos();

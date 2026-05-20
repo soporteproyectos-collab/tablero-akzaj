@@ -451,6 +451,7 @@ tbody tr:hover td{background:var(--cyan-light);}
   <button id="tab-home-btn" onclick="tabHome()" style="padding:6px 18px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:Helvetica,Arial,sans-serif;background:#5DC3DA;color:#fff;">&#127968; Tablero</button>
   <button id="tab-conc-btn" onclick="tabConc()" style="padding:6px 18px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:Helvetica,Arial,sans-serif;background:rgba(255,255,255,0.12);color:#ccc;">&#127970; Conciliaci&#243;n</button>
   <button id="tab-pres-btn" onclick="tabPres()" style="padding:6px 18px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:Helvetica,Arial,sans-serif;background:rgba(255,255,255,0.12);color:#ccc;">&#128203; Presupuesto</button>
+  <button id="tab-sync-btn" onclick="alzakSincronizarSheets()" title="Sincronizar datos desde Google Sheets" style="padding:6px 14px;border-radius:20px;border:1px solid rgba(93,195,218,0.4);cursor:pointer;font-size:11px;font-weight:700;font-family:Helvetica,Arial,sans-serif;background:rgba(93,195,218,0.15);color:#5DC3DA;">&#128260; Sincronizar</button>
 </div>
 <div id="pg-home" class="pg on">
 
@@ -700,11 +701,11 @@ tbody tr:hover td{background:var(--cyan-light);}
 
     <span>📋 Ver detalle de gastos por categoría</span>
 
-    <span id="ico-detalle-gastos" style="font-size:14px;transition:transform .2s">▼</span>
+    <span id="ico-detalle-gastos" style="font-size:14px;transition:transform .2s;transform:rotate(180deg)">▼</span>
 
   </button>
 
-  <div id="gd-grupos" style="display:none;margin-top:12px"></div>
+  <div id="gd-grupos" style="display:block;margin-top:12px"></div>
 
 </div>
 
@@ -10891,6 +10892,8 @@ function gastoProcesarDatos(datos) {
   var dash = g('gasto-dash'); if (dash) dash.style.display = 'block';
 
   gastoInicializar(); renderGastosDashboard(); if(typeof renderMSD==="function") renderMSD(); if(typeof renderEquipoBase==="function") renderEquipoBase();
+  // Panel detalle gastos abierto por defecto — renderizar al cargar
+  setTimeout(function(){ try{ renderGastosDashboard(); }catch(e){} }, 500);
 
   // ── Re-cruzar facturas radicadas con los nuevos egresos ──────────────
   // GASTOS_DATA tiene Cuenta_Origen → mejora el cruce de fuente de pago
@@ -20541,6 +20544,22 @@ function frExportPDF() {
   mostrarToast('✅ Reporte descargado — ábrelo en Chrome y usa Ctrl+P → Guardar como PDF');
 }
 
+function alzakSincronizarSheets() {
+  var btn = document.getElementById('tab-sync-btn');
+  if (btn) { btn.textContent = '⏳ Sincronizando...'; btn.style.color = '#FCD34D'; }
+  alzakCargarDatosSheets(function() {
+    if (btn) {
+      btn.textContent = '✅ Sincronizado';
+      btn.style.color = '#4ADE80';
+      setTimeout(function() {
+        btn.textContent = '🔄 Sincronizar';
+        btn.style.color = '#5DC3DA';
+      }, 3000);
+    }
+  });
+}
+
+// init on demand
 function balToggleCierre2025() {
   var panel = document.getElementById('bal-cierre-2025');
   var btn   = document.getElementById('btn-cierre-2025');

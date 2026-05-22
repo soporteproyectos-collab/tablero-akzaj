@@ -359,7 +359,7 @@ tbody tr:hover td{background:var(--cyan-light);}
 
 <body>
 
-<div id="login-screen" style="position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;background:linear-gradient(145deg,#0d1117 0%,#1a1f2e 40%,#0d1117 100%);">
+<div id="login-screen" style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#0d1117 0%,#1a1f2e 40%,#0d1117 100%);">
   <style>
     @keyframes fadeInUp {from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
     .login-card{animation:fadeInUp 0.5s ease;}
@@ -1241,20 +1241,19 @@ var LS_GASTOS    = 'alzak_gastos';
 var usuarioActual = null;
 
 // ── Inicializar pantalla de login según modo ─────────────────
-document.addEventListener('DOMContentLoaded', function() {
+(function() {
   var ls = document.getElementById('login-screen');
   if (!ls) return;
   if (DEV_MODE) {
-    // Modo desarrollo: entrar directo como admin sin pedir credenciales
     ls.style.display = 'none';
     usuarioActual = {user:'admin', rol:'admin', nombre:'Admin (Dev)'};
-    var hu = document.getElementById('header-usuario');
-    if (hu) hu.textContent = '⚙️ DEV';
-  } else {
-    // Modo producción: mostrar login con opción Google
-    ls.style.display = 'flex';
+    document.addEventListener('DOMContentLoaded', function() {
+      var hu = document.getElementById('header-usuario');
+      if (hu) hu.textContent = '⚙️ DEV';
+    });
   }
-});
+  // Si DEV_MODE = false → login-screen queda display:flex (visible)
+})();
 
 function togglePass() {
 

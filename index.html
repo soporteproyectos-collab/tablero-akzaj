@@ -1216,6 +1216,9 @@ var CLIENTES_ALZAK = [
 // LOGIN, SESION Y LOCALSTORAGE — FUNCIONES GLOBALES
 
 // ============================================================
+// MODO DESARROLLO — cambiar a false para activar login en producción
+// En producción (GitHub Pages) poner: var DEV_MODE = false;
+var DEV_MODE = true;
 
 // MODO PREVIEW — Google Auth deshabilitado temporalmente
 var USUARIOS = [
@@ -1223,20 +1226,35 @@ var USUARIOS = [
   {user:'asistente', pass:'ALZAK2026', rol:'asistente', nombre:'Asistente ALZAK'}
 ];
 var GOOGLE_ROLES = {
-  'soporteproyectos@alzak.com.co': {rol:'admin',      nombre:'Administrador'},
+  'soporteproyectos@alzak.com.co': {rol:'admin',      nombre:'Nelson Rafael Alvis Zakzuk'},
   'njalvis@alzak.com.co':          {rol:'gerente',     nombre:'Gerente General'},
   'contabilidad@alzak.com.co':     {rol:'contador',    nombre:'Contador'},
-  'administrativo@alzak.com.co':   {rol:'asistente',   nombre:'Asistente'}
+  'administrativo@alzak.com.co':   {rol:'asistente',   nombre:'Asistente'},
+  'paula@alzak.com.co':            {rol:'asistente',   nombre:'Paula'}
 };
-var ALLOWED_DOMAIN = 'alzak.com.co';
+var ALLOWED_DOMAINS = ['alzak.com.co', 'gmail.com'];
+var ALLOWED_DOMAIN  = 'alzak.com.co'; // compatibilidad
 
 var SESSION_KEY  = 'alzak_session';
-
 var LS_FACTURAS  = 'alzak_facturas';
-
 var LS_GASTOS    = 'alzak_gastos';
-
 var usuarioActual = null;
+
+// ── Inicializar pantalla de login según modo ─────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  var ls = document.getElementById('login-screen');
+  if (!ls) return;
+  if (DEV_MODE) {
+    // Modo desarrollo: entrar directo como admin sin pedir credenciales
+    ls.style.display = 'none';
+    usuarioActual = {user:'admin', rol:'admin', nombre:'Admin (Dev)'};
+    var hu = document.getElementById('header-usuario');
+    if (hu) hu.textContent = '⚙️ DEV';
+  } else {
+    // Modo producción: mostrar login con opción Google
+    ls.style.display = 'flex';
+  }
+});
 
 function togglePass() {
 
@@ -1261,10 +1279,16 @@ function onGoogleLogin(response) {
     var nombre = payload.name  || email;
     var domain = email.split('@')[1] || '';
 
-    // Validate domain
-    if (domain !== ALLOWED_DOMAIN) {
+    // Validate: must be alzak.com.co OR be in GOOGLE_ROLES whitelist
+    var dominioPermitido = (ALLOWED_DOMAINS || [ALLOWED_DOMAIN]).indexOf(domain) >= 0;
+    var enWhitelist = !!GOOGLE_ROLES[email];
+
+    if (!dominioPermitido && !enWhitelist) {
       var errEl = document.getElementById('login-error-google');
-      if(errEl) errEl.style.display='block';
+      if(errEl) {
+        errEl.style.display='block';
+        errEl.innerHTML = 'El dominio <strong>@' + domain + '</strong> no está autorizado. Solo @alzak.com.co y correos específicos autorizados.';
+      }
       return;
     }
 

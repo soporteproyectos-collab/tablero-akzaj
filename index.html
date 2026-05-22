@@ -1216,9 +1216,9 @@ var CLIENTES_ALZAK = [
 // LOGIN, SESION Y LOCALSTORAGE — FUNCIONES GLOBALES
 
 // ============================================================
-// MODO DESARROLLO — cambiar a false para activar login en producción
-// En producción (GitHub Pages) poner: var DEV_MODE = false;
-var DEV_MODE = true;
+// MODO DESARROLLO — false = requiere login (PRODUCCIÓN)
+// true = entra directo sin credenciales (solo para desarrollo local)
+var DEV_MODE = false;
 
 // MODO PREVIEW — Google Auth deshabilitado temporalmente
 var USUARIOS = [
@@ -1227,13 +1227,14 @@ var USUARIOS = [
 ];
 var GOOGLE_ROLES = {
   'soporteproyectos@alzak.com.co': {rol:'admin',      nombre:'Nelson Rafael Alvis Zakzuk'},
-  'njalvis@alzak.com.co':          {rol:'gerente',     nombre:'Gerente General'},
-  'contabilidad@alzak.com.co':     {rol:'contador',    nombre:'Contador'},
-  'administrativo@alzak.com.co':   {rol:'asistente',   nombre:'Asistente'},
-  'paula@alzak.com.co':            {rol:'asistente',   nombre:'Paula'}
+  'njalvis@alzak.com.co':          {rol:'gerente',     nombre:'Nelson Alvis'},
+  'contabilidad@alzak.com.co':     {rol:'contador',    nombre:'Contador ALZAK'},
+  'administrativo@alzak.com.co':   {rol:'asistente',   nombre:'Asistente ALZAK'}
 };
-var ALLOWED_DOMAINS = ['alzak.com.co', 'gmail.com'];
-var ALLOWED_DOMAIN  = 'alzak.com.co'; // compatibilidad
+// ACCESO RESTRINGIDO: solo los 4 correos anteriores pueden entrar.
+// Cualquier otro correo — incluso @alzak.com.co — queda bloqueado.
+var ALLOWED_DOMAINS = [];  // dominio vacío: NADIE entra solo por dominio
+var ALLOWED_DOMAIN  = '';  // debe estar en GOOGLE_ROLES sí o sí
 
 var SESSION_KEY  = 'alzak_session';
 var LS_FACTURAS  = 'alzak_facturas';
@@ -1278,27 +1279,14 @@ function onGoogleLogin(response) {
     var nombre = payload.name  || email;
     var domain = email.split('@')[1] || '';
 
-    // Validate: must be alzak.com.co OR be in GOOGLE_ROLES whitelist
-    var dominioPermitido = (ALLOWED_DOMAINS || [ALLOWED_DOMAIN]).indexOf(domain) >= 0;
-    var enWhitelist = !!GOOGLE_ROLES[email];
-
-    if (!dominioPermitido && !enWhitelist) {
-      var errEl = document.getElementById('login-error-google');
-      if(errEl) {
-        errEl.style.display='block';
-        errEl.innerHTML = 'El dominio <strong>@' + domain + '</strong> no está autorizado. Solo @alzak.com.co y correos específicos autorizados.';
-      }
-      return;
-    }
-
-    // Assign role — only whitelisted emails allowed
+    // VALIDACIÓN ESTRICTA: solo correos en GOOGLE_ROLES pueden entrar
+    // No importa el dominio — si no está en la lista, bloqueado.
     var roleInfo = GOOGLE_ROLES[email];
     if (!roleInfo) {
-      // Email not in whitelist — block access
       var errEl = document.getElementById('login-error-google');
-      if(errEl) {
-        errEl.style.display='block';
-        errEl.innerHTML = 'Tu correo <strong>' + email + '</strong> no tiene acceso al tablero. Contacta al administrador.';
+      if (errEl) {
+        errEl.style.display = 'block';
+        errEl.innerHTML = 'El correo <strong>' + email + '</strong> no tiene acceso a este tablero. Contacta al administrador.';
       }
       return;
     }

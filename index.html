@@ -363,34 +363,41 @@ tbody tr:hover td{background:var(--cyan-light);}
   <style>
     @keyframes fadeInUp {from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
     .login-card{animation:fadeInUp 0.5s ease;}
+    .google-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px 20px;background:#fff;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;font-weight:600;color:#374151;cursor:pointer;transition:box-shadow .15s,background .15s;}
+    .google-btn:hover{box-shadow:0 2px 12px rgba(0,0,0,.12);background:#f9fafb;}
   </style>
-  <div class="login-card" style="background:#fff;border-radius:20px;padding:40px 44px;width:420px;max-width:94vw;box-shadow:0 32px 80px rgba(0,0,0,.5);">
-    <div style="text-align:center;margin-bottom:28px;">
-      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJkAAABFCAMAAABufrTcAAAAXVBMVEVMaXFUUE9dw9pUUE9dw9pUUE9dw9pUUE9UUE9UUE9UUE9UUE9dw9pdw9pUUE9dw9pUUE9UUE9dw9pdw9pdw9pdw9pUUE9dw9pdw9pUUE9dw9pUUE9dw9pUUE9dw9qB9seNAAAAHXRSTlMA7u7du0R3u3dmzBERRJmIMyIimd1miKozqsxVVdoHr78AAAAJcEhZcwAAC4gAAAuIAeWOKUkAAASLSURBVGiB7ZnZlqM6DEWFCZMZwxDIYP3/Z94lMcQ2Zqi6/VAPnIdeaUMVO0eSJVNw6dKlS5cuXfqfyrt/6WCQ/Lvf1WJtrYSIeLNvi5RbhXmbr+72T8ZKqUhfuEsl02OwDrE8Q/aIbPlEaj0iUepxRFZ59tdxq0UU2QmylVJPKeVV5rKvlGfbYZElSsVnwDpExPA3ZJIse5trCa3ZzzXJHso7l4o3IhO/IHsQhB05TkZvhywtVjZvKMdWIKJZnmfI3srOaypM5VOILU80slQquaoQt24YlojY/pSs4iSzMypSMVnpb5FVnnqeKEpgy0RWo23aMVnKSWaHJVBeelcr0xayxFsX7pYaSv7GBjkmK1yZDgUtFasoz2TxKs7bqnnDYNPyn5DRs9TTXr1zeNm0wEFWKC+wf2RTzbjJ3iySI7LKscWyZRyryDaNySj3zxUlsGVjY8rJNK1FHZClvmOLZbO47ALi1guQyHzf9V02VWIzXnohzh9PkEXrJAfe4KaeI61uSmSecn6bDWViNqozTdsni11bLDeryajEMo2jmfwELfz61KLe13fJOFjSBbz45JvoYwWMaKdqIBMY5pNot/329T2yO2+x63089VQcTHqYu/BUm4HnzoK16PmGlr6+RyZXm8L38YZi41I0940zaC12ea6btrSoHTL3FssRTIJAN+3bopYeMKIdtoEOX9r/Mr2vb5Mlzi2WL+iplxp9/ds3x6Z2NDa2Zq/UTdsk4y/tu7Yl34ySYZo5axyiddZ8wS3qs0/m7uPAlpnzxV2fKo357OnuH5pu1kym9/UtsudmBkf2st7XzZm2OEDLLcsAhm9f3yCLNyMR2CPZ2FoDF9mEtjk/3uzZf+zr/Q7ZRh+HcWJcLy2lYp+d4r12kK/OS3pfJzJx0zXXm5Krs100Toz2b9P6+uq8udep+rVlY4tqwLUH45xkLtElxw7nL6FfkdFwq84eoS5dunTp0qW/oUDuTSPc+7i1JfaIw2pQTINmxq31+CUlzLeLgzsqOitEjpOjQRZtvFMdsCvb+VElTSqOGeGXZE+aBFJV0SwgK4g9qfw7jQFeAFEBoBLwE3qzlPgQqIgGQXpdPk2vNTYvnQxED/WNz9Od4MNOiPgaILshigF6UQr4tHQ9Q9Hq7yochkxuBCqAQkKsgtSLwX9DLL9k5BmTxRBF8KSj9jS8vOiBpmevBmoRgmigx/ojamhaaHAYsIReoIC2hRLzDEX2Wv0NQpecHvHg2S+NfSCgp1fE4CC7Q+yD9+Zl4AlPiFyEsOSZGA852EOLfVnzuQJxgLIno3r8wDA6RdHscTgRTSJ7L2SQFjKiD6mDTC1kA5ZZOw3G7NkHu3pKtazsUWTNmE0lNiWTZefJKEKplPBWFYVpIpNM8qTorj2TT17mk3MD5XSWZrIBQ2hfkGNJGRdi3WEHN5E19GkkA/GCEodjMkh8ehfIx1Z5n8novUhA/0YjWTxVAN9Q+UsFfASKZjahpIoI9QoIAUJBFTAI7IUYyT5cGifIfi4vZof/oMjQU38zunTp0qVLf0oA8B/GsoA79/xQqwAAAABJRU5ErkJggg==" alt="ALZAK" style="height:42px;width:auto;margin:0 auto 14px;display:block;">
-      <div style="font-size:15px;font-weight:700;color:#111827;">Tablero Contable</div>
-      <div style="font-size:11px;color:#9ca3af;margin-top:3px;">ALZAK GROUP SAS · NIT 900.898.741-8</div>
+  <div class="login-card" style="background:#fff;border-radius:20px;padding:44px 48px;width:380px;max-width:94vw;box-shadow:0 32px 80px rgba(0,0,0,.5);text-align:center;">
+    <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJkAAABFCAMAAABufrTcAAAAXVBMVEVMaXFUUE9dw9pUUE9dw9pUUE9dw9pUUE9UUE9UUE9UUE9UUE9dw9pdw9pUUE9dw9pUUE9UUE9dw9pdw9pdw9pdw9pUUE9dw9pdw9pUUE9dw9pUUE9dw9pUUE9dw9qB9seNAAAAHXRSTlMA7u7du0R3u3dmzBERRJmIMyIimd1miKozqsxVVdoHr78AAAAJcEhZcwAAC4gAAAuIAeWOKUkAAASLSURBVGiB7ZnZlqM6DEWFCZMZwxDIYP3/Z94lMcQ2Zqi6/VAPnIdeaUMVO0eSJVNw6dKlS5cuXfqfyrt/6WCQ/Lvf1WJtrYSIeLNvi5RbhXmbr+72T8ZKqUhfuEsl02OwDrE8Q/aIbPlEaj0iUepxRFZ59tdxq0UU2QmylVJPKeVV5rKvlGfbYZElSsVnwDpExPA3ZJIse5trCa3ZzzXJHso7l4o3IhO/IHsQhB05TkZvhywtVjZvKMdWIKJZnmfI3srOaypM5VOILU80slQquaoQt24YlojY/pSs4iSzMypSMVnpb5FVnnqeKEpgy0RWo23aMVnKSWaHJVBeelcr0xayxFsX7pYaSv7GBjkmK1yZDgUtFasoz2TxKs7bqnnDYNPyn5DRs9TTXr1zeNm0wEFWKC+wf2RTzbjJ3iySI7LKscWyZRyryDaNySj3zxUlsGVjY8rJNK1FHZClvmOLZbO47ALi1guQyHzf9V02VWIzXnohzh9PkEXrJAfe4KaeI61uSmSecn6bDWViNqozTdsni11bLDeryajEMo2jmfwELfz61KLe13fJOFjSBbz45JvoYwWMaKdqIBMY5pNot/329T2yO2+x63089VQcTHqYu/BUm4HnzoK16PmGlr6+RyZXm8L38YZi41I0940zaC12ea6btrSoHTL3FssRTIJAN+3bopYeMKIdtoEOX9r/Mr2vb5Mlzi2WL+iplxp9/ds3x6Z2NDa2Zq/UTdsk4y/tu7Yl34ySYZo5axyiddZ8wS3qs0/m7uPAlpnzxV2fKo357OnuH5pu1kym9/UtsudmBkf2st7XzZm2OEDLLcsAhm9f3yCLNyMR2CPZ2FoDF9mEtjk/3uzZf+zr/Q7ZRh+HcWJcLy2lYp+d4r12kK/OS3pfJzJx0zXXm5Krs100Toz2b9P6+uq8udep+rVlY4tqwLUH45xkLtElxw7nL6FfkdFwq84eoS5dunTp0qW/oUDuTSPc+7i1JfaIw2pQTINmxq31+CUlzLeLgzsqOitEjpOjQRZtvFMdsCvb+VElTSqOGeGXZE+aBFJV0SwgK4g9qfw7jQFeAFEBoBLwE3qzlPgQqIgGQXpdPk2vNTYvnQxED/WNz9Od4MNOiPgaILshigF6UQr4tHQ9Q9Hq7yochkxuBCqAQkKsgtSLwX9DLL9k5BmTxRBF8KSj9jS8vOiBpmevBmoRgmigx/ojamhaaHAYsIReoIC2hRLzDEX2Wv0NQpecHvHg2S+NfSCgp1fE4CC7Q+yD9+Zl4AlPiFyEsOSZGA852EOLfVnzuQJxgLIno3r8wDA6RdHscTgRTSJ7L2SQFjKiD6mDTC1kA5ZZOw3G7NkHu3pKtazsUWTNmE0lNiWTZefJKEKplPBWFYVpIpNM8qTorj2TT17mk3MD5XSWZrIBQ2hfkGNJGRdi3WEHN5E19GkkA/GCEodjMkh8ehfIx1Z5n8novUhA/0YjWTxVAN9Q+UsFfASKZjahpIoI9QoIAUJBFTAI7IUYyT5cGifIfi4vZof/oMjQU38zunTp0qVLf0oA8B/GsoA79/xQqwAAAABJRU5ErkJggg==" alt="ALZAK" style="height:40px;width:auto;margin:0 auto 16px;display:block;">
+    <div style="font-size:17px;font-weight:700;color:#111827;margin-bottom:4px;">Tablero Contable</div>
+    <div style="font-size:11px;color:#9ca3af;margin-bottom:32px;">ALZAK GROUP SAS · NIT 900.898.741-8</div>
+
+    <!-- Google Sign-In -->
+    <div id="g_id_onload"
+      data-client_id="YOUR_GOOGLE_CLIENT_ID"
+      data-callback="onGoogleLogin"
+      data-auto_prompt="false">
     </div>
-    <div style="margin-bottom:14px;">
-      <label style="font-size:11px;font-weight:700;color:#555;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Usuario</label>
-      <input id="login-user" type="text" placeholder="admin" autocomplete="username"
-        style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;outline:none;box-sizing:border-box;"
-        onkeydown="if(event.key==='Enter')hacerLogin()">
+    <div class="g_id_signin"
+      data-type="standard"
+      data-size="large"
+      data-theme="outline"
+      data-text="signin_with"
+      data-shape="rectangular"
+      data-logo_alignment="left"
+      data-width="284">
     </div>
-    <div style="margin-bottom:20px;">
-      <label style="font-size:11px;font-weight:700;color:#555;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Contraseña</label>
-      <input id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password"
-        style="width:100%;padding:10px 14px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;outline:none;box-sizing:border-box;"
-        onkeydown="if(event.key==='Enter')hacerLogin()">
-    </div>
-    <div id="login-error" style="display:none;background:#FEE2E2;color:#991B1B;border-radius:8px;padding:10px 14px;font-size:12px;margin-bottom:14px;">
-      Usuario o contraseña incorrectos.
-    </div>
-    <button onclick="hacerLogin()"
-      style="width:100%;padding:12px;background:#1a1a1a;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">
-      Ingresar →
+
+    <!-- Botón Google fallback si GSI no carga -->
+    <button class="google-btn" onclick="iniciarGoogleLogin()" style="margin-top:12px;">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Ingresar con Google
     </button>
-    <div style="text-align:center;margin-top:16px;font-size:10px;color:#9ca3af;">
-      🔐 Modo preview · Google Auth activo en producción
+
+    <div id="login-error-google" style="display:none;background:#FEE2E2;color:#991B1B;border-radius:8px;padding:10px 14px;font-size:12px;margin-top:14px;text-align:left;"></div>
+
+    <div style="margin-top:20px;font-size:10px;color:#d1d5db;line-height:1.6;">
+      🔒 Acceso restringido · Solo personal autorizado ALZAK<br>
+      Cualquier intento de acceso no autorizado queda registrado.
     </div>
   </div>
 </div>
@@ -1315,40 +1322,19 @@ function onGoogleLogin(response) {
   }
 }
 
-function hacerLogin() {
-
-  var u = (document.getElementById('login-user').value||'').trim().toLowerCase();
-
-  var p = (document.getElementById('login-pass').value||'');
-
-  var found = null;
-
-  for (var i=0; i<USUARIOS.length; i++) {
-
-    if (USUARIOS[i].user === u && USUARIOS[i].pass === p) { found = USUARIOS[i]; break; }
-
+function iniciarGoogleLogin() {
+  if (window.google && google.accounts) {
+    google.accounts.id.prompt();
+  } else {
+    var errEl = document.getElementById('login-error-google');
+    if (errEl) {
+      errEl.style.display = 'block';
+      errEl.textContent = 'El sistema de autenticación Google no cargó. Verifica tu conexión e intenta de nuevo.';
+    }
   }
-
-  if (!found) {
-
-    var err = document.getElementById('login-error');
-
-    if (err) err.style.display = 'block';
-
-    return;
-
-  }
-
-  usuarioActual = found;
-
-  try { localStorage.setItem(SESSION_KEY, JSON.stringify({user:found.user, pass:found.pass, rol:found.rol, nombre:found.nombre})); } catch(e){}
-
-  // Registrar acceso con IP, ubicación y notificar por correo
-  alzakRegistrarAcceso(found);
-
-  cerrarLogin();
-
 }
+
+function hacerLogin() {} // vacío — solo Google auth
 
 function cerrarLogin() {
   // Sync from Sheet after login — inline to avoid scope issues

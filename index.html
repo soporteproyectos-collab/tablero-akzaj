@@ -14916,7 +14916,7 @@ function tabPres() {
   if (c) c.classList.add('on');
   var tb = document.getElementById('topbar-t');
   if (tb) tb.textContent = 'Presupuesto 2026';
-  ['tab-home-btn','tab-conc-btn','tab-pres-btn'].forEach(function(id){
+  ['tab-home-btn','tab-conc-btn','tab-pres-btn'].forEach(function(id,idx){
     var b = document.getElementById(id);
     if (b) { b.style.background='rgba(255,255,255,0.12)'; b.style.color='#ccc'; }
   });
@@ -16022,7 +16022,7 @@ function renderConc(){
 // init on demand
 </script>
 
-<div id="pg-presupuesto" class="pg">
+<div id="pg-presupuesto" class="pg on" style="display:block">
 <div style="padding:20px 28px;max-width:1100px;margin:0 auto;">
 
   <!-- Header -->
@@ -16462,7 +16462,11 @@ function renderConc(){
     <div id="fp-total" style="margin-top:10px;padding:8px 12px;background:#F5F3FF;border-radius:8px;font-size:12px;"></div>
   </div>
 
-  <script>
+  
+
+</div>
+</div>
+<script>
   // ══════════════════════════════════════════════════════
   //  PRESUPUESTO 2026 — Motor completo
   // ══════════════════════════════════════════════════════
@@ -16809,9 +16813,6 @@ function renderConc(){
   document.addEventListener('DOMContentLoaded', function(){ pfRender(); });
   var _pfOrigTabPres = typeof tabPres === 'function' ? tabPres : null;
   </script>
-
-</div>
-</div>
 <script>
 function renderPresupuesto() {
   // Modulos EB y MSD viven estaticamente en pg-presupuesto
@@ -17795,16 +17796,18 @@ function fcRender() {
   el.innerHTML = html;
 }
 
-// Hook: refresh flujo on tab switch and on data change
+// Hook: refresh flujo on tab switch
 document.addEventListener('DOMContentLoaded', function(){
-  // Patch tabPres to refresh flujo
-  var _origTabPres = window.tabPres;
-  window.tabPres = function(){
-    if(_origTabPres) _origTabPres.apply(this,arguments);
-    setTimeout(function(){ try{pfRender();}catch(e){} try{fcRender();}catch(e){} },80);
-  };
+  // Inicialización: presupuesto ya tiene clase 'on' para renderizar,
+  // después de 300ms lo ocultamos y mostramos Home
+  setTimeout(function() {
+    var pp = document.getElementById('pg-presupuesto');
+    if (pp) { pp.classList.remove('on'); pp.style.display = ''; }
+    var ph = document.getElementById('pg-home');
+    if (ph) { ph.classList.add('on'); }
+  }, 300);
 
-  // ── Carga automática desde Google Sheets al abrir ──────────
+  // Carga automática desde Google Sheets
   setTimeout(function(){
     try { alzakCargarDatosSheets(); } catch(e) { console.warn('Auto-sync Sheets:', e); }
   }, 1500);
@@ -20619,6 +20622,23 @@ function balToggleCierre2025() {
 
 
 <script>
+// ── Exposición global final — corre después de todos los scripts ──
+// Garantiza que tabPres() encuentre todas las funciones del Presupuesto
+document.addEventListener('DOMContentLoaded', function() {
+  // Buscar pfRender en todos los posibles scopes
+  if (typeof pfRender === 'function' && typeof window.pfRender !== 'function') {
+    window.pfRender = pfRender;
+  }
+  if (typeof fcRender === 'function' && typeof window.fcRender !== 'function') {
+    window.fcRender = fcRender;
+  }
+  if (typeof renderEquipoBase === 'function' && typeof window.renderEquipoBase !== 'function') {
+    window.renderEquipoBase = renderEquipoBase;
+  }
+  if (typeof renderMSD === 'function' && typeof window.renderMSD !== 'function') {
+    window.renderMSD = renderMSD;
+  }
+});
 </script>
 
 </body>

@@ -1652,7 +1652,18 @@ function cargarDatos() {
     // Primero intentar datos frescos de Google Sheets
     var gsFacturas = localStorage.getItem('alzak_facturas_gs');
     if (gsFacturas) {
-      FACTURAS = JSON.parse(gsFacturas);
+      var parsed = JSON.parse(gsFacturas);
+      // Limpiar timestamps ISO que pudieran estar en el cache
+      parsed.forEach(function(f) {
+        if (f.vence && f.vence.indexOf('T') >= 0) {
+          f.vence = f.vence.substring(0,10);
+        }
+        if (!f.venceDisplay && f.vence) {
+          var p = f.vence.split('-');
+          if (p.length === 3) f.venceDisplay = p[2]+'/'+p[1]+'/'+p[0];
+        }
+      });
+      FACTURAS = parsed;
       if (typeof renderDashFacturas === 'function') setTimeout(renderDashFacturas, 100);
     }
 
@@ -18442,19 +18453,48 @@ function alzakFechaParaDias(val) {
 
 // ── Editar fecha de vencimiento desde el tablero → guarda en Drive ──
 function editarFechaVencimiento(numFactura, fechaActual) {
-  // Limpiar el valor actual antes de mostrar en el prompt
-  var fechaLimpia = alzakFechaDisplay(alzakFechaParaDias(fechaActual)||fechaActual);
-  var nueva = prompt('Cambiar fecha de vencimiento de ' + numFactura + '\nFormato: DD/MM/YYYY\nActual: ' + (fechaLimpia||''), fechaLimpia||'');
-  if (!nueva || nueva === fechaActual) return;
-  
-  // Validar formato
-  var partes = nueva.trim().split('/');
-  if (partes.length !== 3 || nueva.length < 8) {
-    mostrarToast('⚠️ Formato inválido. Usa DD/MM/YYYY', '#993C1D'); return;
-  }
-  
+  // Convertir fecha actual a yyyy-MM-dd para el input[type=date]
+  var fechaISO = alzakFechaParaDias(fechaActual) || '';
+  // Si sigue siendo timestamp, extraer solo la fecha
+  if (fechaISO.indexOf('T') >= 0) fechaISO = fechaISO.substring(0,10);
+
+  // Crear modal con date picker nativo
+  var overlay = document.createElement('div');
+  overlay.id = 'modal-vence-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;';
+
+  overlay.innerHTML = '<div style="background:#fff;border-radius:14px;padding:28px 32px;width:320px;box-shadow:0 20px 60px rgba(0,0,0,.3);font-family:Helvetica,Arial,sans-serif;">' +
+    '<div style="font-size:13px;font-weight:700;color:#54504F;margin-bottom:4px;">Cambiar fecha de vencimiento</div>' +
+    '<div style="font-size:12px;color:#888;margin-bottom:18px;">Factura <strong>' + numFactura + '</strong></div>' +
+    '<input type="date" id="input-nueva-vence" value="' + fechaISO + '" ' +
+    'style="width:100%;padding:10px 12px;border:1.5px solid #e0ddd8;border-radius:8px;font-size:14px;box-sizing:border-box;color:#333;outline:none;">' +
+    '<div style="display:flex;gap:10px;margin-top:20px;">' +
+    '<button onclick="cerrarModalVence()" style="flex:1;padding:10px;background:#f5f4f0;border:none;border-radius:8px;font-size:13px;cursor:pointer;color:#54504F;">Cancelar</button>' +
+    '<button onclick="confirmarVence(\'' + numFactura + '\')" ' +
+    'style="flex:1;padding:10px;background:#0C447C;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;color:#fff;">Guardar</button>' +
+    '</div></div>';
+
+  document.body.appendChild(overlay);
+  // Auto-focus el input de fecha
+  setTimeout(function(){ var inp = document.getElementById('input-nueva-vence'); if(inp) inp.focus(); }, 100);
+}
+
+function cerrarModalVence() { var o=document.getElementById("modal-vence-overlay"); if(o) o.remove(); }
+
+function confirmarVence(numFactura) {
+  var inp = document.getElementById('input-nueva-vence');
+  if (!inp || !inp.value) return;
+
+  var isoVal = inp.value; // yyyy-MM-dd
+  var p = isoVal.split('-');
+  var displayVal = p[2] + '/' + p[1] + '/' + p[0]; // dd/MM/yyyy
+
+  // Cerrar modal
+  var overlay = document.getElementById('modal-vence-overlay');
+  if (overlay) overlay.remove();
+
   mostrarToast('💾 Guardando en Google Sheets...', '#0C447C', 3000);
-  
+
   fetch(ALZAK_GS_URL, {
     method: 'POST',
     mode: 'no-cors',
@@ -18465,21 +18505,23 @@ function editarFechaVencimiento(numFactura, fechaActual) {
       colBuscar: 'N_Factura',
       valBuscar: numFactura,
       colActualizar: 'Vencimiento',
-      nuevoValor: nueva
+      nuevoValor: displayVal
     })
   }).then(function() {
-    // Actualizar en memoria local también
-    if (FACTURAS) {
+    // Actualizar en memoria
+    if (typeof FACTURAS !== 'undefined' && FACTURAS) {
       for (var i=0; i<FACTURAS.length; i++) {
         if (FACTURAS[i].num === numFactura) {
-          var p2 = nueva.split('/');
-          FACTURAS[i].vence = p2[2]+'-'+p2[1]+'-'+p2[0];
+          FACTURAS[i].vence = isoVal;
+          FACTURAS[i].venceDisplay = displayVal;
           break;
         }
       }
     }
+    // Actualizar cache
+    try { localStorage.setItem('alzak_facturas_gs', JSON.stringify(FACTURAS)); } catch(e){}
     if (typeof renderDashFacturas === 'function') renderDashFacturas();
-    mostrarToast('✅ Vencimiento de ' + numFactura + ' actualizado a ' + nueva, '#2E7D32', 4000);
+    mostrarToast('✅ ' + numFactura + ' → vence ' + displayVal, '#2E7D32', 4000);
   }).catch(function() {
     mostrarToast('⚠️ Error al guardar en Sheets', '#993C1D');
   });

@@ -6253,7 +6253,10 @@ function renderFacturas() {
 
       '<td style="font-size:11px;white-space:nowrap">' + f.fecha + '</td>' +
 
-      '<td style="font-size:11px;font-weight:600;white-space:nowrap;color:' + diasCol + '">' + f.vence + '</td>' +
+      '<td style="font-size:11px;font-weight:600;white-space:nowrap;color:' + diasCol + '">' + 
+        f.vence + 
+        ' <span onclick="editarFechaVencimiento(\'' + f.num + '\',\'' + f.vence + '\')" title="Editar fecha de vencimiento" style="cursor:pointer;opacity:0.5;font-size:10px;margin-left:3px;">✏️</span>' +
+      '</td>' +
 
       '<td style="text-align:center;font-size:12px;font-weight:700;color:' + diasCol + '">' + diasTxt + '</td>' +
 
@@ -18387,6 +18390,49 @@ function alzakFechaAISO(f) {
   var p = String(f).split('/');
   if (p.length === 3) return p[2] + '-' + p[1] + '-' + p[0];
   return f;
+}
+
+// ── Editar fecha de vencimiento desde el tablero → guarda en Drive ──
+function editarFechaVencimiento(numFactura, fechaActual) {
+  var nueva = prompt('Cambiar fecha de vencimiento de ' + numFactura + '\nFormato: DD/MM/YYYY\nActual: ' + (fechaActual||''), fechaActual||'');
+  if (!nueva || nueva === fechaActual) return;
+  
+  // Validar formato
+  var partes = nueva.trim().split('/');
+  if (partes.length !== 3 || nueva.length < 8) {
+    mostrarToast('⚠️ Formato inválido. Usa DD/MM/YYYY', '#993C1D'); return;
+  }
+  
+  mostrarToast('💾 Guardando en Google Sheets...', '#0C447C', 3000);
+  
+  fetch(ALZAK_GS_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      tab: '_update_cell',
+      sheet: 'facturacion',
+      colBuscar: 'N_Factura',
+      valBuscar: numFactura,
+      colActualizar: 'Vencimiento',
+      nuevoValor: nueva
+    })
+  }).then(function() {
+    // Actualizar en memoria local también
+    if (FACTURAS) {
+      for (var i=0; i<FACTURAS.length; i++) {
+        if (FACTURAS[i].num === numFactura) {
+          var p2 = nueva.split('/');
+          FACTURAS[i].vence = p2[2]+'-'+p2[1]+'-'+p2[0];
+          break;
+        }
+      }
+    }
+    if (typeof renderDashFacturas === 'function') renderDashFacturas();
+    mostrarToast('✅ Vencimiento de ' + numFactura + ' actualizado a ' + nueva, '#2E7D32', 4000);
+  }).catch(function() {
+    mostrarToast('⚠️ Error al guardar en Sheets', '#993C1D');
+  });
 }
 
 // ── Override alzakExportarDatos to ALSO save to Drive ─────────────────────

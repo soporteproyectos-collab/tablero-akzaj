@@ -1332,6 +1332,8 @@ function hacerLogin() {
   document.body.style.background = '#f5f4f0';
   var hu = document.getElementById('header-usuario');
   if (hu) hu.textContent = found.nombre;
+  // Limpiar cache viejo de facturas para forzar datos frescos de Sheets
+  try { localStorage.removeItem('alzak_facturas_gs'); } catch(e) {}
 }
 
 function cerrarLogin() {
@@ -18346,10 +18348,10 @@ function alzakCargarDatosSheets(callback) {
             var iva   = parseFloat(r['IVA_COP']||r['IVA (COP)']||r['IVA']||0);
             var total = parseFloat(r['Total_COP']||r['Total (COP)']||r['Total']||bruto+iva||0);
             var rete  = parseFloat(r['Retefuente']||r['RteFuente']||r['Retención']||0);
-            var vence = r['Vencimiento']||r['Fecha Vencimiento']||r['Vence']||'';
-            // Normalizar vence — soporta ISO timestamp, dd/MM/yyyy, yyyy-MM-dd
-            var venceDisplay = alzakFechaDisplay(vence);
-            var venceDias    = alzakFechaParaDias(vence);
+            var _vRaw = r['Vencimiento']||r['Fecha Vencimiento']||r['Vence']||'';
+            // Convertir a yyyy-MM-dd para cálculos y dd/MM/yyyy para mostrar
+            var venceDias    = alzakFechaParaDias(_vRaw);   // yyyy-MM-dd
+            var venceDisplay = alzakFechaDisplay(_vRaw);    // dd/MM/yyyy
             var fechaDisplay = alzakFechaDisplay(r['Fecha']||'');
             var pagada = (r['Estado']||'').toLowerCase().indexOf('pagad') >= 0 ||
                          (r['Estado']||'').toLowerCase() === 'cobrada';
@@ -18419,21 +18421,30 @@ function alzakFechaDisplay(val) {
   return s;
 }
 
-// Convierte fecha display a yyyy-MM-dd para diasHasta()
+// Convierte CUALQUIER formato de fecha a yyyy-MM-dd para diasHasta()
 function alzakFechaParaDias(val) {
   if (!val) return '';
   var s = String(val).trim();
+  // yyyy-MM-dd ya correcto
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // dd/MM/yyyy → yyyy-MM-dd
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
     var p = s.split('/'); return p[2]+'-'+p[1]+'-'+p[0];
   }
-  if (s.indexOf('T') >= 0) return s.substring(0,10);
+  // ISO timestamp: tomar solo fecha
+  if (s.indexOf('T') >= 0) {
+    var datePart = s.substring(0,10);
+    // Verificar si es realmente yyyy-MM-dd
+    if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return datePart;
+  }
   return s;
 }
 
 // ── Editar fecha de vencimiento desde el tablero → guarda en Drive ──
 function editarFechaVencimiento(numFactura, fechaActual) {
-  var nueva = prompt('Cambiar fecha de vencimiento de ' + numFactura + '\nFormato: DD/MM/YYYY\nActual: ' + (fechaActual||''), fechaActual||'');
+  // Limpiar el valor actual antes de mostrar en el prompt
+  var fechaLimpia = alzakFechaDisplay(alzakFechaParaDias(fechaActual)||fechaActual);
+  var nueva = prompt('Cambiar fecha de vencimiento de ' + numFactura + '\nFormato: DD/MM/YYYY\nActual: ' + (fechaLimpia||''), fechaLimpia||'');
   if (!nueva || nueva === fechaActual) return;
   
   // Validar formato

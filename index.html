@@ -1653,6 +1653,7 @@ function cargarDatos() {
     // Limpiar SIEMPRE el cache viejo — forzar datos frescos de Sheets en cada carga
     try { localStorage.removeItem('alzak_facturas_gs'); } catch(e) {}
     try { localStorage.removeItem('alzak_facturas'); } catch(e) {}
+    try { localStorage.removeItem(LS_FACTURAS); } catch(e) {}
 
     var f  = localStorage.getItem(LS_FACTURAS);
     var g2 = localStorage.getItem(LS_GASTOS);
@@ -18360,9 +18361,19 @@ function alzakCargarDatosSheets(callback) {
             var total = parseFloat(r['Total_COP']||r['Total (COP)']||r['Total']||bruto+iva||0);
             var rete  = parseFloat(r['Retefuente']||r['RteFuente']||r['Retención']||0);
             var _vRaw = r['Vencimiento']||r['Fecha Vencimiento']||r['Vence']||'';
-            // Convertir a yyyy-MM-dd para cálculos y dd/MM/yyyy para mostrar
-            var venceDias    = alzakFechaParaDias(_vRaw);   // yyyy-MM-dd
-            var venceDisplay = alzakFechaDisplay(_vRaw);    // dd/MM/yyyy
+            // FORZAR yyyy-MM-dd — extraer fecha SIN conversión UTC
+            var _vClean = '';
+            if (_vRaw) {
+              var _vs = String(_vRaw).trim();
+              if (_vs.indexOf('T') >= 0) _vs = _vs.substring(0,10); // quitar hora UTC
+              if (/^\d{2}\/\d{2}\/\d{4}$/.test(_vs)) { // dd/MM/yyyy → yyyy-MM-dd
+                var _vp = _vs.split('/'); _vClean = _vp[2]+'-'+_vp[1]+'-'+_vp[0];
+              } else if (/^\d{4}-\d{2}-\d{2}$/.test(_vs)) {
+                _vClean = _vs;
+              }
+            }
+            var venceDias    = _vClean;   // yyyy-MM-dd para diasHasta()
+            var venceDisplay = _vClean ? _vClean.split('-').reverse().join('/') : ''; // dd/MM/yyyy
             var fechaDisplay = alzakFechaDisplay(r['Fecha']||'');
             var pagada = (r['Estado']||'').toLowerCase().indexOf('pagad') >= 0 ||
                          (r['Estado']||'').toLowerCase() === 'cobrada';
@@ -20777,8 +20788,30 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+<script>
+// Patch global: corrige f.vence con timestamp ISO o dd/MM/yyyy → yyyy-MM-dd
+window.addEventListener('load', function() {
+  setTimeout(function() {
+    if (typeof FACTURAS === 'undefined' || !FACTURAS || !FACTURAS.length) return;
+    var changed = false;
+    FACTURAS.forEach(function(f) {
+      var v = String(f.vence || '');
+      if (v.indexOf('T') >= 0) {
+        f.vence = v.substring(0, 10);
+        var p = f.vence.split('-');
+        f.venceDisplay = p[2]+'/'+p[1]+'/'+p[0];
+        changed = true;
+      } else if (v.indexOf('/') >= 0 && v.length === 10) {
+        var p2 = v.split('/');
+        if (p2.length === 3) {
+          f.vence = p2[2]+'-'+p2[1]+'-'+p2[0];
+          f.venceDisplay = v;
+          changed = true;
+        }
+      }
+    });
+    if (changed && typeof renderDashFacturas === 'function') renderDashFacturas();
+  }, 2500);
+});
+</script>
 </body>
-</html,
-  {f:'14/01',d:'Débito Fritocaribe Cartagena',v:-86400,t:'egreso'},
-  {f:'06/01',d:'Débito Ferretería Electrosol',v:-181000,t:'egreso'},
-  {f:'10/02',d:'Pago Sodimac Homecenter',v:-9900,t:'egreso'}>

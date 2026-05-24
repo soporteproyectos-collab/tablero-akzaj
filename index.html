@@ -1647,9 +1647,14 @@ function cargarDatos() {
   // 1. localStorage (inmediato — para que el UI cargue rápido)
 
   try {
+    // Primero intentar datos frescos de Google Sheets
+    var gsFacturas = localStorage.getItem('alzak_facturas_gs');
+    if (gsFacturas) {
+      FACTURAS = JSON.parse(gsFacturas);
+      if (typeof renderDashFacturas === 'function') setTimeout(renderDashFacturas, 100);
+    }
 
     var f  = localStorage.getItem(LS_FACTURAS);
-
     var g2 = localStorage.getItem(LS_GASTOS);
 
     // Always start with built-in defaults
@@ -18367,6 +18372,10 @@ function alzakCargarDatosSheets(callback) {
             };
           });
           if (typeof renderDashFacturas === 'function') renderDashFacturas();
+          // Guardar en localStorage con datos frescos de Sheets
+          try {
+            localStorage.setItem('alzak_facturas_gs', JSON.stringify(FACTURAS));
+          } catch(e) {}
           cargados.push('Facturación: ' + FACTURAS.length);
         }
       }

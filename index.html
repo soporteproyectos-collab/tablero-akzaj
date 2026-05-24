@@ -18319,6 +18319,7 @@ function alzakCargarDatosSheets(callback) {
           };
         });
         if (typeof frRender === 'function') { _FR_FUENTE_CACHE={}; _FR_MOVS_POOL=null; frRender(); }
+        if (typeof frActualizarFiltros === 'function') frActualizarFiltros();
         cargados.push('Facturas Radicadas: ' + FR_DATA.length);
       }
 

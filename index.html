@@ -6254,8 +6254,8 @@ function renderFacturas() {
       '<td style="font-size:11px;white-space:nowrap">' + f.fecha + '</td>' +
 
       '<td style="font-size:11px;font-weight:600;white-space:nowrap;color:' + diasCol + '">' + 
-        f.vence + 
-        ' <span onclick="editarFechaVencimiento(\'' + f.num + '\',\'' + f.vence + '\')" title="Editar fecha de vencimiento" style="cursor:pointer;opacity:0.5;font-size:10px;margin-left:3px;">✏️</span>' +
+        (f.venceDisplay||alzakFechaDisplay(f.vence)) + 
+        ' <span onclick="editarFechaVencimiento(\'' + f.num + '\',\'' + (f.venceDisplay||f.vence) + '\')" title="Editar fecha de vencimiento" style="cursor:pointer;opacity:0.5;font-size:10px;margin-left:3px;">✏️</span>' +
       '</td>' +
 
       '<td style="text-align:center;font-size:12px;font-weight:700;color:' + diasCol + '">' + diasTxt + '</td>' +
@@ -6706,7 +6706,7 @@ function renderTablaFact() {
 
       '<td style="font-size:11px">' + f.fecha + '</td>' +
 
-      '<td style="font-size:11px;font-weight:600;color:' + dCol + '">' + f.vence + '</td>' +
+      '<td style="font-size:11px;font-weight:600;color:' + dCol + '">' + (f.venceDisplay||alzakFechaDisplay(f.vence)) + ' <span onclick="editarFechaVencimiento(\'' + f.num + '\',\'' + (f.venceDisplay||f.vence) + '\')" title="Editar vencimiento" style="cursor:pointer;opacity:0.4;font-size:10px;">✏️</span></td>' +
 
       '<td style="font-size:11px;color:' + dCol + '">' + dTxt + '</td>' +
 
@@ -7150,7 +7150,7 @@ function exportarPDFFacturas() {
 
       +'<td style="color:#777;font-size:10px">'+f.nit+'</td>'
 
-      +'<td style="color:#777">'+f.vence+'</td>'
+      +'<td style="color:#777">'+(f.venceDisplay||alzakFechaDisplay(f.vence))+'</td>'
 
       +'<td style="font-size:10px;max-width:180px;overflow:hidden">'+((f.descripcion||'').substring(0,60)+(f.descripcion&&f.descripcion.length>60?'...':''))+'</td>'
 
@@ -18342,23 +18342,18 @@ function alzakCargarDatosSheets(callback) {
             var total = parseFloat(r['Total_COP']||r['Total (COP)']||r['Total']||bruto+iva||0);
             var rete  = parseFloat(r['Retefuente']||r['RteFuente']||r['Retención']||0);
             var vence = r['Vencimiento']||r['Fecha Vencimiento']||r['Vence']||'';
-            // Normalizar vence: timestamp ISO → yyyy-MM-dd, dd/MM/yyyy → yyyy-MM-dd
-            if (vence) {
-              var vs = String(vence).trim();
-              if (vs.indexOf('T') >= 0) {
-                vence = vs.substring(0, 10); // yyyy-MM-dd
-              } else if (vs.indexOf('/') >= 0) {
-                var vp = vs.split('/');
-                if (vp.length === 3) vence = vp[2]+'-'+vp[1]+'-'+vp[0];
-              }
-            }
+            // Normalizar vence — soporta ISO timestamp, dd/MM/yyyy, yyyy-MM-dd
+            var venceDisplay = alzakFechaDisplay(vence);
+            var venceDias    = alzakFechaParaDias(vence);
+            var fechaDisplay = alzakFechaDisplay(r['Fecha']||'');
             var pagada = (r['Estado']||'').toLowerCase().indexOf('pagad') >= 0 ||
                          (r['Estado']||'').toLowerCase() === 'cobrada';
             return {
               id:          'GS-' + idx,
               num:         r['N_Factura']||r['N Factura']||r['Factura']||r['N°']||'',
-              fecha:       alzakFechaAISO(r['Fecha']||''),
-              vence:       vence,
+              fecha:       fechaDisplay || alzakFechaAISO(r['Fecha']||''),
+              vence:       venceDias,       // yyyy-MM-dd para diasHasta()
+              venceDisplay:venceDisplay,    // dd/MM/yyyy para mostrar
               cliente:     r['Cliente']||'',
               nit:         r['NIT']||'',
               descripcion: r['Concepto']||r['Descripcion']||'',
@@ -18390,6 +18385,41 @@ function alzakFechaAISO(f) {
   var p = String(f).split('/');
   if (p.length === 3) return p[2] + '-' + p[1] + '-' + p[0];
   return f;
+}
+
+// Convierte cualquier formato de fecha a dd/MM/yyyy para mostrar
+function alzakFechaDisplay(val) {
+  if (!val) return '';
+  var s = String(val).trim();
+  // Ya es dd/MM/yyyy
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+  // yyyy-MM-dd
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    var p = s.split('-'); return p[2]+'/'+p[1]+'/'+p[0];
+  }
+  // ISO timestamp 2026-05-14T05:00:00.000Z → usar fecha local Colombia
+  if (s.indexOf('T') >= 0) {
+    var d = new Date(s);
+    // Ajustar a UTC-5 (Colombia)
+    d.setMinutes(d.getMinutes() + d.getTimezoneOffset() - 300);
+    var dd = String(d.getDate()).padStart(2,'0');
+    var mm = String(d.getMonth()+1).padStart(2,'0');
+    var yy = d.getFullYear();
+    return dd+'/'+mm+'/'+yy;
+  }
+  return s;
+}
+
+// Convierte fecha display a yyyy-MM-dd para diasHasta()
+function alzakFechaParaDias(val) {
+  if (!val) return '';
+  var s = String(val).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+    var p = s.split('/'); return p[2]+'-'+p[1]+'-'+p[0];
+  }
+  if (s.indexOf('T') >= 0) return s.substring(0,10);
+  return s;
 }
 
 // ── Editar fecha de vencimiento desde el tablero → guarda en Drive ──

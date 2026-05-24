@@ -18395,7 +18395,7 @@ function alzakCargarDatosSheets(callback) {
               estado:      r['Estado']||'pendiente'
             };
           });
-          if (typeof renderDashFacturas === 'function') renderDashFacturas();
+          if (typeof renderFacturas === 'function') renderFacturas();
           // Guardar en localStorage con datos frescos de Sheets
           try {
             localStorage.setItem('alzak_facturas_gs', JSON.stringify(FACTURAS));
@@ -18531,7 +18531,7 @@ function confirmarVence(numFactura) {
     }
     // Actualizar cache
     try { localStorage.setItem('alzak_facturas_gs', JSON.stringify(FACTURAS)); } catch(e){}
-    if (typeof renderDashFacturas === 'function') renderDashFacturas();
+    if (typeof renderFacturas === 'function') renderFacturas();
     mostrarToast('✅ ' + numFactura + ' → vence ' + displayVal, '#2E7D32', 4000);
   }).catch(function() {
     mostrarToast('⚠️ Error al guardar en Sheets', '#993C1D');
@@ -20789,29 +20789,41 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
-// Patch global: corrige f.vence con timestamp ISO o dd/MM/yyyy → yyyy-MM-dd
-window.addEventListener('load', function() {
-  setTimeout(function() {
-    if (typeof FACTURAS === 'undefined' || !FACTURAS || !FACTURAS.length) return;
-    var changed = false;
-    FACTURAS.forEach(function(f) {
-      var v = String(f.vence || '');
-      if (v.indexOf('T') >= 0) {
-        f.vence = v.substring(0, 10);
-        var p = f.vence.split('-');
-        f.venceDisplay = p[2]+'/'+p[1]+'/'+p[0];
-        changed = true;
-      } else if (v.indexOf('/') >= 0 && v.length === 10) {
-        var p2 = v.split('/');
-        if (p2.length === 3) {
-          f.vence = p2[2]+'-'+p2[1]+'-'+p2[0];
-          f.venceDisplay = v;
-          changed = true;
-        }
-      }
-    });
-    if (changed && typeof renderDashFacturas === 'function') renderDashFacturas();
-  }, 2500);
-});
+// PATCH DEFINITIVO: Limpia f.vence en cualquier array de facturas
+function patchVencimientos(arr) {
+  if (!arr || !arr.length) return false;
+  var changed = false;
+  arr.forEach(function(f) {
+    var v = String(f.vence || '');
+    if (v.indexOf('T') >= 0) {
+      // ISO timestamp: extraer yyyy-MM-dd SIN conversión UTC
+      f.vence = v.substring(0, 10);
+      var p = f.vence.split('-');
+      f.venceDisplay = p[2]+'/'+p[1]+'/'+p[0];
+      changed = true;
+    } else if (/^\d{2}\/\d{2}\/\d{4}$/.test(v)) {
+      // dd/MM/yyyy → yyyy-MM-dd
+      var p2 = v.split('/');
+      f.vence = p2[2]+'-'+p2[1]+'-'+p2[0];
+      f.venceDisplay = v;
+      changed = true;
+    }
+  });
+  return changed;
+}
+
+// Correr cada 1 segundo hasta que las facturas estén limpias (máx 10 intentos)
+var _patchCount = 0;
+var _patchInterval = setInterval(function() {
+  _patchCount++;
+  if (_patchCount > 10) { clearInterval(_patchInterval); return; }
+  if (typeof FACTURAS === 'undefined' || !FACTURAS || !FACTURAS.length) return;
+  var changed = patchVencimientos(FACTURAS);
+  if (changed) {
+    clearInterval(_patchInterval);
+    if (typeof renderFacturas === 'function') renderFacturas();
+    if (typeof renderResumenTablero === 'function') renderResumenTablero();
+  }
+}, 1000);
 </script>
 </body>

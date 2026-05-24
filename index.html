@@ -1650,22 +1650,9 @@ function cargarDatos() {
 
   try {
     // Primero intentar datos frescos de Google Sheets
-    var gsFacturas = localStorage.getItem('alzak_facturas_gs');
-    if (gsFacturas) {
-      var parsed = JSON.parse(gsFacturas);
-      // Limpiar timestamps ISO que pudieran estar en el cache
-      parsed.forEach(function(f) {
-        if (f.vence && f.vence.indexOf('T') >= 0) {
-          f.vence = f.vence.substring(0,10);
-        }
-        if (!f.venceDisplay && f.vence) {
-          var p = f.vence.split('-');
-          if (p.length === 3) f.venceDisplay = p[2]+'/'+p[1]+'/'+p[0];
-        }
-      });
-      FACTURAS = parsed;
-      if (typeof renderDashFacturas === 'function') setTimeout(renderDashFacturas, 100);
-    }
+    // Limpiar SIEMPRE el cache viejo — forzar datos frescos de Sheets en cada carga
+    try { localStorage.removeItem('alzak_facturas_gs'); } catch(e) {}
+    try { localStorage.removeItem('alzak_facturas'); } catch(e) {}
 
     var f  = localStorage.getItem(LS_FACTURAS);
     var g2 = localStorage.getItem(LS_GASTOS);
@@ -5755,6 +5742,22 @@ function diasHasta(fechaStr) {
   return Math.round((target - hoy) / 86400000);
 }
 
+
+// Helper: muestra fecha de factura limpia (sin timestamp)
+function fVence(f) {
+  var v = f.venceDisplay || f.vence || '';
+  if (!v) return '';
+  // Limpiar timestamp si quedó
+  if (v.indexOf('T') >= 0) {
+    var parts = v.substring(0,10).split('-');
+    return parts.length===3 ? parts[2]+'/'+parts[1]+'/'+parts[0] : v;
+  }
+  // yyyy-MM-dd → dd/MM/yyyy
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+    var p = v.split('-'); return p[2]+'/'+p[1]+'/'+p[0];
+  }
+  return v;
+}
 function cerrarDetalle() {
 
   var det = g('fact-detalle');
@@ -6031,7 +6034,7 @@ function verDetalle(id) {
 
       '<div class="ind"><div class="ind-l">Fecha emisión</div><div class="ind-v">' + f.fecha + '</div></div>' +
 
-      '<div class="ind"><div class="ind-l">Vencimiento</div><div class="ind-v ' + (dias<0&&!f.pagada?'tr':'') + '">' + f.vence + '</div><div class="ind-s">' + diasTxt + '</div></div>' +
+      '<div class="ind"><div class="ind-l">Vencimiento</div><div class="ind-v ' + (dias<0&&!f.pagada?'tr':'') + '">' + fVence(f) + '</div><div class="ind-s">' + diasTxt + '</div></div>' +
 
       '<div class="ind"><div class="ind-l">Total bruto</div><div class="ind-v tb">' + F(f.bruto) + '</div></div>' +
 
@@ -6392,7 +6395,7 @@ function renderCalendarioCobros() {
 
       '<div style="font-size:12px;font-weight:700;margin-bottom:2px">' + f.num + ' — ' + f.cliente + '</div>' +
 
-      '<div style="font-size:11px;color:#666">Vence: ' + f.vence + '</div>' +
+      '<div style="font-size:11px;color:#666">Vence: ' + fVence(f) + '</div>' +
 
       '<div style="font-size:14px;font-weight:700;color:' + col + ';margin-top:4px">' + F(f.total) + '</div>' +
 
@@ -6844,7 +6847,7 @@ function renderDetalleFact() {
             + '<div style="flex:1;"><div style="font-size:11px;color:#666;">' + (f.oc?'OC: '+f.oc:'') + '</div></div>'
             + '<div style="text-align:right;">'
             + '<div style="font-size:13px;font-weight:700;color:#5DC3DA;">' + F(f.total) + '</div>'
-            + '<div style="font-size:10px;color:#888;">Vence: ' + f.vence + '</div>'
+            + '<div style="font-size:10px;color:#888;">Vence: ' + fVence(f) + '</div>'
             + '</div>'
             + '<div style="font-size:10px;color:' + dC + ';font-weight:600;">' + dT + '</div>'
             + badgeFact(est)
@@ -7028,7 +7031,7 @@ function descargarExcelFacturas() {
 
     var f=FACTURAS[i];
 
-    data.push([f.num,f.fecha,f.cliente,f.nit,f.vence,f.descripcion,f.bruto,f.iva,f.retefuente,f.total,f.pagada?'Pagada':'Pendiente']);
+    data.push([f.num,f.fecha,f.cliente,f.nit,fVence(f),f.descripcion,f.bruto,f.iva,f.retefuente,f.total,f.pagada?'Pagada':'Pendiente']);
 
   }
 
@@ -17718,7 +17721,7 @@ function fcRender() {
     var factTags = allFacts.map(function(f){
       var col = f.pagada?'#2E7D32':(new Date(f.vence||f.fecha)<new Date()?'#A32D2D':'#B45309');
       var fmtV = '$'+(Math.round(f.total||0)).toLocaleString('es-CO');
-      var tip = escapeHtml(f.cliente||'')+'&#10;'+fmtV+(f.vence?'&#10;Vence: '+f.vence:'');
+      var tip = escapeHtml(f.cliente||'')+'&#10;'+fmtV+(f.vence?'&#10;Vence: '+fVence(f):'');
       return '<span title="'+tip+'" onclick="fcToggleDet(&quot;'+fcDetId+'&quot;)" style="display:inline-block;background:'+col+'18;color:'+col+';border-radius:4px;padding:2px 7px;margin:1px;font-size:9px;font-weight:700;cursor:pointer;border:1px solid '+col+'33;">'+escapeHtml(f.num||'')+'</span>';
     }).join('');
 
@@ -17738,7 +17741,7 @@ function fcRender() {
     allFacts.forEach(function(f){
       var col = f.pagada?'#2E7D32':(new Date(f.vence||f.fecha)<new Date()?'#A32D2D':'#B45309');
       var est = f.pagada ? '✅ Pagada' : (new Date(f.vence||f.fecha)<new Date() ? '🔴 Vencida' : '⏳ Pendiente');
-      var fechaCobro = f.pagada && f.fecha_pago ? f.fecha_pago : (f.vence||'—');
+      var fechaCobro = f.pagada && f.fecha_pago ? f.fecha_pago : (fVence(f)||'—');
       var diasText = '';
       if (!f.pagada && f.vence) {
         var dias = Math.ceil((new Date(f.vence)-new Date())/(1000*60*60*24));

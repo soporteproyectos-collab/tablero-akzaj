@@ -5721,24 +5721,22 @@ function diasHasta(fechaStr) {
   if (!fechaStr) return 9999;
   var hoy = new Date(); hoy.setHours(0,0,0,0);
   var s = String(fechaStr).trim();
-  var target;
+  var y, m, d;
   if (s.indexOf('T') >= 0) {
-    // ISO timestamp — usar solo la parte de fecha en zona Bogotá
-    var datePart = s.substring(0, 10); // yyyy-MM-dd
-    var p = datePart.split('-');
-    target = new Date(parseInt(p[0]), parseInt(p[1])-1, parseInt(p[2]));
+    // ISO timestamp — extraer SOLO la parte de fecha yyyy-MM-dd sin conversión UTC
+    var dp = s.substring(0,10).split('-');
+    y = +dp[0]; m = +dp[1]-1; d = +dp[2];
   } else if (s.indexOf('/') >= 0) {
     // dd/MM/yyyy
     var p = s.split('/');
-    target = new Date(parseInt(p[2]), parseInt(p[1])-1, parseInt(p[0]));
+    y = +p[2]; m = +p[1]-1; d = +p[0];
   } else if (s.indexOf('-') >= 0) {
     // yyyy-MM-dd
     var p = s.split('-');
-    target = new Date(parseInt(p[0]), parseInt(p[1])-1, parseInt(p[2]));
-  } else {
-    return 9999;
-  }
-  if (!target || isNaN(target.getTime())) return 9999;
+    y = +p[0]; m = +p[1]-1; d = +p[2];
+  } else { return 9999; }
+  if (isNaN(y)||isNaN(m)||isNaN(d)) return 9999;
+  var target = new Date(y, m, d);
   return Math.round((target - hoy) / 86400000);
 }
 
@@ -5747,12 +5745,11 @@ function diasHasta(fechaStr) {
 function fVence(f) {
   var v = f.venceDisplay || f.vence || '';
   if (!v) return '';
-  // Limpiar timestamp si quedó
   if (v.indexOf('T') >= 0) {
-    var parts = v.substring(0,10).split('-');
-    return parts.length===3 ? parts[2]+'/'+parts[1]+'/'+parts[0] : v;
+    // Extraer yyyy-MM-dd SIN conversión UTC → convertir a dd/MM/yyyy
+    var dp = v.substring(0,10).split('-');
+    return dp[2]+'/'+dp[1]+'/'+dp[0];
   }
-  // yyyy-MM-dd → dd/MM/yyyy
   if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
     var p = v.split('-'); return p[2]+'/'+p[1]+'/'+p[0];
   }

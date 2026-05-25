@@ -5308,7 +5308,7 @@ function renderPagos() {
 
     var ban = r['Banco'] || '';
 
-    var conc = (r['Concepto']||'').toLowerCase();
+    var conc = String(r['Concepto']||'').toLowerCase();
 
     var ben  = (r['Beneficiario']||'').toLowerCase();
 
@@ -10965,7 +10965,7 @@ function gastoFiltrar() {
 
     if (eF === 'pendiente' && r._pagada) return false;
 
-    if (qF && (r['Proveedor']||'').toLowerCase().indexOf(qF)<0 && (r['Concepto']||'').toLowerCase().indexOf(qF)<0 && (r['N_Factura']||'').toLowerCase().indexOf(qF)<0) return false;
+    if (qF && String(r['Proveedor']||'').toLowerCase().indexOf(qF)<0 && String(r['Concepto']||'').toLowerCase().indexOf(qF)<0 && String(r['N_Factura']||'').toLowerCase().indexOf(qF)<0) return false;
 
     return true;
 
@@ -12228,7 +12228,7 @@ function renderGastosDashboard() {
 
     if(filAnio&&(r['Fecha']||'').indexOf(filAnio)<0&&(r['Mes']||'').indexOf(filAnio)<0)return false;
 
-    if(filQ&&(r['Proveedor']||'').toLowerCase().indexOf(filQ)<0&&(r['N_Factura']||'').toLowerCase().indexOf(filQ)<0&&(r['Concepto']||'').toLowerCase().indexOf(filQ)<0)return false;
+    if(filQ&&String(r['Proveedor']||'').toLowerCase().indexOf(filQ)<0&&String(r['N_Factura']||'').toLowerCase().indexOf(filQ)<0&&String(r['Concepto']||'').toLowerCase().indexOf(filQ)<0)return false;
 
     if(filEst==='pendiente'&&r._pagada)return false;
 
@@ -19897,14 +19897,12 @@ function frRender() {
   frResetPool();
   _FR_FUENTE_CACHE = {};
 
-  // PRE-CALCULAR fuentes para TODAS las facturas ANTES de cualquier filtrado
-  // Esto garantiza que el pool se consuma en orden correcto
-  // y que frGetFiltered use el caché, sin tocar el pool de nuevo
-  if (typeof FR_DATA !== 'undefined' && FR_DATA.length > 0) {
-    FR_DATA.forEach(function(r) { frFuentePago(r); });
-  }
-
+  // FILTRAR PRIMERO — luego calcular fuentes solo para los filtrados
   var filtered = frGetFiltered();
+  
+  // Pre-calcular fuentes SOLO para las facturas filtradas
+  filtered.forEach(function(r) { frFuentePago(r); });
+
   var kpiEl    = document.getElementById('fr-kpis');
   var tablaEl  = document.getElementById('fr-tabla');
   var countEl  = document.getElementById('fr-count');
@@ -20196,7 +20194,7 @@ function frCalcularAbonado(r) {
     var pWords = proveedor.split(/\s+/).filter(function(w){ return w.length>3 && !SKIP2[w]; });
     for (var i = 0; i < GASTOS_DATA.length; i++) {
       var gx2   = GASTOS_DATA[i];
-      var gComp2 = (gx2['N_Comprobante']||gx2['N Comprobante']||gx2['N_Factura']||gx2['Concepto']||'').toLowerCase();
+      var gComp2 = String(gx2['N_Comprobante']||gx2['N Comprobante']||gx2['N_Factura']||gx2['Concepto']||'').toLowerCase();
       var gProv2 = (gx2['Beneficiario']||gx2['Proveedor / Beneficiario']||gx2['Proveedor_Beneficiario']||'').toUpperCase();
       var gTot2  = parseFloat(gx2['Total ($)']||gx2['Total_COP']||gx2['Total (COP)']||0);
       // Modo A: N° comprobante
@@ -20373,14 +20371,14 @@ function frFuentePago(r) {
 
     for (var i = 0; i < GASTOS_DATA.length; i++) {
       var gx   = GASTOS_DATA[i];
-      var gComp = (gx['N_Comprobante'] || gx['N Comprobante'] || gx['N_Factura'] || gx['Concepto'] || '').toLowerCase();
+      var gComp = String(gx['N_Comprobante'] || gx['N Comprobante'] || gx['N_Factura'] || gx['Concepto'] || '').toLowerCase();
       var gProv = (gx['Beneficiario'] || gx['Proveedor / Beneficiario'] || gx['Proveedor_Beneficiario'] || '').toUpperCase();
       var gTot  = parseFloat(gx['Total ($)'] || gx['Total_COP'] || gx['Total (COP)'] || 0);
       var cta   = (gx['Cuenta_Origen'] || '').trim();
 
       // MODO A: N° comprobante de la factura radicada aparece en el egreso
       // Busca en N_Comprobante, Concepto Y Observaciones del egreso
-      var gConcepto = (gx['Concepto'] || '').toLowerCase();
+      var gConcepto = String(gx['Concepto'] || '').toLowerCase();
       var gObs      = (gx['Observaciones'] || '').toLowerCase();
       var gCompFull = gComp + ' ' + gConcepto + ' ' + gObs;
       if (ncomp.length > 2 && gCompFull.indexOf(ncomp.toLowerCase()) >= 0) {

@@ -5741,6 +5741,19 @@ function fVence(f) {
   }
   return v;
 }
+
+// Helper: extrae [año, mes, dia] de f.fecha en cualquier formato
+function fFechaPartes(fecha) {
+  var s = String(fecha||'').trim();
+  if (!s) return [0,0,0];
+  if (s.indexOf('/') >= 0) {
+    var p = s.split('/');
+    return [parseInt(p[2])||0, parseInt(p[1])||0, parseInt(p[0])||0];
+  }
+  if (s.indexOf('T') >= 0) s = s.substring(0,10);
+  var p = s.split('-');
+  return [parseInt(p[0])||0, parseInt(p[1])||0, parseInt(p[2])||0];
+}
 function cerrarDetalle() {
 
   var det = g('fact-detalle');
@@ -8618,7 +8631,7 @@ function borrarBloque(bloque) {
 
     for (var i=0; i<FACTURAS.length; i++) {
 
-      var dp = (FACTURAS[i].fecha||'').split('-');
+      var dp = fFechaPartes(FACTURAS[i].fecha);
 
       if (dp.length===3) { var k=MN[parseInt(dp[1])-1]+' '+dp[0]; periodos[k]=(periodos[k]||0)+1; }
 
@@ -8790,7 +8803,7 @@ function confirmarBorrarPeriodo(bloque) {
 
     FACTURAS = FACTURAS.filter(function(f){
 
-      var dp = (f.fecha||'').split('-');
+      var dp = fFechaPartes(f.fecha);
 
       if (dp.length!==3) return true;
 
@@ -8885,7 +8898,7 @@ function renderResumenTablero() {
 
   // Ingresos también filtrados a 2026
   var totalFact2026 = FACTURAS.filter(function(f){
-    var dp = (f.fecha||'').split('-');
+    var dp = fFechaPartes(f.fecha);
     return dp.length === 3 && dp[0] === '2026';
   }).reduce(function(a,f){ return a+(f.bruto||0); }, 0);
 
@@ -9455,7 +9468,7 @@ function calcBalMes(mes) {
 
     if(!mes) return true;
 
-    var dp=(f.fecha||'').split('-');
+    var dp = fFechaPartes(f.fecha);
 
     if(dp.length<3) return false;
 
@@ -9659,7 +9672,7 @@ function renderBalance() {
 
   var disp = {};
 
-  for (var i=0;i<FACTURAS.length;i++) { var dp=(FACTURAS[i].fecha||'').split('-'); if(dp.length===3) disp[MN[parseInt(dp[1])-1]+' '+dp[0]]=1; }
+  for (var i=0;i<FACTURAS.length;i++) { var dp=fFechaPartes(FACTURAS[i].fecha); if(dp.length===3) disp[MN[parseInt(dp[1])-1]+' '+dp[0]]=1; }
 
   for (var i=0;i<GASTOS_DATA.length;i++) { if(GASTOS_DATA[i]['Mes']) disp[GASTOS_DATA[i]['Mes']]=1; }
 
@@ -9989,7 +10002,11 @@ function calcMesData(mes) {
 
   var MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
-  var ff=FACTURAS.filter(function(f){var dp=(f.fecha||'').split('-');if(dp.length<3)return false;return MN[parseInt(dp[1])-1]+' '+dp[0]===mes;});
+  var ff=FACTURAS.filter(function(f){
+    var dp = fFechaPartes(f.fecha);
+    if(!dp[0] || !dp[1]) return false;
+    return MN[parseInt(dp[1])-1]+' '+dp[0]===mes;
+  });
 
   var gf=GASTOS_DATA.filter(function(r){return (r['Mes']||'')===mes;});
   var gfOp=gf.filter(esGastoOpPL);
@@ -10032,8 +10049,8 @@ function getMeses() {
   var disp={};
 
   for(var i=0;i<FACTURAS.length;i++){
-    var dp=(FACTURAS[i].fecha||'').split('-');
-    if(dp.length===3 && (!anioFil || dp[0]===anioFil)) disp[MN[parseInt(dp[1])-1]+' '+dp[0]]=1;
+    var dp=fFechaPartes(FACTURAS[i].fecha);
+    if(dp[0] && dp[1] && (!anioFil || String(dp[0])===String(anioFil))) disp[MN[parseInt(dp[1])-1]+' '+dp[0]]=1;
   }
   for(var i=0;i<GASTOS_DATA.length;i++){
     var m=GASTOS_DATA[i]['Mes']||'';
@@ -10197,7 +10214,7 @@ function renderErDetalle() {
   var dataM=meses.map(calcMesData);
 
   var accIng=FACTURAS.filter(function(f){
-    var dp=(f.fecha||'').split('-');
+    var dp = fFechaPartes(f.fecha);
     return dp.length===3 && (!anioFil3||dp[0]===anioFil3);
   }).reduce(function(a,f){return a+(f.bruto||0);},0);
 
@@ -10354,9 +10371,13 @@ function renderErDetalle() {
       });
 
       var provArr=Object.keys(provs).sort(function(a,b){
+        var na = provs[a].length, nb = provs[b].length;
         var ta=provs[a].reduce(function(s,r){return s+getValGasto(r);},0);
         var tb=provs[b].reduce(function(s,r){return s+getValGasto(r);},0);
-        return tb-ta;
+        // Multi-factura primero, single al final
+        if (na > 1 && nb === 1) return -1;
+        if (na === 1 && nb > 1) return 1;
+        return tb-ta; // dentro de cada grupo, mayor monto primero
       });
 
       for(var pi=0;pi<provArr.length;pi++){
@@ -10527,7 +10548,7 @@ function exportarPDFEstadoResultados() {
 
       var desc=f.num+(f.descripcion?' · '+(f.descripcion||'').substring(0,35):'');
 
-      var fMes=''; var dp=(f.fecha||'').split('-');
+      var fMes=''; var dp = fFechaPartes(f.fecha);
 
       if(dp.length===3){var MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];fMes=MN[parseInt(dp[1])-1]+' '+dp[0];}
 
@@ -10588,11 +10609,12 @@ function exportarPDFEstadoResultados() {
     GASTOS_DATA.filter(function(r){return (r['Categoria']||'Otros')===cat;}).forEach(function(r){var p=r['Proveedor']||'—';if(!provs[p])provs[p]=[];provs[p].push(r);});
 
     var provArr=Object.keys(provs).sort(function(a,b){
-
-      return provs[b].reduce(function(s,r){return s+parseFloat(r['Total_COP']||0);},0)
-
-            -provs[a].reduce(function(s,r){return s+parseFloat(r['Total_COP']||0);},0);
-
+      var na = provs[a].length, nb = provs[b].length;
+      var ta=provs[a].reduce(function(s,r){return s+parseFloat(r['Total_COP']||0);},0);
+      var tb=provs[b].reduce(function(s,r){return s+parseFloat(r['Total_COP']||0);},0);
+      if (na > 1 && nb === 1) return -1;
+      if (na === 1 && nb > 1) return 1;
+      return tb-ta;
     });
 
     for(var pi=0;pi<provArr.length;pi++){
@@ -10775,8 +10797,8 @@ function renderEstadoResultados() {
       var mesesFil = getMeses(); // ya filtrados por año
 
       ingT = FACTURAS.filter(function(f){
-        var dp=(f.fecha||'').split('-');
-        return dp.length===3 && (!anioFil2 || dp[0]===anioFil2);
+        var dp = fFechaPartes(f.fecha);
+        return dp[0] && dp[1] && (!anioFil2 || String(dp[0])===String(anioFil2));
       }).reduce(function(a,f){return a+(f.bruto||0);},0);
 
       if (typeof FR_DATA !== 'undefined' && FR_DATA.length) {

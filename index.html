@@ -8591,7 +8591,7 @@ function renderCarteraHome() {
 
     // Gráfico de barras — SVG responsivo con etiquetas legibles
     var nM=meses.length;
-    var W=Math.max(460, nM*90+80), H=170, PL=58, PR=16, PT=20, PB=36;
+    var W=Math.max(380, nM*70+60), H=140, PL=52, PR=10, PT=16, PB=28;
     var CW=W-PL-PR, CH=H-PT-PB;
     var bw=Math.max(28,Math.min(56,CW/nM*0.52));
     var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;max-width:100%;height:auto;display:block" xmlns="http://www.w3.org/2000/svg">';
@@ -8599,7 +8599,7 @@ function renderCarteraHome() {
     for(var t=0;t<=4;t++){
       var yv=Math.round(PT+CH-(t/4)*CH);
       var yVal=maxV*t/4;
-      var yLbl=yVal>=1000000?('$'+Math.round(yVal/100000)/10+'M'):('$'+Math.round(yVal/1000)+'k');
+      var yLbl=yVal>=1000000?('$'+Math.round(yVal/1000000)+'M'):('$'+Math.round(yVal/1000)+'k');
       svg+='<line x1="'+PL+'" y1="'+yv+'" x2="'+(W-PR)+'" y2="'+yv+'" stroke="#ede9e4" stroke-width="1"/>';
       svg+='<text x="'+(PL-5)+'" y="'+(yv+4)+'" text-anchor="end" font-size="9" fill="#aaa" font-family="Montserrat,sans-serif">'+yLbl+'</text>';
     }
@@ -9582,30 +9582,27 @@ function calcBalMes(mes) {
   });
   var cxc2026Pendiente = cxcArr.reduce(function(a,f){return a+(f.total||0);},0);
 
-  // Cobros de cartera 2025 recibidos hasta el corte:
-  // Facturas con año < 2026, pagadas, con fecha_pago <= cierre del mes
+  // CxC: apertura 2025 pendiente + facturas 2026 sin cobrar al corte
+  // Cobros de cartera 2025 recibidos (facturas 2025 pagadas con fecha_pago <= corte)
   var totalCobrado2025calc = 0;
-  if (mes && cxcApertura > 0) {
+  if (cxcApertura > 0) {
     FACTURAS.forEach(function(f) {
       var dp0 = fFechaPartes(f.fecha||'');
       if (dp0.length < 3) return;
-      if (parseInt(dp0[0]) >= 2026) return;
+      if (parseInt(dp0[0]) >= 2026) return; // solo facturas 2025 o anteriores
       if (!f.pagada) return;
       if (f.fecha_pago) {
         var dp3 = fFechaPartes(f.fecha_pago);
         if (dp3.length >= 3) {
           var pTs = new Date(parseInt(dp3[0]),parseInt(dp3[1])-1,parseInt(dp3[2])).getTime();
+          // En acumulado, cierreTimestamp = Infinity → cuenta todos los cobros
           if (pTs <= cierreTimestamp) totalCobrado2025calc += (f.total||0);
         }
-      } else {
-        // Pagada sin fecha_pago: si la factura es de 2025 y está pagada,
-        // se asume cobrada en el mes de vencimiento o antes del corte
-        totalCobrado2025calc += (f.total||0);
       }
     });
   }
   var cxcAperturaPendiente = Math.max(0, cxcApertura - totalCobrado2025calc);
-  var cxc = (mes ? cxcAperturaPendiente : cxcApertura) + cxc2026Pendiente;
+  var cxc = cxcAperturaPendiente + cxc2026Pendiente;
 
   // 3. Retención en la fuente (anticipo de impuesto — activo)
 
@@ -9747,7 +9744,10 @@ function calcBalMes(mes) {
     // Si el egreso que la cruzó tiene fecha <= cierre → estaba pagada
     function frPagadaAlCorte(r) {
       if (!mes) {
-        // Acumulado: usar estado actual
+        // Acumulado: usar el campo Estado de la FR directamente (sin pool)
+        var estRaw = String(r['Estado']||'').toUpperCase().trim();
+        if (estRaw === 'PAGADO' || estRaw === 'PAGADA') return true;
+        // También verificar cruce con GASTOS_DATA (estado actual sin corte temporal)
         return typeof frEstadoReal === 'function' ? frEstadoReal(r) === 'PAGADO' : false;
       }
       // Intentar obtener la fecha del egreso que pagó esta FR

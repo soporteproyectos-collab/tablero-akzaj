@@ -1625,21 +1625,30 @@ function cargarDatos() {
   // 1. localStorage (inmediato — para que el UI cargue rápido)
 
   try {
-    // Primero intentar datos frescos de Google Sheets
-    // Limpiar SIEMPRE el cache viejo — forzar datos frescos de Sheets en cada carga
-    try { localStorage.removeItem('alzak_facturas_gs'); } catch(e) {}
+    // Al cargar: usar cache de Sheets si existe (datos frescos del último sync)
+    // Solo limpiar el formato viejo (alzak_facturas), NO el cache de Sheets
     try { localStorage.removeItem('alzak_facturas'); } catch(e) {}
     try { localStorage.removeItem(LS_FACTURAS); } catch(e) {}
 
-    var f  = localStorage.getItem(LS_FACTURAS);
-    var g2 = localStorage.getItem(LS_GASTOS);
+    // Cargar desde cache de Sheets si disponible
+    var gsCache = null;
+    try {
+      var gsCacheStr = localStorage.getItem('alzak_facturas_gs');
+      if (gsCacheStr) gsCache = JSON.parse(gsCacheStr);
+    } catch(e) {}
 
-    // Always start with built-in defaults
-    FACTURAS = FACTURAS_DEFAULT.map(function(r){
-      var o = Object.assign({},r);
-      o.estado = typeof estadoFact==='function' ? estadoFact(o) : (o.pagada?'Pagada':'Pendiente');
-      return o;
-    });
+    if (gsCache && gsCache.length) {
+      FACTURAS = gsCache;
+    } else {
+      FACTURAS = FACTURAS_DEFAULT.map(function(r){
+        var o = Object.assign({},r);
+        o.estado = typeof estadoFact==='function' ? estadoFact(o) : (o.pagada?'Pagada':'Pendiente');
+        return o;
+      });
+    }
+
+    var f  = null; // ya no usamos el formato viejo
+    var g2 = localStorage.getItem(LS_GASTOS);
     // Merge any extra invoices saved in localStorage (not in defaults)
     if (f) {
       try {
@@ -18412,6 +18421,7 @@ function alzakCargarDatosSheets(callback) {
           });
           if (typeof renderFacturas === 'function') renderFacturas();
           if (typeof renderCarteraHome === 'function') renderCarteraHome();
+          if (typeof renderResumenTablero === 'function') renderResumenTablero();
           if (typeof frActualizarFiltros === 'function') frActualizarFiltros();
           try {
             localStorage.setItem('alzak_facturas_gs', JSON.stringify(FACTURAS));

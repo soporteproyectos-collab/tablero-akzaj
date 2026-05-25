@@ -38,7 +38,7 @@ body{background:#f5f4f0;color:#54504F;min-height:100vh}
 
 .met-l{font-size:10px;color:#888;font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
 
-.met-v{font-size:18px;font-weight:700}
+.met-v{font-size:15px;font-weight:700}
 
 .met-s{font-size:10px;color:#aaa;margin-top:2px}
 
@@ -167,7 +167,7 @@ select,input{padding:6px 10px;border:1px solid #d0cec8;border-radius:7px;font-si
   --navy:#1E3A5F;--navy-bg:#EFF6FF;--navy-mid:#BFDBFE;--navy-btn:#1D4ED8;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Montserrat','Helvetica Neue',Helvetica,Arial,sans-serif;background:var(--gray-bg);color:var(--gray-dark);min-height:100vh;}
+body{font-family:'Montserrat','Helvetica Neue',Helvetica,Arial,sans-serif;font-size:12px;background:var(--gray-bg);color:var(--gray-dark);min-height:100vh;}
 
 /* HEADER */
 .header{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:62px;border-bottom:3px solid var(--cyan);background:var(--white);position:sticky;top:0;z-index:100;gap:12px;flex-wrap:wrap;}
@@ -361,7 +361,7 @@ tbody tr:hover td{background:var(--cyan-light);}
 
 <div id="login-screen" style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#0d1117 0%,#1a1f2e 40%,#0d1117 100%);">
 <div style="background:#fff;border-radius:16px;padding:40px 44px;width:380px;max-width:94vw;box-shadow:0 32px 80px rgba(0,0,0,.5);text-align:center;">
-  <div style="font-size:22px;font-weight:800;color:#54504F;margin-bottom:4px;">ALZAK</div>
+  <div style="font-size:15px;font-weight:700;color:#54504F;margin-bottom:4px;">ALZAK</div>
   <div style="font-size:13px;font-weight:700;color:#333;margin-bottom:4px;">Tablero Contable</div>
   <div style="font-size:11px;color:#9ca3af;margin-bottom:28px;">ALZAK GROUP SAS · NIT 900.898.741-8</div>
   <div style="margin-bottom:14px;text-align:left;">
@@ -673,11 +673,11 @@ tbody tr:hover td{background:var(--cyan-light);}
 
     <span>📋 Ver detalle de gastos por categoría</span>
 
-    <span id="ico-detalle-gastos" style="font-size:14px;transition:transform .2s;transform:rotate(180deg)">▼</span>
+    <span id="ico-detalle-gastos" style="font-size:14px;transition:transform .2s;transform:rotate(0deg)">▼</span>
 
   </button>
 
-  <div id="gd-grupos" style="display:block;margin-top:12px"></div>
+  <div id="gd-grupos" style="display:none;margin-top:12px"></div>
 
 </div>
 
@@ -3968,7 +3968,7 @@ function renderPosicion() {
 
   for (var i = 0; i < KPI_DATA.saldos.length; i++) total += KPI_DATA.saldos[i].v;
 
-  var html = '<div style="font-size:22px;font-weight:700;color:#5DC3DA;margin-bottom:12px">' + F(total) + '</div>';
+  var html = '<div style="font-size:15px;font-weight:700;color:#5DC3DA;margin-bottom:12px">' + F(total) + '</div>';
 
   for (var i = 0; i < KPI_DATA.saldos.length; i++) {
 
@@ -5630,7 +5630,7 @@ function renderBancos() {
 
         '<div style="font-size:11px;color:#888">Cta. '+d.cta+' · '+d.tipo+'</div></div>'+
 
-        '<div style="font-size:18px;font-weight:700;color:#5DC3DA">'+F(d.sfin)+'</div>'+
+        '<div style="font-size:15px;font-weight:700;color:#5DC3DA">'+F(d.sfin)+'</div>'+
 
       '</div>'+
 
@@ -7209,7 +7209,7 @@ function exportarPDFFacturas() {
 
     +'.kpi-label{font-size:10px;color:#888;font-weight:700;text-transform:uppercase;margin-bottom:4px}'
 
-    +'.kpi-val{font-size:18px;font-weight:700}'
+    +'.kpi-val{font-size:15px;font-weight:700}'
 
     +'@media print{'
 
@@ -7233,7 +7233,7 @@ function exportarPDFFacturas() {
 
     +'<div>'
 
-    +'<div style="font-size:22px;font-weight:700;color:#54504F">ALZAK GROUP SAS</div>'
+    +'<div style="font-size:15px;font-weight:700;color:#54504F">ALZAK GROUP SAS</div>'
 
     +'<div style="font-size:12px;color:#888;margin-top:2px">NIT 900.898.741-8</div>'
 
@@ -7852,7 +7852,7 @@ function exportarPDFGastos() {
 
     +'.kpi-label{font-size:10px;color:#888;font-weight:700;text-transform:uppercase;margin-bottom:4px}'
 
-    +'.kpi-val{font-size:18px;font-weight:700}'
+    +'.kpi-val{font-size:15px;font-weight:700}'
 
     +'@media print{body{padding:16px 20px}h2{page-break-after:avoid}tr{page-break-inside:avoid}}'
 
@@ -7864,7 +7864,7 @@ function exportarPDFGastos() {
 
     +'<div>'
 
-    +'<div style="font-size:22px;font-weight:700;color:#54504F">ALZAK GROUP SAS</div>'
+    +'<div style="font-size:15px;font-weight:700;color:#54504F">ALZAK GROUP SAS</div>'
 
     +'<div style="font-size:12px;color:#888;margin-top:2px">NIT 900.898.741-8 · Bogotá, Colombia</div>'
 
@@ -8968,7 +8968,7 @@ function renderResumenTablero() {
 
       +'<div style="font-size:11px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">'+ico+' '+label+'</div>'
 
-      +'<div style="font-size:22px;font-weight:700;color:'+col+'">'+valorStr+'</div>'
+      +'<div style="font-size:15px;font-weight:700;color:'+col+'">'+valorStr+'</div>'
 
       +(sub1?'<div style="font-size:11px;color:'+col+';opacity:.6;margin-top:4px">'+sub1+'</div>':'')
 
@@ -10713,7 +10713,7 @@ function exportarPDFEstadoResultados() {
 
     +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;padding-bottom:14px;border-bottom:2px solid #54504F">'
 
-    +'<div><div style="font-size:20px;font-weight:700;color:#54504F">ALZAK GROUP SAS</div>'
+    +'<div><div style="font-size:15px;font-weight:700;color:#54504F">ALZAK GROUP SAS</div>'
 
     +'<div style="font-size:11px;color:#888;margin-top:2px">NIT 900.898.741-8 · Bogotá, Colombia</div></div>'
 
@@ -13413,7 +13413,7 @@ function renderBcol() {
 
       var ult=BCOL_RESUMEN['Marzo 2026']||BCOL_RESUMEN[Object.keys(BCOL_RESUMEN).pop()]||{};
 
-      hkpi.innerHTML='<div style="font-size:11px;color:#888">Saldo último mes</div><div style="font-size:18px;font-weight:700;color:#185FA5">'+FB(ult.sfin)+'</div>';
+      hkpi.innerHTML='<div style="font-size:11px;color:#888">Saldo último mes</div><div style="font-size:15px;font-weight:700;color:#185FA5">'+FB(ult.sfin)+'</div>';
 
     } else {
 
@@ -19958,7 +19958,7 @@ function frRender() {
                      : ' style="background:'+bg+';border-radius:12px;padding:14px 16px;"';
     return '<div'+oc+'>'
       +'<div style="font-size:10px;font-weight:700;color:'+col+';text-transform:uppercase;margin-bottom:4px;letter-spacing:.5px;">'+label+'</div>'
-      +'<div style="font-size:20px;font-weight:700;color:'+col+';">'+frFmt(val)+'</div>'
+      +'<div style="font-size:15px;font-weight:700;color:'+col+';">'+frFmt(val)+'</div>'
       +'<div style="font-size:10px;color:'+col+';opacity:.7;margin-top:2px;">'+sub+'</div>'
       +'</div>';
   }

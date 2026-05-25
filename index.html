@@ -1689,6 +1689,17 @@ function gsCargarDesdeSheets() {
 
     if (objs.length) {
 
+      // Normalizar campos pagada y fecha_pago (vienen como texto desde Sheets)
+      objs.forEach(function(f) {
+        var est = String(f.estado || f.pagada || '').toLowerCase().trim();
+        f.pagada    = (est === 'pagada' || est === 'cobrada' || est === 'si' || est === 'sí' || est === 'true' || est === '1');
+        f.fecha_pago = f.fecha_pago || f.fecha_cobro || null;
+        // Normalizar montos a número
+        ['bruto','iva','retefuente','reteiva','total'].forEach(function(c){
+          if (f[c] !== undefined) f[c] = parseFloat(String(f[c]).replace(/[$,.\s]/g,'').replace(',','')) || 0;
+        });
+      });
+
       FACTURAS = objs;
 
       try { localStorage.setItem(LS_FACTURAS, JSON.stringify(FACTURAS)); } catch(e){}
@@ -9453,39 +9464,35 @@ function calcBalMes(mes) {
 
   // Caja y Bancos → Total Disponible ALZAK desde conciliación bancaria
   var totalBancos = 0;
+  var bancosDetalle = {bcol:0, fid:0, caja:0, bold:0}; // desglose por cuenta
   try {
     if (typeof P !== 'undefined' && P.length) {
       if (!mes) {
-        // Acumulado: saldo final más reciente de cada cuenta
-        var lastSF   = 0; // Bancolombia Ahorros
-        var lastFid  = 0; // Fiducuenta
-        var lastCaja = 0; // Caja Social
-        var lastBold = 0; // Bold CF
-        for (var pi2 = 0; pi2 < P.length; pi2++) {
-          var pe = P[pi2];
-          if (pe.sF   !== undefined) lastSF   = pe.sF;
-          if (pe.fid  && pe.fid.sF  !== undefined) lastFid  = pe.fid.sF;
-          if (pe.caja && pe.caja.sF !== undefined) lastCaja = pe.caja.sF;
-          if (pe.bold && pe.bold.sF !== undefined) lastBold = pe.bold.sF;
+        var lastSF=0, lastFid=0, lastCaja=0, lastBold=0;
+        for (var pi2=0; pi2<P.length; pi2++) {
+          var pe=P[pi2];
+          if (pe.sF!==undefined) lastSF=pe.sF;
+          if (pe.fid&&pe.fid.sF!==undefined) lastFid=pe.fid.sF;
+          if (pe.caja&&pe.caja.sF!==undefined) lastCaja=pe.caja.sF;
+          if (pe.bold&&pe.bold.sF!==undefined) lastBold=pe.bold.sF;
         }
-        totalBancos = lastSF + lastFid + lastCaja + lastBold;
+        bancosDetalle={bcol:lastSF, fid:lastFid, caja:lastCaja, bold:lastBold};
+        totalBancos=lastSF+lastFid+lastCaja+lastBold;
       } else {
-        // Mes específico: buscar la entrada de P que coincida con el label
-        // El label de P es 'Enero 2026', el mes del balance también
-        for (var pi2 = 0; pi2 < P.length; pi2++) {
-          var pe = P[pi2];
-          if (pe.label === mes) {
-            var sf   = pe.sF   || 0;
-            var sfid = (pe.fid  && pe.fid.sF  !== undefined) ? pe.fid.sF  : 0;
-            var scaj = (pe.caja && pe.caja.sF !== undefined) ? pe.caja.sF : 0;
-            var sbol = (pe.bold && pe.bold.sF !== undefined) ? pe.bold.sF : 0;
-            totalBancos = sf + sfid + scaj + sbol;
+        for (var pi2=0; pi2<P.length; pi2++) {
+          var pe=P[pi2];
+          if (pe.label===mes) {
+            bancosDetalle.bcol=(pe.sF||0);
+            bancosDetalle.fid=(pe.fid&&pe.fid.sF!==undefined)?pe.fid.sF:0;
+            bancosDetalle.caja=(pe.caja&&pe.caja.sF!==undefined)?pe.caja.sF:0;
+            bancosDetalle.bold=(pe.bold&&pe.bold.sF!==undefined)?pe.bold.sF:0;
+            totalBancos=bancosDetalle.bcol+bancosDetalle.fid+bancosDetalle.caja+bancosDetalle.bold;
             break;
           }
         }
       }
     }
-  } catch(e) { totalBancos = 0; }
+  } catch(e) { totalBancos=0; }
 
   // 2. CxC clientes → facturas pendientes AL CORTE del mes
   // Lógica correcta: emitidas hasta el último día del mes de corte,
@@ -9769,7 +9776,7 @@ function calcBalMes(mes) {
 
   return {
 
-    bancos:totalBancos, cxc:cxc, cxcCount:cxcArr.length, rete:rete,
+    bancos:totalBancos, bancosDetalle:bancosDetalle, cxc:cxc, cxcCount:cxcArr.length, cxcArr:cxcArr, rete:rete,
 
     totalActCorr:totalActCorr,
 
@@ -9907,12 +9914,28 @@ function renderBalance() {
 
   html += fila('Activos Corrientes', null, 'h', 0);
 
+  // ── Caja y Bancos con desglose por cuenta ──
+  var bd = d.bancosDetalle || {bcol:0,fid:0,caja:0,bold:0};
+  var tieneDetBancos = (bd.bcol||bd.fid||bd.caja||bd.bold);
   html += fila('Caja y Bancos', d.bancos, 'item', 1,
+    d.bancos===0 ? '(pendiente conciliación bancaria)' : (tieneDetBancos?'▾ ver por cuenta':''));
+  if (tieneDetBancos) {
+    if (bd.bcol)  html += fila('Bancolombia Ahorros *6556', bd.bcol,  'item', 2);
+    if (bd.fid)   html += fila('Fiducuenta *1771',          bd.fid,   'item', 2);
+    if (bd.caja)  html += fila('Caja Social *2970',         bd.caja,  'item', 2);
+    if (bd.bold)  html += fila('Bold CF *2371',             bd.bold,  'item', 2);
+  }
 
-    d.bancos===0 ? '(pendiente conciliación bancaria)' : '');
-
+  // ── Cuentas por Cobrar con detalle de facturas ──
   html += fila('Cuentas por Cobrar — Clientes', d.cxc, 'item', 1,
-    d.cxcCount + ' facturas pendientes al corte');
+    d.cxcCount ? d.cxcCount + ' facturas pendientes al corte' : 'sin facturas pendientes al corte');
+  if (d.cxcArr && d.cxcArr.length) {
+    d.cxcArr.forEach(function(f){
+      var lbl = (f.num||'') + ' · ' + (f.cliente||'') ;
+      var nota = f.fecha ? ('emit. '+f.fecha) : '';
+      html += fila(lbl, f.total||0, 'item', 2, nota);
+    });
+  }
 
   html += fila('Anticipo Rte.Fte. (11% s/honorarios)', d.rete, 'item', 1, 'activo fiscal');
 

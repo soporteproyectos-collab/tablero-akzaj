@@ -19886,7 +19886,10 @@ function frEstadoReal(r) {
     return 'PENDIENTE';
   }
 
-  // Sin extracto del período → pendiente de cargar extracto
+  // Sin extracto: si hay fuente de egreso = PAGADO (todo lo de egresos ya fue pagado)
+  if (fuente !== null) return 'PAGADO';
+  
+  // Sin extracto y sin egreso → pendiente de verificar
   return 'SIN-EXTRACTO';
 }
 
@@ -20379,7 +20382,7 @@ function frFuentePago(r) {
       // MODO A: N° comprobante de la factura radicada aparece en el egreso
       // Busca en N_Comprobante, Concepto Y Observaciones del egreso
       var gConcepto = String(gx['Concepto'] || '').toLowerCase();
-      var gObs      = (gx['Observaciones'] || '').toLowerCase();
+      var gObs      = String(gx['Observaciones'] || '').toLowerCase();
       var gCompFull = gComp + ' ' + gConcepto + ' ' + gObs;
       if (ncomp.length > 2 && gCompFull.indexOf(ncomp.toLowerCase()) >= 0) {
         var _ra = frParseCuenta(cta, 'egreso');
@@ -20392,6 +20395,15 @@ function frFuentePago(r) {
         if (ncompParts.some(function(p){ return gCompFull.indexOf(p) >= 0; })) {
           var _ra2 = frParseCuenta(cta, 'egreso');
           _FR_FUENTE_CACHE[_ck] = _ra2; return _ra2;
+        }
+      }
+
+      // MODO A2: monto exacto + proveedor coincide (sin necesitar N° comprobante)
+      // Todo lo de egresos ya está pagado — si monto y proveedor coinciden = PAGADO
+      if (Math.abs(gTot - total) <= 500 && gProv.length > 3) {
+        if (provWords.length > 0 && provWords.some(function(w){ return gProv.indexOf(w) >= 0; })) {
+          var _ra3 = frParseCuenta(cta, 'egreso');
+          _FR_FUENTE_CACHE[_ck] = _ra3; return _ra3;
         }
       }
 

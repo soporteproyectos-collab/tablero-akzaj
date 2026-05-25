@@ -5040,7 +5040,7 @@ function renderHomeGastos() {
 
     // Key incluye N° Comprobante para que registros del mismo proveedor
     // con diferente comprobante no se colapsen en uno solo
-    var ncomp2 = (r['N Comprobante'] || r['N_Comprobante'] || '').trim();
+    var ncomp2 = String(r['N Comprobante'] || r['N_Comprobante'] || '').trim();
     var baseKey = (r['Proveedor / Beneficiario'] || r['Beneficiario'] || r['Concepto'] || 'Sin identificar').trim();
     var key = ncomp2 ? baseKey + '|' + ncomp2 : baseKey;
 
@@ -20186,7 +20186,7 @@ function frCalcularAbonado(r) {
   var total = frTotalVal(r);
   if (total <= 0) return 0;
 
-  var ncomp     = (r['N Comprobante'] || r['N_Comprobante'] || '').trim().toLowerCase();
+  var ncomp     = StringString(r['N Comprobante'] || r['N_Comprobante'] || '').trim().toLowerCase();
   var proveedor = (r['Proveedor / Beneficiario'] || '').trim().toUpperCase();
   var abonado   = 0;
 
@@ -20353,7 +20353,7 @@ function frFuentePago(r) {
   if (_FR_FUENTE_CACHE[_ck] !== undefined) return _FR_FUENTE_CACHE[_ck];
   var total     = frTotalVal(r);
   if (total <= 0) return null;
-  var ncomp     = (r['N Comprobante'] || r['N_Comprobante'] || '').trim().toLowerCase();
+  var ncomp     = StringString(r['N Comprobante'] || r['N_Comprobante'] || '').trim().toLowerCase();
   var proveedor = (r['Proveedor / Beneficiario'] || '').trim().toUpperCase();
   var fechaFR   = (r['Fecha'] || '');
 

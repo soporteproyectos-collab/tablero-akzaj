@@ -9049,8 +9049,10 @@ function renderResumenTablero() {
         if (rendFid  > 0) detalle.push('Fid: '+F(rendFid));
         if (rendBold > 0) detalle.push('Bold: '+F(rendBold));
         if (rendBcol > 0) detalle.push('Bcol: '+F(rendBcol));
+        var periodos = typeof P !== 'undefined' ? P.length : 0;
+        var labelPer = periodos > 0 ? P[0].label.split(' ')[0].substring(0,3) + '–' + P[periodos-1].label.split(' ')[0].substring(0,3) + ' 2026' : 'Acumulado 2026';
         return card('💰','Rendimientos financieros', rendTotal, '#0F6E56','#F0FDF4',
-          detalle.join(' · '), 'Acumulado Ene–Mar 2026');
+          detalle.join(' · '), 'Acumulado ' + labelPer);
       })()
 
     +'</div>'

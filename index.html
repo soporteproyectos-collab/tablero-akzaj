@@ -11878,7 +11878,7 @@ function actualizarTodo() {
     }
 
     selMes.innerHTML = opts;
-
+    if (valActual) selMes.value = valActual; // restaurar selección
   }
 
   renderResumenTablero();
@@ -18354,8 +18354,8 @@ function alzakCargarDatosSheets(callback) {
             'Observaciones':  r['Observaciones']||''
           };
         });
-        if (typeof gastoActualizarFiltros === 'function') gastoActualizarFiltros();
-        if (typeof renderGastosDashboard === 'function') renderGastosDashboard();
+        if (typeof actualizarTodo === 'function') actualizarTodo();
+        else if (typeof renderGastosDashboard === 'function') renderGastosDashboard();
         if (typeof renderResumenTablero === 'function') renderResumenTablero();
         cargados.push('Egresos: ' + GASTOS_DATA.length);
       }
@@ -18403,6 +18403,7 @@ function alzakCargarDatosSheets(callback) {
             };
           });
           if (typeof renderFacturas === 'function') renderFacturas();
+          if (typeof renderCarteraHome === 'function') renderCarteraHome();
           if (typeof frActualizarFiltros === 'function') frActualizarFiltros();
           try {
             localStorage.setItem('alzak_facturas_gs', JSON.stringify(FACTURAS));
@@ -20832,6 +20833,7 @@ var _patchInterval = setInterval(function() {
   if (changed) {
     clearInterval(_patchInterval);
     if (typeof renderFacturas === 'function') renderFacturas();
+    if (typeof renderCarteraHome === 'function') renderCarteraHome();
     if (typeof renderResumenTablero === 'function') renderResumenTablero();
   }
 }, 1000);

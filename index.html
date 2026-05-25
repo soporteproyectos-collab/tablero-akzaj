@@ -9487,25 +9487,52 @@ function calcBalMes(mes) {
     }
   } catch(e) { totalBancos = 0; }
 
-  // 2. CxC clientes → facturas pendientes (automático desde Facturación)
+  // 2. CxC clientes → facturas pendientes AL CORTE del mes
+  // Lógica correcta: emitidas hasta el último día del mes de corte,
+  // que no tenían pago registrado a esa fecha.
+  var MESES_ORD_NUM_CXC = {
+    'Enero':1,'Febrero':2,'Marzo':3,'Abril':4,'Mayo':5,'Junio':6,
+    'Julio':7,'Agosto':8,'Septiembre':9,'Octubre':10,'Noviembre':11,'Diciembre':12
+  };
+  // Último día de cada mes (sin leap-year preciso, suficiente para comparar)
+  var DIAS_MES = [0,31,28,31,30,31,30,31,31,30,31,30,31];
+  var corteAnio_cxc = 0, corteMes_cxc = 0, cierreTimestamp = Infinity;
+  if (mes) {
+    var mesParts_cxc = mes.split(' ');
+    corteMes_cxc  = MESES_ORD_NUM_CXC[mesParts_cxc[0]] || 0;
+    corteAnio_cxc = parseInt(mesParts_cxc[1]) || 0;
+    // Timestamp del cierre del mes (último día, 23:59:59)
+    var diasCorte = DIAS_MES[corteMes_cxc] || 31;
+    cierreTimestamp = new Date(corteAnio_cxc, corteMes_cxc - 1, diasCorte, 23, 59, 59).getTime();
+  }
 
   var factFil = FACTURAS.filter(function(f){
-
-    if(!mes) return true;
-
     var dp = fFechaPartes(f.fecha);
-
-    if(dp.length<3) return false;
-
-    return MN[parseInt(dp[1])-1]+' '+String(dp[0])===String(mes);
-
+    if (dp.length < 3) return false;
+    if (!mes) return true;
+    // Factura emitida en o antes del mes de corte
+    var fAnio = parseInt(dp[0]), fMes = parseInt(dp[1]);
+    if (fAnio > corteAnio_cxc) return false;
+    if (fAnio === corteAnio_cxc && fMes > corteMes_cxc) return false;
+    return true;
   });
 
-  // CxC = total de facturas pendientes de cobro
-
-  var cxc = factFil.filter(function(f){return !f.pagada;})
-
-    .reduce(function(a,f){return a+(f.total||0);},0);
+  // CxC = facturas que al cierre del mes aún no habían sido cobradas
+  // Una factura estaba "cobrada al corte" si tiene fecha_pago <= cierre del mes
+  var cxcArr = factFil.filter(function(f){
+    if (!mes) return !f.pagada; // acumulado: estado actual
+    if (!f.pagada) return true; // no pagada hoy = no pagada en ningún corte pasado
+    // Si tiene fecha_pago, verificar si el pago ocurrió antes del cierre del mes
+    if (f.fecha_pago) {
+      var dp2 = fFechaPartes(f.fecha_pago);
+      if (dp2.length >= 3) {
+        var pagoTs = new Date(parseInt(dp2[0]), parseInt(dp2[1])-1, parseInt(dp2[2])).getTime();
+        return pagoTs > cierreTimestamp; // pago posterior al corte → pendiente en ese mes
+      }
+    }
+    return false; // pagada sin fecha_pago = asumir cobrada antes del corte
+  });
+  var cxc = cxcArr.reduce(function(a,f){return a+(f.total||0);},0);
 
   // 3. Retención en la fuente (anticipo de impuesto — activo)
 
@@ -9624,7 +9651,8 @@ function calcBalMes(mes) {
   var totalPas = cxpHon + oblFin + imptos + tc + otrosPas;
 
   // ── CxP Contratistas (FR_DATA pendientes al corte del mes) ──────────
-  // Facturas radicadas que a la fecha del mes aún no han sido pagadas
+  // Facturas radicadas que a la fecha del corte del mes AÚN no habían sido pagadas.
+  // "Pagada al corte" = el egreso que la cruzó tiene fecha <= cierre del mes.
   var cxpContratistas = 0;
   var cxpContratistasDetalle = {};
   if (typeof FR_DATA !== 'undefined' && FR_DATA.length) {
@@ -9632,23 +9660,71 @@ function calcBalMes(mes) {
       'Enero':1,'Febrero':2,'Marzo':3,'Abril':4,'Mayo':5,'Junio':6,
       'Julio':7,'Agosto':8,'Septiembre':9,'Octubre':10,'Noviembre':11,'Diciembre':12
     };
-    // Al corte de "mes" (ej: "Enero 2026"), mostrar facturas:
-    // - Fecha <= corte del mes
-    // - Estado NO pagada (frEstadoReal !== PAGADO)
+    var DIAS_MES_FR = [0,31,28,31,30,31,30,31,31,30,31,30,31];
+    var cxpCierreTs = Infinity; // timestamp del último día del mes de corte
+    var cxpCorteMes = 0, cxpCorteAnio = 0;
+    if (mes) {
+      var mpFR = mes.split(' ');
+      cxpCorteMes  = MESES_ORD_NUM[mpFR[0]] || 0;
+      cxpCorteAnio = parseInt(mpFR[1]) || 0;
+      cxpCierreTs  = new Date(cxpCorteAnio, cxpCorteMes - 1, DIAS_MES_FR[cxpCorteMes]||31, 23, 59, 59).getTime();
+    }
+
+    // Helper: ¿fue pagada esta FR antes del cierre del mes?
+    // Si el egreso que la cruzó tiene fecha <= cierre → estaba pagada
+    function frPagadaAlCorte(r) {
+      if (!mes) {
+        // Acumulado: usar estado actual
+        return typeof frEstadoReal === 'function' ? frEstadoReal(r) === 'PAGADO' : false;
+      }
+      // Intentar obtener la fecha del egreso que pagó esta FR
+      // GASTOS_DATA tiene columna 'Fecha' en dd/MM/yyyy
+      var total = parseFloat(r['Total (COP)']||r['Total']||0);
+      var ncomp = String(r['N Comprobante']||r['N_Comprobante']||'').trim().toLowerCase();
+      var prov  = (r['Proveedor / Beneficiario']||'').trim().toUpperCase();
+      var SKIP3 = {S:1,A:1,SAS:1,DE:1,LA:1,EL:1,LOS:1,Y:1,DEL:1,LTDA:1};
+      var provWords3 = prov.split(/[\s.]+/).filter(function(w){ return w.length>3 && !SKIP3[w]; });
+
+      if (typeof GASTOS_DATA !== 'undefined') {
+        for (var gi=0; gi<GASTOS_DATA.length; gi++) {
+          var gx = GASTOS_DATA[gi];
+          var gComp = String(gx['N_Comprobante']||gx['N Comprobante']||gx['Concepto']||'').toLowerCase();
+          var gProv = (gx['Beneficiario']||gx['Proveedor / Beneficiario']||'').toUpperCase();
+          var gTot  = parseFloat(gx['Total_COP']||gx['Total ($)']||0);
+          var gFecha= String(gx['Fecha']||'');
+          // Calcular timestamp del egreso
+          var gTs = 0;
+          var gfp = gFecha.split('/');
+          if (gfp.length >= 3) {
+            gTs = new Date(parseInt(gfp[2]), parseInt(gfp[1])-1, parseInt(gfp[0])).getTime();
+          }
+          // ¿Este egreso coincide con la FR?
+          var coincide = false;
+          if (ncomp.length > 2 && (gComp.indexOf(ncomp) >= 0)) coincide = true;
+          if (!coincide && Math.abs(gTot - total) <= 500 && provWords3.length > 0) {
+            coincide = provWords3.some(function(w){ return gProv.indexOf(w) >= 0; });
+          }
+          if (coincide && gTs > 0) {
+            return gTs <= cxpCierreTs; // pagada si el egreso ocurrió antes del cierre
+          }
+        }
+      }
+      // Sin cruce con GASTOS_DATA: usar frEstadoReal (estado actual sin corte de fecha)
+      if (typeof frEstadoReal === 'function') return frEstadoReal(r) === 'PAGADO';
+      return false;
+    }
+
     FR_DATA.forEach(function(r) {
-      var estado = typeof frEstadoReal === 'function' ? frEstadoReal(r) : (r['Estado']||'');
-      if (estado === 'PAGADO') return; // ya pagada, no es pasivo
       var fp = (r['Fecha']||'').split('/');
       if (fp.length < 3) return;
       var fMes = parseInt(fp[1]), fAnio = parseInt(fp[2]);
       if (!fMes || !fAnio) return;
-      // Si hay mes seleccionado, incluir solo facturas del mes o anteriores
+      // Solo facturas emitidas hasta el mes de corte
       if (mes) {
-        var mesParts = mes.split(' ');
-        var corteAnio = parseInt(mesParts[mesParts.length-1])||0;
-        var corteMes  = MESES_ORD_NUM[mesParts[0]]||0;
-        if (fAnio > corteAnio || (fAnio === corteAnio && fMes > corteMes)) return;
+        if (fAnio > cxpCorteAnio || (fAnio === cxpCorteAnio && fMes > cxpCorteMes)) return;
       }
+      // Si ya fue pagada al corte, no es pasivo en ese mes
+      if (frPagadaAlCorte(r)) return;
       var val = parseFloat(r['Total (COP)']||r['Total']||0);
       if (val <= 0) return;
       var cat = r['Categoria']||'Sin categoría';
@@ -9693,7 +9769,7 @@ function calcBalMes(mes) {
 
   return {
 
-    bancos:totalBancos, cxc:cxc, rete:rete,
+    bancos:totalBancos, cxc:cxc, cxcCount:cxcArr.length, rete:rete,
 
     totalActCorr:totalActCorr,
 
@@ -9836,8 +9912,7 @@ function renderBalance() {
     d.bancos===0 ? '(pendiente conciliación bancaria)' : '');
 
   html += fila('Cuentas por Cobrar — Clientes', d.cxc, 'item', 1,
-
-    FACTURAS.filter(function(f){return !f.pagada;}).length+' facturas pendientes');
+    d.cxcCount + ' facturas pendientes al corte');
 
   html += fila('Anticipo Rte.Fte. (11% s/honorarios)', d.rete, 'item', 1, 'activo fiscal');
 

@@ -20186,7 +20186,7 @@ function frCalcularAbonado(r) {
   var total = frTotalVal(r);
   if (total <= 0) return 0;
 
-  var ncomp     = StringString(r['N Comprobante'] || r['N_Comprobante'] || '').trim().toLowerCase();
+  var ncomp     = String(r['N Comprobante'] || r['N_Comprobante'] || '').trim().toLowerCase();
   var proveedor = (r['Proveedor / Beneficiario'] || '').trim().toUpperCase();
   var abonado   = 0;
 
@@ -20353,7 +20353,7 @@ function frFuentePago(r) {
   if (_FR_FUENTE_CACHE[_ck] !== undefined) return _FR_FUENTE_CACHE[_ck];
   var total     = frTotalVal(r);
   if (total <= 0) return null;
-  var ncomp     = StringString(r['N Comprobante'] || r['N_Comprobante'] || '').trim().toLowerCase();
+  var ncomp     = String(r['N Comprobante'] || r['N_Comprobante'] || '').trim().toLowerCase();
   var proveedor = (r['Proveedor / Beneficiario'] || '').trim().toUpperCase();
   var fechaFR   = (r['Fecha'] || '');
 

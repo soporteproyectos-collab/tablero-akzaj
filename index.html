@@ -9842,7 +9842,7 @@ function calcBalMes(mes) {
 
   return {
 
-    bancos:totalBancos, bancosDetalle:bancosDetalle, cxc:cxc, cxcCount:cxcArr.length, cxcArr:cxcArr, cxc2026Pendiente:cxc2026Pendiente, cxcApertura:cxcAperturaPendiente, rete:rete,
+    bancos:totalBancos, bancosDetalle:bancosDetalle, cxc:cxc, cxcCount:cxcArr.length, cxcArr:cxcArr, cxc2026Pendiente:cxc2026Pendiente, cxcApertura:cxcAperturaPendiente, cxcCierreTs:cierreTimestamp, rete:rete,
 
     totalActCorr:totalActCorr,
 
@@ -10017,16 +10017,16 @@ function renderBalance() {
       // Cartera 2025 pendiente al corte = apertura − cobros de 2025 recibidos hasta el mes
       html += fila('Cartera 2025 (apertura 01-Ene-2026)', aperCxC, 'item', 2, 'cierre oficial Kevin Díaz T.P. 103960-T');
       // Cobros de cartera 2025 recibidos hasta el corte (facturas 2025 pagadas con fecha_pago en 2026)
+      var _cierreTs = d.cxcCierreTs || Infinity;
       var cobrados2025 = FACTURAS.filter(function(f){
         var dp0 = fFechaPartes(f.fecha||'');
         if (dp0.length<3) return false;
-        var fAnio0 = parseInt(dp0[0]);
-        if (fAnio0 >= 2026) return false; // solo facturas de 2025 o anteriores
+        if (parseInt(dp0[0]) >= 2026) return false;
         if (!f.pagada || !f.fecha_pago) return false;
         var dp3 = fFechaPartes(f.fecha_pago);
         if (dp3.length<3) return false;
         var pTs = new Date(parseInt(dp3[0]),parseInt(dp3[1])-1,parseInt(dp3[2])).getTime();
-        return pTs <= cierreTimestamp;
+        return pTs <= _cierreTs;
       });
       var totalCobrado2025 = cobrados2025.reduce(function(a,f){return a+(f.total||0);},0);
       if (totalCobrado2025>0) {

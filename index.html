@@ -884,11 +884,11 @@ tbody tr:hover td{background:var(--cyan-light);}
 
       <span>📋 Ver Estado de Resultados detallado</span>
 
-      <span id="ico-er-detalle" style="font-size:14px">▼</span>
+      <span id="ico-er-detalle" style="font-size:14px">▲</span>
 
     </button>
 
-    <div id="er-body" style="display:none;margin-top:12px"></div>
+    <div id="er-body" style="display:block;margin-top:12px"></div>
 
   </div>
 
@@ -20401,9 +20401,22 @@ function frBuildPool() {
   });
 }
 function frResetPool(){if(_FR_MOVS_POOL)_FR_MOVS_POOL.forEach(function(m){m.usado=false;});else frBuildPool();}
-function frConsumir(total){
+function frConsumir(total, proveedorHint){
   if(!_FR_MOVS_POOL)frBuildPool();
-  for(var _i=0;_i<_FR_MOVS_POOL.length;_i++){var _mv=_FR_MOVS_POOL[_i];if(!_mv.usado&&Math.abs(_mv.v-total)<=100){_mv.usado=true;return _mv;}}
+  var SKIP_W={S:1,A:1,SAS:1,DE:1,LA:1,EL:1,LOS:1,Y:1,DEL:1,LTDA:1,COL:1};
+  var provW = proveedorHint ? proveedorHint.toUpperCase().split(/[\s.,()+]+/).filter(function(w){return w.length>3&&!SKIP_W[w];}) : [];
+  // Primero intenta con coincidencia de monto Y proveedor en descripción
+  if (provW.length > 0) {
+    for(var _i=0;_i<_FR_MOVS_POOL.length;_i++){
+      var _mv=_FR_MOVS_POOL[_i];
+      if(_mv.usado||Math.abs(_mv.v-total)>100) continue;
+      var _desc=(_mv.d||'').toUpperCase();
+      if(provW.some(function(w){return _desc.indexOf(w)>=0;})){
+        _mv.usado=true; return _mv;
+      }
+    }
+  }
+  // Si no hay coincidencia de proveedor, NO cruzar solo por monto — demasiado ambiguo
   return null;
 }
 // ── Cruce USD: tolerancia porcentual ±FR_TOL_USD_PCT% ────────────────────
@@ -20504,7 +20517,7 @@ function frFuentePago(r) {
     // ── FUENTE 2: Extractos bancarios P[] — cruce ESTRICTO con pool ────────
   // Usa frConsumir() que marca cada movimiento como usado — evita que el mismo
   // movimiento bancario pague múltiples facturas del mismo monto
-  var poolMatch = frConsumir(total);
+  var poolMatch = frConsumir(total, proveedor);
   // MODO C: si frConsumir no encontró match, buscar en pool por monto+descripción
   // Esto cubre casos donde el proveedor en extracto difiere del de la factura
   // Ej: Atrium Food ↔ "ATRIUM ZONA NORTE", Padel One ↔ "Mucho Padel Col"

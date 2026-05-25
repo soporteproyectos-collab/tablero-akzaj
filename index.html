@@ -19804,14 +19804,18 @@ function frActualizarFiltros() {
 
   var selAnio = document.getElementById('fr-fil-anio');
   var selMes  = document.getElementById('fr-fil-mes');
+
   if (selAnio) {
-    var anioActual = selAnio.value || '2026';
+    var anioActual = selAnio.value || '2026'; // preservar selección
     selAnio.innerHTML = '<option value="">Todos los años</option>'
       + años.map(function(a){ return '<option value="'+a+'"'+(a===anioActual?' selected':'')+'>'+a+'</option>'; }).join('');
+    if (anioActual) selAnio.value = anioActual; // restaurar
   }
   if (selMes) {
+    var mesActual = selMes.value || ''; // preservar selección
     selMes.innerHTML = '<option value="">Todos los meses</option>'
-      + meses.map(function(m){ return '<option value="'+m+'">'+m+'</option>'; }).join('');
+      + meses.map(function(m){ return '<option value="'+m+'"'+(m===mesActual?' selected':'')+'>'+m+'</option>'; }).join('');
+    if (mesActual) selMes.value = mesActual; // restaurar
   }
 }
 

@@ -20045,7 +20045,8 @@ function frGetFiltered() {
   var mes   = (document.getElementById('fr-fil-mes')||{}).value || '';
   var est   = (document.getElementById('fr-fil-estado')||{}).value || '';
   var bus   = ((document.getElementById('fr-buscar')||{}).value || '').toLowerCase();
-  return FR_DATA.filter(function(r) {
+  console.log('[frGetFiltered] anio='+anio+' mes='+mes+' est='+est+' total FR_DATA='+FR_DATA.length);
+  var result = FR_DATA.filter(function(r) {
     var fecha = r['Fecha'] || '';
     // Extraer mes y año de la fecha (formato dd/MM/yyyy)
     var partes = fecha.split('/');
@@ -20073,9 +20074,9 @@ function frGetFiltered() {
     }
     return true;
   });
+  console.log('[frGetFiltered] resultado='+result.length);
+  return result;
 }
-
-// ── Motor de cruce: 3 fuentes ──────────────────────────
 // Fuente 1: GASTOS_DATA (CSV egresos cargado por usuario)
 // Fuente 2: DATA TC (extractos TC BCS cargados en el tablero)
 // Fuente 3: Estado explícito en el CSV de radicadas

@@ -20477,40 +20477,26 @@ function frFuentePago(r) {
       var gTot  = parseFloat(gx['Total ($)'] || gx['Total_COP'] || gx['Total (COP)'] || 0);
       var cta   = (gx['Cuenta_Origen'] || '').trim();
 
-      // MODO A: N° comprobante de la factura radicada aparece en el egreso
-      // Busca en N_Comprobante, Concepto Y Observaciones del egreso
       var gConcepto = String(gx['Concepto'] || '').toLowerCase();
       var gObs      = String(gx['Observaciones'] || '').toLowerCase();
       var gCompFull = gComp + ' ' + gConcepto + ' ' + gObs;
-      if (ncomp.length > 2 && gCompFull.indexOf(ncomp.toLowerCase()) >= 0) {
+
+      // Mes/año del egreso para acotar cruce temporal
+      var gFechaStr = String(gx['Fecha'] || '');
+      var gFp = gFechaStr.split('/');
+      var gMes = gFp.length >= 3 ? parseInt(gFp[1])-1 : -1;
+      var gAnio = gFp.length >= 3 ? parseInt(gFp[2]) : -1;
+      // Solo cruzar con egresos del mismo mes/año o hasta 2 meses después
+      var mesesDif = (gAnio >= 0 && frAnio >= 0)
+        ? (gAnio - frAnio) * 12 + (gMes - frMes)
+        : 0;
+      if (mesesDif < 0 || mesesDif > 2) continue; // egreso muy anterior o muy futuro
+
+      // ÚNICO MODO VÁLIDO: N° comprobante de la FR aparece en el egreso
+      // Regla: PAGADO solo si hay evidencia documental — N°comp en egresos O en extracto
+      if (ncomp.length >= 5 && gCompFull.indexOf(ncomp.toLowerCase()) >= 0) {
         var _ra = frParseCuenta(cta, 'egreso');
         _FR_FUENTE_CACHE[_ck] = _ra; return _ra;
-      }
-
-      // También: si alguna parte del N°comp de la factura (separado por / o espacio) aparece
-      if (ncomp.length > 4) {
-        var ncompParts = ncomp.split(/[\/\s\-]+/).filter(function(p){ return p.length > 3; });
-        if (ncompParts.some(function(p){ return gCompFull.indexOf(p) >= 0; })) {
-          var _ra2 = frParseCuenta(cta, 'egreso');
-          _FR_FUENTE_CACHE[_ck] = _ra2; return _ra2;
-        }
-      }
-
-      // MODO A2: monto exacto + proveedor coincide (sin necesitar N° comprobante)
-      // Todo lo de egresos ya está pagado — si monto y proveedor coinciden = PAGADO
-      if (Math.abs(gTot - total) <= 500 && gProv.length > 3) {
-        if (provWords.length > 0 && provWords.some(function(w){ return gProv.indexOf(w) >= 0; })) {
-          var _ra3 = frParseCuenta(cta, 'egreso');
-          _FR_FUENTE_CACHE[_ck] = _ra3; return _ra3;
-        }
-      }
-
-      // MODO B: monto exacto (±100) + al menos 1 palabra clave del proveedor
-      if (Math.abs(gTot - total) <= 100 && gProv.length > 3) {
-        if (provWords.some(function(w){ return gProv.indexOf(w) >= 0; })) {
-          var _rb = frParseCuenta(cta, 'egreso');
-          _FR_FUENTE_CACHE[_ck] = _rb; return _rb;
-        }
       }
     }
   }

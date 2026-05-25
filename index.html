@@ -18290,6 +18290,7 @@ function alzakCargarDatosSheets(callback) {
   fetch(url, { mode: 'cors' })
     .then(function(r){ return r.json(); })
     .then(function(data) {
+      try {
       console.log('ALZAK Sheets response:', JSON.stringify(data).substring(0, 500));
       if (!data.ok) { mostrarToast('⚠️ Error al cargar Sheets: ' + (data.error||''), '#993C1D'); return; }
       console.log('Radicadas:', data.radicadas ? data.radicadas.length : 'vacío', '| Egresos:', data.egresos ? data.egresos.length : 'vacío', '| Facturación:', data.facturacion ? data.facturacion.length : 'vacío');
@@ -18432,8 +18433,13 @@ function alzakCargarDatosSheets(callback) {
       if (typeof renderBalance === 'function') setTimeout(renderBalance, 300);
       mostrarToast('✅ Sheets sincronizados — ' + cargados.join(' · '), '#2E7D32', 4000);
       if (callback) callback();
+      } catch(procErr) {
+        console.error('Error procesando datos de Sheets:', procErr);
+        mostrarToast('⚠️ Error procesando datos: ' + procErr.message, '#993C1D');
+      }
     })
     .catch(function(err) {
+      console.error('Error fetch Sheets:', err);
       mostrarToast('⚠️ No se pudo conectar con Google Sheets', '#993C1D');
     });
 }

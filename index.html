@@ -9406,9 +9406,16 @@ var BAL_CONFIG = {
 };
 
 (function(){
-
-  try { var c=localStorage.getItem('alzak_bal_config'); if(c) BAL_CONFIG=JSON.parse(c); } catch(e){}
-
+  try {
+    var c = localStorage.getItem('alzak_bal_config');
+    if (c) {
+      var saved = JSON.parse(c);
+      // Merge: preservar apertura2025 hardcodeado — nunca sobreescribir con localStorage
+      if (saved.activosFijos) BAL_CONFIG.activosFijos = saved.activosFijos;
+      if (saved.patrimonio)   BAL_CONFIG.patrimonio   = saved.patrimonio;
+      // apertura2025 NO se toma de localStorage — siempre usa los valores hardcodeados
+    }
+  } catch(e) {}
 })();
 
 function guardarConfigBalance() {
@@ -9575,17 +9582,30 @@ function calcBalMes(mes) {
   });
   var cxc2026Pendiente = cxcArr.reduce(function(a,f){return a+(f.total||0);},0);
 
-  // Cobros de cartera 2025 recibidos hasta el corte del mes
-  // = facturas 2026 marcadas como pagadas con fecha_pago <= cierre del mes
-  // Asumimos que los pagos recibidos en 2026 de facturas 2025 están registrados
-  // en FACTURAS como facturas pagadas (el Sheet de facturación incluye las cobradas)
-  // El cobro de cartera 2025 se deduce del saldo apertura proporcionalmente:
-  // si hay facturas 2025 cobradas en 2026 cargadas en el Sheet, se descontarían aquí.
-  // Por ahora el saldo completo de 2025 se arrastra hasta que se registren los cobros.
-  var cxcAperturaPendiente = cxcApertura; // se irá reduciendo cuando se registren cobros 2025
-
+  // Cobros de cartera 2025 recibidos hasta el corte:
+  // Facturas con año < 2026, pagadas, con fecha_pago <= cierre del mes
+  var totalCobrado2025calc = 0;
+  if (mes && cxcApertura > 0) {
+    FACTURAS.forEach(function(f) {
+      var dp0 = fFechaPartes(f.fecha||'');
+      if (dp0.length < 3) return;
+      if (parseInt(dp0[0]) >= 2026) return;
+      if (!f.pagada) return;
+      if (f.fecha_pago) {
+        var dp3 = fFechaPartes(f.fecha_pago);
+        if (dp3.length >= 3) {
+          var pTs = new Date(parseInt(dp3[0]),parseInt(dp3[1])-1,parseInt(dp3[2])).getTime();
+          if (pTs <= cierreTimestamp) totalCobrado2025calc += (f.total||0);
+        }
+      } else {
+        // Pagada sin fecha_pago: si la factura es de 2025 y está pagada,
+        // se asume cobrada en el mes de vencimiento o antes del corte
+        totalCobrado2025calc += (f.total||0);
+      }
+    });
+  }
+  var cxcAperturaPendiente = Math.max(0, cxcApertura - totalCobrado2025calc);
   var cxc = (mes ? cxcAperturaPendiente : cxcApertura) + cxc2026Pendiente;
-  // cxcArr ya tiene solo las de 2026; para el detalle los mostramos con una nota de apertura
 
   // 3. Retención en la fuente (anticipo de impuesto — activo)
 
@@ -9960,35 +9980,71 @@ function renderBalance() {
 
   html += fila('Activos Corrientes', null, 'h', 0);
 
-  // ── Caja y Bancos con desglose por cuenta ──
+  // ── Caja y Bancos con desglose colapsable por cuenta ──
   var bd = d.bancosDetalle || {bcol:0,fid:0,caja:0,bold:0};
-  var tieneDetBancos = (bd.bcol||bd.fid||bd.caja||bd.bold);
-  html += fila('Caja y Bancos', d.bancos, 'item', 1,
-    d.bancos===0 ? '(pendiente conciliación bancaria)' : (tieneDetBancos?'▾ ver por cuenta':''));
+  var tieneDetBancos = !!(bd.bcol||bd.fid||bd.caja||bd.bold);
+  var _balUID = 'bal-bancos-det-' + (BAL_MES_SEL||'acum').replace(/ /g,'-');
+  var _bancosNota = d.bancos===0 ? '(pendiente conciliación bancaria)' : '';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 14px 5px 30px;font-size:11px;border-bottom:1px solid #f0ede8">'
+    + '<span style="color:#444">Caja y Bancos'
+    + (tieneDetBancos ? ' <span id="'+_balUID+'-btn" onclick="balToggleDetalle(this.dataset.uid)" data-uid="'+_balUID+'" style="cursor:pointer;color:#5DC3DA;font-size:10px;font-weight:600">&#9658; ver por cuenta</span>' : '')
+    + '<span style="font-size:9px;color:#aaa;margin-left:6px">'+_bancosNota+'</span></span>'
+    + '<span style="color:#54504F">'+F(d.bancos)+'</span>'
+    + '</div>';
   if (tieneDetBancos) {
+    html += '<div id="'+_balUID+'" style="display:none">';
     if (bd.bcol)  html += fila('Bancolombia Ahorros *6556', bd.bcol,  'item', 2);
     if (bd.fid)   html += fila('Fiducuenta *1771',          bd.fid,   'item', 2);
     if (bd.caja)  html += fila('Caja Social *2970',         bd.caja,  'item', 2);
     if (bd.bold)  html += fila('Bold CF *2371',             bd.bold,  'item', 2);
+    html += '</div>';
   }
 
-  // ── Cuentas por Cobrar con detalle de facturas ──
-  // CxC con desglose: apertura 2025 + facturas 2026 pendientes
-  html += fila('Cuentas por Cobrar — Clientes', d.cxc, 'item', 1,
-    'cartera al corte del período');
+  // ── Cuentas por Cobrar — colapsable con desglose completo ──
+  var _cxcUID = 'bal-cxc-det-' + (BAL_MES_SEL||'acum').replace(/ /g,'_');
+  var _cxcToggleBtn = d.cxc > 0
+    ? ' <span id="'+_cxcUID+'-btn" onclick="balToggleDetalle(this.dataset.uid)" data-uid="'+_cxcUID+'" style="cursor:pointer;color:#5DC3DA;font-size:10px;font-weight:600">&#9658; ver detalle</span>'
+    : '';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 14px 5px 30px;font-size:11px;border-bottom:1px solid #f0ede8">'
+    + '<span style="color:#444">Cuentas por Cobrar — Clientes'+_cxcToggleBtn
+    + '<span style="font-size:9px;color:#aaa;margin-left:6px">cartera al corte</span></span>'
+    + '<span style="color:' + (d.cxc>0?'#54504F':'#aaa') + '">' + F(d.cxc) + '</span>'
+    + '</div>';
   if (d.cxc > 0) {
     var aperCxC = (BAL_CONFIG.apertura2025 && BAL_CONFIG.apertura2025.cxc) ? BAL_CONFIG.apertura2025.cxc : 0;
+    html += '<div id="'+_cxcUID+'" style="display:none">';
     if (aperCxC && mes) {
-      html += fila('Cartera 2025 (saldo apertura)', aperCxC, 'item', 2, 'cierre 31 Dic 2025');
+      // Cartera 2025 pendiente al corte = apertura − cobros de 2025 recibidos hasta el mes
+      html += fila('Cartera 2025 (apertura 01-Ene-2026)', aperCxC, 'item', 2, 'cierre oficial Kevin Díaz T.P. 103960-T');
+      // Cobros de cartera 2025 recibidos hasta el corte (facturas 2025 pagadas con fecha_pago en 2026)
+      var cobrados2025 = FACTURAS.filter(function(f){
+        var dp0 = fFechaPartes(f.fecha||'');
+        if (dp0.length<3) return false;
+        var fAnio0 = parseInt(dp0[0]);
+        if (fAnio0 >= 2026) return false; // solo facturas de 2025 o anteriores
+        if (!f.pagada || !f.fecha_pago) return false;
+        var dp3 = fFechaPartes(f.fecha_pago);
+        if (dp3.length<3) return false;
+        var pTs = new Date(parseInt(dp3[0]),parseInt(dp3[1])-1,parseInt(dp3[2])).getTime();
+        return pTs <= cierreTimestamp;
+      });
+      var totalCobrado2025 = cobrados2025.reduce(function(a,f){return a+(f.total||0);},0);
+      if (totalCobrado2025>0) {
+        html += fila('(−) Cobros de cartera 2025 recibidos', -totalCobrado2025, 'item', 2, cobrados2025.length+' facturas cobradas antes del corte');
+        cobrados2025.forEach(function(f){
+          html += fila((f.num||'—')+' · '+(f.cliente||''), -(f.total||0), 'item', 3, 'cobrado '+f.fecha_pago);
+        });
+      }
     }
     if (d.cxcArr && d.cxcArr.length) {
-      html += fila('Facturas 2026 pendientes (' + d.cxcArr.length + ')', d.cxc2026Pendiente||0, 'item', 2, 'emitidas en 2026 sin cobro al corte');
+      html += fila('Facturas 2026 pendientes ('+d.cxcArr.length+')', d.cxc2026Pendiente||0, 'item', 2, 'emitidas en 2026 sin cobro al corte');
       d.cxcArr.forEach(function(f){
-        var lbl = (f.num||'—') + ' · ' + (f.cliente||'');
-        var nota = f.fecha ? 'emit. '+f.fecha : '';
-        html += fila(lbl, f.total||0, 'item', 3, nota);
+        html += fila((f.num||'—')+' · '+(f.cliente||''), f.total||0, 'item', 3, f.fecha?'emit. '+f.fecha:'');
       });
+    } else if (!aperCxC) {
+      html += fila('Sin facturas pendientes al corte', 0, 'item', 2);
     }
+    html += '</div>';
   }
 
   html += fila('Anticipo Rte.Fte. (11% s/honorarios)', d.rete, 'item', 1, 'activo fiscal');
@@ -18629,10 +18685,10 @@ function alzakCargarDatosSheets(callback) {
       // Facturación → FACTURAS — SIEMPRE reemplazar con datos frescos de Sheets
       if (data.facturacion && data.facturacion.length) {
           FACTURAS = data.facturacion.map(function(r, idx) {
-            var bruto = parseFloat(r['Subtotal_COP']||r['Subtotal (COP)']||r['Subtotal']||r['Base gravable']||r['Valor']||0);
-            var iva   = parseFloat(r['IVA_COP']||r['IVA (COP)']||r['IVA']||0);
-            var total = parseFloat(r['Total_COP']||r['Total (COP)']||r['Total']||bruto+iva||0);
-            var rete  = parseFloat(r['Retefuente']||r['RteFuente']||r['Retención']||0);
+            var bruto = parseMonto(r['Subtotal_COP']||r['Subtotal (COP)']||r['Subtotal']||r['Base gravable']||r['Valor']||r['VALOR']||0);
+            var iva   = parseMonto(r['IVA_COP']||r['IVA (COP)']||r['IVA']||0);
+            var total = parseMonto(r['Total_COP']||r['Total (COP)']||r['Total']||r['TOTAL']||0) || (bruto+iva);
+            var rete  = parseMonto(r['Retefuente']||r['RteFuente']||r['Retención']||r['RETENCIÓN']||r['Retención Fuente']||0);
             var _vRaw = r['Vencimiento']||r['Fecha Vencimiento']||r['Vence']||'';
             // FORZAR yyyy-MM-dd — extraer fecha SIN conversión UTC
             var _vClean = '';
@@ -18650,22 +18706,26 @@ function alzakCargarDatosSheets(callback) {
             var fechaDisplay = alzakFechaDisplay(r['Fecha']||'');
             var pagada = (r['Estado']||'').toLowerCase().indexOf('pagad') >= 0 ||
                          (r['Estado']||'').toLowerCase() === 'cobrada';
+            // Capturar fecha de pago/cobro para arqueo mes a mes
+            var fechaPagoRaw = r['Fecha de Pago']||r['FECHA DE PAGO']||r['Fecha Pago']||r['fecha_cobro']||r['Cobrado']||'';
+            var fechaPagoDisplay = fechaPagoRaw ? alzakFechaDisplay(fechaPagoRaw) : (pagada ? fechaDisplay : null);
             return {
               id:          'GS-' + idx,
-              num:         r['N_Factura']||r['N Factura']||r['Factura']||r['N°']||'',
+              num:         r['N_Factura']||r['N Factura']||r['Factura']||r['N°']||r['FACTURA']||'',
               fecha:       fechaDisplay || alzakFechaAISO(r['Fecha']||''),
-              vence:       venceDias,       // yyyy-MM-dd para diasHasta()
-              venceDisplay:venceDisplay,    // dd/MM/yyyy para mostrar
-              cliente:     r['Cliente']||'',
+              vence:       venceDias,
+              venceDisplay:venceDisplay,
+              cliente:     r['Cliente']||r['CLIENTE']||'',
               nit:         r['NIT']||'',
-              descripcion: r['Concepto']||r['Descripcion']||'',
+              descripcion: r['Concepto']||r['Descripcion']||r['DESCRIPCION']||'',
               bruto:       bruto,
               iva:         iva,
               retefuente:  rete,
               reteiva:     Math.round(iva * 0.15),
               total:       total,
               pagada:      pagada,
-              estado:      r['Estado']||'pendiente'
+              fecha_pago:  fechaPagoDisplay,
+              estado:      r['Estado']||r['ESTADO']||'pendiente'
             };
           });
           if (typeof renderFacturas === 'function') renderFacturas();
@@ -21042,6 +21102,16 @@ function alzakSincronizarSheets() {
 }
 
 // init on demand
+function balToggleDetalle(src) {
+  var uid = typeof src === 'string' ? src : (src && src.dataset ? src.dataset.uid : '');
+  var el  = document.getElementById(uid);
+  var btn = document.getElementById(uid + '-btn');
+  if (!el) return;
+  var oculto = el.style.display === 'none';
+  el.style.display  = oculto ? 'block' : 'none';
+  if (btn) btn.innerHTML = oculto ? '&#9660; ocultar' : '&#9658; ver detalle';
+}
+
 function balToggleCierre2025() {
   var panel = document.getElementById('bal-cierre-2025');
   var btn   = document.getElementById('btn-cierre-2025');

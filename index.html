@@ -8523,7 +8523,15 @@ function renderCarteraHome() {
 
     var mm={};
 
-    for(var i=0;i<FACTURAS.length;i++){var f=FACTURAS[i],dp=f.fecha.split('-'),mk=MN[parseInt(dp[1])-1]+' '+dp[0];if(!mm[mk])mm[mk]={total:0,cobrado:0,pendiente:0,vencida:0,mes:parseInt(dp[1]),anio:parseInt(dp[0])};mm[mk].total+=f.total;if(f.pagada)mm[mk].cobrado+=f.total;else if(estadoFact(f)==='vencida')mm[mk].vencida+=f.total;else mm[mk].pendiente+=f.total;}
+    for(var i=0;i<FACTURAS.length;i++){var f=FACTURAS[i];
+      var _fd=f.fecha||'',_dp,_mes,_anio;
+      if(_fd.indexOf('/')>=0){var _p=_fd.split('/');_mes=parseInt(_p[1]);_anio=parseInt(_p[2]);}
+      else{_dp=_fd.split('-');_mes=parseInt(_dp[1]);_anio=parseInt(_dp[0]);}
+      if(!_mes||!_anio)continue;
+      var mk=MN[_mes-1]+' '+_anio;
+      if(!mm[mk])mm[mk]={total:0,cobrado:0,pendiente:0,vencida:0,mes:_mes,anio:_anio};
+      mm[mk].total+=f.total;if(f.pagada)mm[mk].cobrado+=f.total;else if(estadoFact(f)==='vencida')mm[mk].vencida+=f.total;else mm[mk].pendiente+=f.total;
+    }
 
     var meses=Object.keys(mm).sort(function(a,b){return mm[a].anio!==mm[b].anio?mm[a].anio-mm[b].anio:mm[a].mes-mm[b].mes;});
 
@@ -12297,7 +12305,7 @@ function renderPGnew() {
 
   var meses=['Enero 2026','Febrero 2026','Marzo 2026'],mc=['Ene','Feb','Mar'],ingPM={},gasPM={};
 
-  if(FACTURAS&&FACTURAS.length){for(var i=0;i<FACTURAS.length;i++){var fac=FACTURAS[i],p=fac.fecha.split('-'),mn=MF[parseInt(p[1])]+' '+p[0];ingPM[mn]=(ingPM[mn]||0)+fac.total;}}
+  if(FACTURAS&&FACTURAS.length){for(var i=0;i<FACTURAS.length;i++){var fac=FACTURAS[i];var _fd2=fac.fecha||'',_m2,_a2;if(_fd2.indexOf('/')>=0){var _p2=_fd2.split('/');_m2=parseInt(_p2[1]);_a2=parseInt(_p2[2]);}else{var _p2=_fd2.split('-');_m2=parseInt(_p2[1]);_a2=parseInt(_p2[0]);}if(!_m2||!_a2)continue;var mn=MF[_m2]+' '+_a2;ingPM[mn]=(ingPM[mn]||0)+fac.total;}}
 
   for(var i=0;i<meses.length;i++)if(!ingPM[meses[i]])ingPM[meses[i]]=KPI_DATA.ing[meses[i]]||0;
 
@@ -20029,8 +20037,14 @@ function frGetFiltered() {
   var bus   = ((document.getElementById('fr-buscar')||{}).value || '').toLowerCase();
   return FR_DATA.filter(function(r) {
     var fecha = r['Fecha'] || '';
-    if (anio && fecha.indexOf(anio) < 0) return false;
-    if (mes  && fecha.indexOf(mes)  < 0) return false;
+    // Extraer mes y año de la fecha (formato dd/MM/yyyy)
+    var partes = fecha.split('/');
+    var fMes = partes.length >= 3 ? partes[1] : '';   // "05"
+    var fAnio = partes.length >= 3 ? partes[2] : '';  // "2026"
+    var fMesAnio = fMes + '/' + fAnio;                // "05/2026"
+    
+    if (anio && fAnio !== anio) return false;
+    if (mes  && fMesAnio !== mes) return false;
     // Usar estado real (cruce TC + Egresos), no el campo del CSV
     if (est) {
       var estadoReal = frEstadoReal(r);

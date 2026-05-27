@@ -17909,6 +17909,17 @@ document.addEventListener('DOMContentLoaded', function(){
     if (ph) { ph.classList.add('on'); }
   }, 300);
 
+  // Limpiar datos de localStorage al cargar — solo Sheets es la fuente de verdad
+  try {
+    var _conservar = ['alzak_session','alzak_bal_config','alzak_api_key','alzak_fp2026','pf2026v2','eb_estado_2026','msd_estado_2026'];
+    for (var _ki = localStorage.length - 1; _ki >= 0; _ki--) {
+      var _k = localStorage.key(_ki);
+      if (_k && _conservar.indexOf(_k) < 0) {
+        try { localStorage.removeItem(_k); } catch(e) {}
+      }
+    }
+  } catch(e) {}
+
   // Carga automática desde Google Sheets
   setTimeout(function(){
     try { alzakCargarDatosSheets(); } catch(e) { console.warn('Auto-sync Sheets:', e); }

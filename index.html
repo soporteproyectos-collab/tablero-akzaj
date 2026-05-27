@@ -429,6 +429,8 @@ tbody tr:hover td{background:var(--cyan-light);}
   <button id="tab-conc-btn" onclick="tabConc()" style="padding:6px 18px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif;background:rgba(255,255,255,0.12);color:#ccc;">&#127970; Conciliaci&#243;n</button>
   <button id="tab-pres-btn" onclick="tabPres()" style="padding:6px 18px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif;background:rgba(255,255,255,0.12);color:#ccc;">&#128203; Presupuesto</button>
   <button id="tab-sync-btn" onclick="alzakSincronizarSheets()" title="Sincronizar datos desde Google Sheets" style="padding:6px 14px;border-radius:20px;border:1px solid rgba(93,195,218,0.4);cursor:pointer;font-size:11px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif;background:rgba(93,195,218,0.15);color:#5DC3DA;">&#128260; Sincronizar</button>
+  <button onclick="if(confirm('¿Limpiar caché y recargar todo desde Sheets?')) alzakLimpiarCache()" title="Limpiar caché" style="padding:6px 14px;border-radius:20px;border:1px solid rgba(255,100,100,0.3);cursor:pointer;font-size:11px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif;background:rgba(255,100,100,0.12);color:#ff9999;">&#128465; Limpiar</button>
+  <button id="btn-ocultar-saldos-nav" onclick="alzakToggleSaldos()" title="Ocultar/mostrar saldos" style="padding:6px 12px;border-radius:20px;border:1px solid rgba(255,255,255,0.15);cursor:pointer;font-size:13px;font-family:'Montserrat',Helvetica,Arial,sans-serif;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.6);">&#128065;</button>
 </div>
 <div id="pg-home" class="pg on">
 
@@ -21028,7 +21030,7 @@ var _ALZAK_SALDOS_OCULTOS = false;
 
 function alzakToggleSaldos() {
   _ALZAK_SALDOS_OCULTOS = !_ALZAK_SALDOS_OCULTOS;
-  var btn = document.getElementById('btn-ocultar-saldos');
+  var btn = document.getElementById('btn-ocultar-saldos') || document.getElementById('btn-ocultar-saldos-nav');
   if (_ALZAK_SALDOS_OCULTOS) {
     document.body.classList.add('alzak-ocultar');
     if (btn) { btn.textContent = '🙈'; btn.title = 'Mostrar saldos'; btn.style.color = '#5DC3DA'; }

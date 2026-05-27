@@ -1218,6 +1218,24 @@ var ALLOWED_DOMAIN  = '';  // debe estar en GOOGLE_ROLES sí o sí
 var SESSION_KEY  = 'alzak_session';
 var LS_FACTURAS  = 'alzak_facturas';
 var LS_GASTOS    = 'alzak_gastos';
+
+// Control de versión de caché — cambiar este número limpia todo el localStorage
+var ALZAK_CACHE_VERSION = '20260527_v3';
+(function(){
+  try {
+    var cv = localStorage.getItem('alzak_cache_version');
+    if (cv !== ALZAK_CACHE_VERSION) {
+      // Versión nueva — limpiar todo excepto sesión
+      var conservar = ['alzak_session'];
+      var keys = [];
+      for (var i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+      keys.forEach(function(k){
+        if (conservar.indexOf(k) < 0) try { localStorage.removeItem(k); } catch(e){}
+      });
+      localStorage.setItem('alzak_cache_version', ALZAK_CACHE_VERSION);
+    }
+  } catch(e) {}
+})();
 var usuarioActual = null;
 
 // ── Inicializar pantalla de login según modo ─────────────────

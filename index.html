@@ -149,6 +149,81 @@ select,input{padding:6px 10px;border:1px solid #d0cec8;border-radius:7px;font-si
 
 /* Modo ocultar saldos */
 body.alzak-ocultar .alzak-masked { filter: blur(5px); user-select: none; transition: filter 0.15s; }
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE MÓVIL — max 768px
+═══════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* Header */
+  #main-header { padding: 0 14px; height: auto; min-height: 56px; flex-wrap: wrap; gap: 6px; }
+  #main-header > div:first-child { font-size: 11px; }
+  #header-fecha { display: none !important; }
+
+  /* Tab nav sticky */
+  #tab-nav { padding: 6px 10px !important; gap: 5px !important; flex-wrap: wrap; }
+  #tab-nav button { padding: 5px 10px !important; font-size: 10px !important; }
+
+  /* Contenido principal */
+  #content { padding: 10px 12px !important; }
+  .scroll-area { padding: 10px 12px !important; }
+
+  /* Grid de KPIs — 2 columnas en móvil */
+  .g4, .g3, .g2 {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  /* Cards de métricas */
+  .met, .card, .ind {
+    padding: 10px 12px !important;
+    font-size: 11px !important;
+  }
+  .met-v, .ind-v { font-size: 13px !important; }
+
+  /* Tablas — scroll horizontal */
+  table { font-size: 10px !important; }
+  .scroll-x, [style*="overflow-x:auto"], [style*="overflow-x: auto"] {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Facturas radicadas — ocultar columnas menos importantes */
+  .fr-col-concepto { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Botones de acción — más grandes para touch */
+  .btn { min-height: 36px; font-size: 11px !important; }
+
+  /* Pills de meses */
+  .pill { padding: 4px 10px !important; font-size: 10px !important; }
+
+  /* Balance general */
+  #bal-pills { flex-wrap: wrap; gap: 4px; }
+
+  /* Estado de resultados — scroll */
+  #er-body { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  #er-body table { min-width: 600px; }
+
+  /* Conciliación bancaria */
+  .acct-cards { grid-template-columns: 1fr !important; }
+
+  /* Login box */
+  #login-box { padding: 28px 20px !important; width: 100% !important; max-width: 100% !important; }
+
+  /* Filtros en fila envolvente */
+  [style*="display:flex"] { flex-wrap: wrap; }
+
+  /* Ocultar textos largos en header de tabla */
+  .fr-header-concepto { display: none; }
+
+  /* KPIs del resumen del tablero — 1 columna en pantallas muy pequeñas */
+}
+
+@media (max-width: 480px) {
+  .g4, .g3 { grid-template-columns: 1fr !important; }
+  #tab-nav button span { display: none; }
+  #main-header > div { font-size: 10px; }
+}
 </style>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -599,7 +674,7 @@ tbody tr:hover td{background:var(--cyan-light);}
     <span id="fr-tabla-arr" style="font-size:13px;color:#888;">▼</span>
   </button>
 </div>
-<div id="fr-tabla" style="display:none;overflow-x:auto;"></div>
+<div id="fr-tabla" style="display:none;overflow-x:auto;-webkit-overflow-scrolling:touch;"></div>
 
 <!-- Fin módulo Facturas Radicadas -->
 </div>

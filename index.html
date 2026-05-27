@@ -18398,22 +18398,31 @@ function alzakCargarDatosSheets(callback) {
       // Columnas exactas: Fecha, Categoria, Proveedor / Beneficiario, Concepto, N Comprobante, Subtotal (COP), IVA (COP), Total (COP)
       if (data.radicadas && data.radicadas.length) {
         FR_DATA = data.radicadas.map(function(r) {
-          // Normalizar fecha a dd/MM/yyyy
+          // Normalizar fecha a dd/MM/yyyy — maneja todos los formatos posibles
           var rawFecha = r['Fecha']||'';
           var fecha = '';
           if (rawFecha) {
             var s = String(rawFecha).trim();
-            if (s.indexOf('T') >= 0) {
-              // ISO timestamp → extraer yyyy-MM-dd sin UTC y convertir
-              var dp = s.substring(0,10).split('-');
-              if (dp.length === 3) fecha = dp[2]+'/'+dp[1]+'/'+dp[0];
-            } else if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
-              fecha = s; // ya dd/MM/yyyy
+            if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+              fecha = s; // ya dd/MM/yyyy ✓
             } else if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
               var dp2 = s.split('-');
-              fecha = dp2[2]+'/'+dp2[1]+'/'+dp2[0];
+              fecha = dp2[2]+'/'+dp2[1]+'/'+dp2[0]; // yyyy-MM-dd → dd/MM/yyyy
+            } else if (s.indexOf('T') >= 0) {
+              // ISO timestamp — usar solo la parte de fecha, sin conversión UTC
+              var dp = s.substring(0,10).split('-');
+              if (dp.length === 3) fecha = dp[2]+'/'+dp[1]+'/'+dp[0];
+            } else if (/^\d{5}$/.test(s) || /^\d{4,6}\.\d+$/.test(s)) {
+              // Número serial de Excel (ej: 46199) → convertir a fecha
+              var serial = Math.floor(parseFloat(s));
+              var excelEpoch = new Date(1899, 11, 30); // 30-dic-1899
+              var d = new Date(excelEpoch.getTime() + serial * 86400000);
+              var dd = ('0'+d.getDate()).slice(-2);
+              var mm = ('0'+(d.getMonth()+1)).slice(-2);
+              var yy = d.getFullYear();
+              fecha = dd+'/'+mm+'/'+yy;
             } else {
-              fecha = s;
+              fecha = s; // dejar como está
             }
           }
           return {
@@ -19848,11 +19857,20 @@ function frCargarCSV(input) {
       FR_DATA = [];
       var rows = frParseCSV(e.target.result);
       if (rows.length < 2) { alert('CSV sin datos'); return; }
-      var headers = rows[0];
+      var headers = rows[0].map(function(h){ return String(h||'').trim(); });
       for (var i=1; i<rows.length; i++) {
         if (!rows[i] || !rows[i].length) continue;
         var obj = {};
         headers.forEach(function(h,j){ obj[h] = (rows[i][j]||'').toString().trim(); });
+        // Normalizar fecha a dd/MM/yyyy
+        var fechaRaw = obj['Fecha'] || '';
+        if (/^\d{4}-\d{2}-\d{2}/.test(fechaRaw)) {
+          var dp = fechaRaw.substring(0,10).split('-');
+          obj['Fecha'] = dp[2]+'/'+dp[1]+'/'+dp[0];
+        } else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(fechaRaw)) {
+          var fp = fechaRaw.split('/');
+          obj['Fecha'] = ('0'+fp[0]).slice(-2)+'/'+('0'+fp[1]).slice(-2)+'/'+fp[2];
+        }
         if (obj['Fecha'] && obj['Categoria'] && obj['Categoria'] !== 'Categoria') FR_DATA.push(obj);
       }
       frPostLoad();
@@ -19868,20 +19886,42 @@ function frCargarCSV(input) {
         // Find the Consolidado sheet
         var shName = wb.SheetNames.find(function(n){ return n.toLowerCase().includes('consolidado'); }) || wb.SheetNames[0];
         var ws = wb.Sheets[shName];
-        var rows = XLSX.utils.sheet_to_json(ws, {defval:'', header:1});
-        // Find header row
-        var headerIdx = rows.findIndex(function(r){ return r[0]==='Fecha' || r[1]==='Categoria'; });
-        if (headerIdx < 0) headerIdx = 1;
-        var headers = rows[headerIdx];
+        var rows = XLSX.utils.sheet_to_json(ws, {defval:'', header:1, raw:false, dateNF:'dd/MM/yyyy'});
+        // Buscar fila de encabezado (puede no ser la primera)
+        var headerIdx = -1;
+        for (var hi=0; hi<Math.min(rows.length,5); hi++) {
+          var r0 = rows[hi];
+          if (r0 && (String(r0[0]).trim()==='Fecha' || String(r0[1]).trim()==='Categoria' || String(r0[1]).trim()==='Categoría')) {
+            headerIdx = hi; break;
+          }
+        }
+        if (headerIdx < 0) headerIdx = 0;
+        var headers = rows[headerIdx].map(function(h){ return String(h||'').trim(); });
         FR_DATA = [];
         for (var i=headerIdx+1; i<rows.length; i++) {
           var row = rows[i];
-          if (!row[0] || !row[1]) continue;
-          var fecha = String(row[0]);
-          if (fecha.includes('—') || fecha.includes('TOTAL') || fecha.includes('PUC')) continue;
+          if (!row[0] && !row[1]) continue;
+          var fechaRaw = row[0] !== undefined ? String(row[0]).trim() : '';
+          if (!fechaRaw || fechaRaw.includes('—') || fechaRaw.toUpperCase().includes('TOTAL') || fechaRaw.toUpperCase().includes('FECHA')) continue;
+          // Normalizar fecha a dd/MM/yyyy
+          var fechaNorm = fechaRaw;
+          if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(fechaRaw)) {
+            // Asegurar dd/MM/yyyy con ceros
+            var fp = fechaRaw.split('/');
+            fechaNorm = ('0'+fp[0]).slice(-2)+'/'+('0'+fp[1]).slice(-2)+'/'+fp[2];
+          } else if (/^\d{4}-\d{2}-\d{2}/.test(fechaRaw)) {
+            var dp = fechaRaw.substring(0,10).split('-');
+            fechaNorm = dp[2]+'/'+dp[1]+'/'+dp[0];
+          } else if (/^\d{4,6}$/.test(fechaRaw)) {
+            // Número serial de Excel
+            var serial = parseInt(fechaRaw);
+            var d = new Date(Math.round((serial - 25569)*86400*1000));
+            fechaNorm = ('0'+d.getUTCDate()).slice(-2)+'/'+ ('0'+(d.getUTCMonth()+1)).slice(-2)+'/'+d.getUTCFullYear();
+          }
           var obj = {};
-          headers.forEach(function(h,j){ obj[h] = row[j] !== undefined ? String(row[j]) : ''; });
-          if (obj['Categoria'] && obj['Categoria'] !== 'Categoria') FR_DATA.push(obj);
+          headers.forEach(function(h,j){ obj[h] = row[j] !== undefined ? String(row[j]).trim() : ''; });
+          obj['Fecha'] = fechaNorm; // siempre usar fecha normalizada
+          if (obj['Categoria'] && obj['Categoria'] !== 'Categoria' && obj['Categoria'] !== 'Categoría') FR_DATA.push(obj);
         }
         frPostLoad();
       } catch(err) {

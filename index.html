@@ -146,6 +146,9 @@ select,input{padding:6px 10px;border:1px solid #d0cec8;border-radius:7px;font-si
 
 #login-hint{font-size:11px;color:#bbb;text-align:center;margin-top:16px}
 
+
+/* Modo ocultar saldos */
+body.alzak-ocultar .alzak-masked { filter: blur(5px); user-select: none; transition: filter 0.15s; }
 </style>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -413,6 +416,8 @@ tbody tr:hover td{background:var(--cyan-light);}
       <span id="header-user-nombre" style="font-size:10px;color:rgba(255,255,255,.5);font-family:'Montserrat',Helvetica,Arial,sans-serif;"></span>
       <span id="gs-sync-icon" style="font-size:10px;color:rgba(255,255,255,0.4);">☁️</span>
       <button onclick="alzakCargarDatosSheets()" title="Recargar desde Sheets" style="background:rgba(93,195,218,0.3);border:none;color:#5DC3DA;padding:3px 10px;border-radius:6px;cursor:pointer;font-size:10px;font-family:'Montserrat',Helvetica,Arial,sans-serif;font-weight:700">🔄 Sheets</button>
+      <button onclick="if(confirm('¿Limpiar caché y recargar todo desde Sheets?')) alzakLimpiarCache()" title="Limpiar caché y sincronizar" style="background:rgba(255,100,100,0.2);border:none;color:#ff9999;padding:3px 10px;border-radius:6px;cursor:pointer;font-size:10px;font-family:'Montserrat',Helvetica,Arial,sans-serif;font-weight:700">🗑️ Limpiar</button>
+      <button id="btn-ocultar-saldos" onclick="alzakToggleSaldos()" title="Ocultar/mostrar saldos" style="background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.6);padding:3px 8px;border-radius:6px;cursor:pointer;font-size:13px;font-family:'Montserrat',Helvetica,Arial,sans-serif;letter-spacing:1px">👁</button>
       <button onclick="cerrarSesion()" style="background:rgba(255,255,255,0.1);border:none;color:rgba(255,255,255,0.5);padding:3px 8px;border-radius:6px;cursor:pointer;font-size:10px;font-family:'Montserrat',Helvetica,Arial,sans-serif">Salir</button>
     </div>
   </div>
@@ -1630,22 +1635,10 @@ function cargarDatos() {
     try { localStorage.removeItem('alzak_facturas'); } catch(e) {}
     try { localStorage.removeItem(LS_FACTURAS); } catch(e) {}
 
-    // Cargar desde cache de Sheets si disponible
-    var gsCache = null;
-    try {
-      var gsCacheStr = localStorage.getItem('alzak_facturas_gs');
-      if (gsCacheStr) gsCache = JSON.parse(gsCacheStr);
-    } catch(e) {}
-
-    if (gsCache && gsCache.length) {
-      FACTURAS = gsCache;
-    } else {
-      FACTURAS = FACTURAS_DEFAULT.map(function(r){
-        var o = Object.assign({},r);
-        o.estado = typeof estadoFact==='function' ? estadoFact(o) : (o.pagada?'Pagada':'Pendiente');
-        return o;
-      });
-    }
+    // Arranque limpio — FACTURAS vacío hasta que Sheets sincronice
+    // No cargar ningún caché de datos para evitar mostrar registros borrados
+    FACTURAS = [];
+    try { localStorage.removeItem('alzak_facturas_gs'); } catch(e) {}
 
     var f  = null; // ya no usamos el formato viejo
     var g2 = localStorage.getItem(LS_GASTOS);
@@ -1691,8 +1684,7 @@ function gsCargarDesdeSheets() {
 
       FACTURAS = objs;
 
-      try { localStorage.setItem(LS_FACTURAS, JSON.stringify(FACTURAS)); } catch(e){}
-
+      // No persistir en localStorage
       if (typeof renderFacturas === 'function') renderFacturas();
 
       if (typeof renderCarteraHome === 'function') renderCarteraHome();
@@ -18440,6 +18432,9 @@ function alzakCargarDatosSheets(callback) {
         if (typeof frActualizarFiltros === 'function') frActualizarFiltros();
         if (typeof frRender === 'function') { _FR_FUENTE_CACHE={}; _FR_MOVS_POOL=null; frRender(); }
         cargados.push('Facturas Radicadas: ' + FR_DATA.length);
+        // Diagnóstico Gabriela — ver en consola del navegador (F12)
+        var _gab = FR_DATA.filter(function(r){ return (r['Proveedor / Beneficiario']||'').indexOf('Gabriela')>=0; });
+        _gab.forEach(function(r){ console.log('GABRIELA ROW:', JSON.stringify({fecha:r['Fecha'], cat:r['Categoria'], total:r['Total (COP)'], ncomp:r['N Comprobante']})); });
       }
 
       // Egresos → GASTOS_DATA
@@ -18532,7 +18527,8 @@ function alzakCargarDatosSheets(callback) {
           if (typeof renderEstadoResultados === 'function') setTimeout(renderEstadoResultados, 200);
           if (typeof frActualizarFiltros === 'function') frActualizarFiltros();
           try {
-            localStorage.setItem('alzak_facturas_gs', JSON.stringify(FACTURAS));
+            // No persistir en localStorage — solo en memoria
+            void(0);
           } catch(e) {}
           cargados.push('Facturación: ' + FACTURAS.length);
       }
@@ -21014,4 +21010,78 @@ var _patchInterval = setInterval(function() {
   }
 }, 1000);
 </script>
+
+<script>
+// ── Modo ocultar saldos (botón 👁 en header) ──────────────────
+var _ALZAK_SALDOS_OCULTOS = false;
+
+function alzakToggleSaldos() {
+  _ALZAK_SALDOS_OCULTOS = !_ALZAK_SALDOS_OCULTOS;
+  var btn = document.getElementById('btn-ocultar-saldos');
+  if (_ALZAK_SALDOS_OCULTOS) {
+    document.body.classList.add('alzak-ocultar');
+    if (btn) { btn.textContent = '🙈'; btn.title = 'Mostrar saldos'; btn.style.color = '#5DC3DA'; }
+    // También reemplazar texto de valores con ••••••
+    alzakAplicarMascara(true);
+  } else {
+    document.body.classList.remove('alzak-ocultar');
+    if (btn) { btn.textContent = '👁'; btn.title = 'Ocultar saldos'; btn.style.color = 'rgba(255,255,255,0.6)'; }
+    alzakAplicarMascara(false);
+  }
+}
+
+function alzakAplicarMascara(ocultar) {
+  // Marcar todos los elementos que contienen valores $
+  var selectores = [
+    '.ind-v',           // KPIs del resumen
+    '.tb',              // valores en negrita del tablero  
+    '[class*="kpi"]',   // cualquier KPI
+  ];
+  // Buscar todos los elementos con texto que empiece por $
+  var todos = document.querySelectorAll('*');
+  for (var i = 0; i < todos.length; i++) {
+    var el = todos[i];
+    // Solo nodos hoja con texto
+    if (el.children.length > 0) continue;
+    var txt = el.textContent || '';
+    if (ocultar) {
+      if (/^\$[\d.,]+/.test(txt.trim()) || /^-?\$[\d.,]+/.test(txt.trim())) {
+        el.setAttribute('data-alzak-orig', txt);
+        el.textContent = '$ ••••••';
+        el.classList.add('alzak-masked');
+      }
+    } else {
+      if (el.classList.contains('alzak-masked')) {
+        var orig = el.getAttribute('data-alzak-orig');
+        if (orig) el.textContent = orig;
+        el.classList.remove('alzak-masked');
+        el.removeAttribute('data-alzak-orig');
+      }
+    }
+  }
+}
+
+function alzakLimpiarCache() {
+  // Borrar TODOS los datos de localStorage excepto sesión y configuración
+  var conservar = ['alzak_session', 'alzak_bal_config', 'alzak_api_key'];
+  var keys = [];
+  for (var i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+  keys.forEach(function(k) {
+    if (conservar.indexOf(k) < 0) {
+      try { localStorage.removeItem(k); } catch(e) {}
+    }
+  });
+  // Limpiar memoria
+  FACTURAS    = [];
+  FR_DATA     = [];
+  GASTOS_DATA = [];
+  if (typeof _FR_FUENTE_CACHE !== 'undefined') _FR_FUENTE_CACHE = {};
+  if (typeof _FR_MOVS_POOL   !== 'undefined') _FR_MOVS_POOL    = null;
+  mostrarToast('🗑️ Caché limpiado — sincronizando desde Sheets...', '#54504F', 3000);
+  setTimeout(function() {
+    alzakCargarDatosSheets();
+  }, 500);
+}
+</script>
+
 </body>

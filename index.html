@@ -5413,7 +5413,7 @@ var ALZAK_GS_URL = 'https://script.google.com/macros/s/AKfycbxdFspEmxI7srLsz09eP
 
 // ── Carga automática de datos desde Google Sheets al abrir ────────
 function alzakCargarDatosSheets(callback) {
-  var url = ALZAK_GS_URL + '?tab=_datos_todos';
+  var url = ALZAK_GS_URL + '?tab=_datos_todos&_t=' + Date.now();
   mostrarToast('🔄 Sincronizando datos desde Google Sheets...', '#0C447C', 4000);
   fetch(url, { mode: 'cors' })
     .then(function(r){ return r.json(); })

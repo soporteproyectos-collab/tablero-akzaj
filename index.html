@@ -431,9 +431,25 @@ tbody tr:hover td{background:var(--cyan-light);}
 </div>
 <div id="pg-home" class="pg on">
 
-<!-- RESUMEN DEL TABLERO -->
+<!-- LAYOUT 2 COLUMNAS: izquierda KPIs / derecha Bancos -->
+<div id="home-layout" style="display:flex;gap:14px;align-items:flex-start;margin-bottom:12px">
 
-<div id="widget-resumen" style="margin-bottom:12px"></div>
+  <!-- COLUMNA IZQUIERDA: Resumen financiero -->
+  <div id="home-col-left" style="flex:1.5;min-width:0">
+    <div id="widget-resumen"></div>
+  </div>
+
+  <!-- COLUMNA DERECHA: Saldos bancarios en tiempo real -->
+  <div id="home-col-right" style="flex:1;min-width:280px;max-width:380px">
+    <div style="background:#fff;border-radius:12px;border:0.5px solid #e0ddd8;padding:14px 16px">
+      <div style="font-size:11px;font-weight:700;color:#5DC3DA;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">💳 Disponible ALZAK</div>
+      <div id="home-bancos-panel">
+        <div style="color:#aaa;font-size:11px">Sincroniza para ver saldos</div>
+      </div>
+    </div>
+  </div>
+
+</div>
 
 <div id="h-datos">
 
@@ -3869,6 +3885,7 @@ function renderHome() {
   buildPills();
 
   renderResumenTablero();
+  if (typeof renderHomeBancosPanel === 'function') setTimeout(renderHomeBancosPanel, 100);
 
   renderConcCards();
 
@@ -18125,14 +18142,7 @@ function fcRender() {
 
 // Hook: refresh flujo on tab switch
 document.addEventListener('DOMContentLoaded', function(){
-  // Inicialización: presupuesto ya tiene clase 'on' para renderizar,
-  // después de 300ms lo ocultamos y mostramos Home
-  setTimeout(function() {
-    var pp = document.getElementById('pg-presupuesto');
-    if (pp) { pp.classList.remove('on'); pp.style.display = ''; }
-    var ph = document.getElementById('pg-home');
-    if (ph) { ph.classList.add('on'); }
-  }, 300);
+  // Inicialización: pg-home ya arranca activo, pg-presupuesto oculto por CSS .pg{display:none}
 
   // Limpiar caché viejo al cargar nueva versión
   try {
@@ -18767,6 +18777,7 @@ function alzakCargarDatosSheets(callback) {
 
       if (typeof renderBalance === 'function') setTimeout(renderBalance, 300);
       if (typeof fcRender === 'function') setTimeout(fcRender, 400);
+      if (typeof renderHomeBancosPanel === 'function') setTimeout(renderHomeBancosPanel, 350);
       mostrarToast('✅ Sheets sincronizados — ' + cargados.join(' · '), '#2E7D32', 4000);
       if (callback) callback();
       } catch(procErr) {
@@ -21495,6 +21506,77 @@ async function alzakGenerarInforme() {
     console.error('Error generando PPTX:', err);
     if (typeof mostrarToast === 'function') mostrarToast('❌ Error: ' + err.message, '#A32D2D', 5000);
   }
+}
+</script>
+
+
+<script>
+function renderHomeBancosPanel() {
+  var el = document.getElementById('home-bancos-panel');
+  if (!el) return;
+  
+  // Obtener saldo más reciente de cada cuenta
+  var saldos = {bcol:0, fid:0, caja:0, bold:0, total:0};
+  if (typeof P !== 'undefined' && P.length) {
+    for (var i=0; i<P.length; i++) {
+      var p = P[i];
+      if (p.sF !== undefined) saldos.bcol = p.sF;
+      if (p.fid && p.fid.sF !== undefined) saldos.fid = p.fid.sF;
+      if (p.caja && p.caja.sF !== undefined) saldos.caja = p.caja.sF;
+      if (p.bold && p.bold.sF !== undefined) saldos.bold = p.bold.sF;
+    }
+    saldos.total = saldos.bcol + saldos.fid + saldos.caja + saldos.bold;
+  }
+
+  function fmtB(n) {
+    if (!n) return '$0';
+    return '$' + Math.round(n).toLocaleString('es-CO');
+  }
+
+  var cuentas = [
+    { lbl:'Bancolombia Ahorros', num:'*6556', val:saldos.bcol, col:'#5DC3DA' },
+    { lbl:'Fiducuenta',          num:'*1771', val:saldos.fid,  col:'#7C3AED' },
+    { lbl:'Caja Social',         num:'*2970', val:saldos.caja, col:'#F59E0B' },
+    { lbl:'Bold CF',             num:'*2371', val:saldos.bold, col:'#1E293B' }
+  ];
+
+  var html = '';
+  // Total grande
+  html += '<div style="text-align:center;padding:8px 0 12px">'
+    + '<div style="font-size:22px;font-weight:700;color:#0C447C">' + fmtB(saldos.total) + '</div>'
+    + '<div style="font-size:10px;color:#aaa;margin-top:2px">Total disponible</div>'
+    + '</div>';
+
+  // Barra proporcional
+  if (saldos.total > 0) {
+    html += '<div style="display:flex;height:6px;border-radius:4px;overflow:hidden;margin-bottom:12px">';
+    cuentas.forEach(function(c){
+      var pct = saldos.total ? (c.val / saldos.total * 100) : 0;
+      html += '<div style="width:'+pct+'%;background:'+c.col+';"></div>';
+    });
+    html += '</div>';
+  }
+
+  // Detalle por cuenta
+  cuentas.forEach(function(c){
+    if (!c.val) return;
+    var pct = saldos.total ? Math.round(c.val/saldos.total*100) : 0;
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f5f4f2">'
+      + '<div style="display:flex;align-items:center;gap:7px">'
+      + '<div style="width:8px;height:8px;border-radius:50%;background:'+c.col+'"></div>'
+      + '<div><div style="font-size:11px;font-weight:600;color:#54504F">'+c.lbl+'</div>'
+      + '<div style="font-size:9px;color:#aaa">'+c.num+'</div></div></div>'
+      + '<div style="text-align:right">'
+      + '<div style="font-size:11px;font-weight:700;color:#0C447C">'+fmtB(c.val)+'</div>'
+      + '<div style="font-size:9px;color:#aaa">'+pct+'%</div>'
+      + '</div></div>';
+  });
+
+  if (!saldos.total) {
+    html = '<div style="color:#aaa;font-size:11px;text-align:center;padding:12px 0">Carga extractos en Conciliación</div>';
+  }
+
+  el.innerHTML = html;
 }
 </script>
 

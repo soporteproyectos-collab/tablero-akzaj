@@ -3886,17 +3886,13 @@ function renderHome() {
   setTimeout(function() {
     var right = document.getElementById('home-split-right');
     var conc  = document.getElementById('pg-conc');
-    if (right && conc && conc.parentElement !== right) {
-      right.appendChild(conc);
-    }
-    if (conc) {
-      conc.classList.add('on');
-      conc.style.display  = 'block';
-      conc.style.position = 'relative';
-      conc.style.height   = 'auto';
-    }
-    if (typeof renderConc === 'function') renderConc();
-  }, 200);
+    if (!right || !conc) return;
+    if (conc.parentElement !== right) right.appendChild(conc);
+    // Forzar visibilidad — override del .pg{display:none}
+    conc.style.cssText = 'display:block; position:relative; height:auto; width:100%;';
+    conc.classList.add('on');
+    if (typeof renderConc === 'function') setTimeout(renderConc, 100);
+  }, 300);
 
   renderConcCards();
 
@@ -15241,14 +15237,14 @@ function tabHome() {
   if (h) h.classList.add('on');
   var pp = document.getElementById('pg-presupuesto');
   if (pp) pp.style.display = 'none';
-  // Devolver pg-conc al split derecho
+  // Siempre mover pg-conc al split derecho y forzar renderizado
   var conc2 = document.getElementById('pg-conc');
   var right2 = document.getElementById('home-split-right');
-  if (conc2 && right2 && conc2.parentElement !== right2) {
-    right2.appendChild(conc2);
+  if (conc2 && right2) {
+    if (conc2.parentElement !== right2) right2.appendChild(conc2);
+    conc2.style.cssText = 'display:block; position:relative; height:auto; width:100%;';
     conc2.classList.add('on');
-    conc2.style.display = 'block';
-    if (typeof renderConc === 'function') setTimeout(renderConc, 100);
+    if (typeof renderConc === 'function') setTimeout(renderConc, 150);
   }
   var tb = document.getElementById('topbar-t');
   if (tb) tb.textContent = 'Inicio';
@@ -21391,14 +21387,25 @@ function alzakGetDatosInforme() {
 
 async function alzakGenerarInforme() {
   if (typeof PptxGenJS === 'undefined') {
-    if (typeof mostrarToast === 'function') mostrarToast('⏳ Cargando librería...', '#0C447C', 3000);
-    await new Promise(function(resolve, reject){
-      var s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/libs/pptxgen.bundle.js';
-      s.onload = resolve; s.onerror = reject;
-      document.head.appendChild(s);
-    });
-    setTimeout(alzakGenerarInforme, 500); return;
+    if (typeof mostrarToast === 'function') mostrarToast('⏳ Cargando librería PPTX...', '#0C447C', 4000);
+    try {
+      await new Promise(function(resolve, reject){
+        var s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/libs/pptxgen.bundle.js';
+        s.onload = resolve;
+        s.onerror = function() { reject(new Error('No se pudo cargar la librería')); };
+        s.timeout = 10000;
+        document.head.appendChild(s);
+      });
+      await new Promise(function(r){ setTimeout(r, 300); });
+    } catch(e) {
+      if (typeof mostrarToast === 'function') mostrarToast('❌ Error cargando librería. Verifica conexión a internet.', '#A32D2D', 5000);
+      return;
+    }
+  }
+  if (typeof PptxGenJS === 'undefined') {
+    if (typeof mostrarToast === 'function') mostrarToast('❌ Librería no disponible. Intenta de nuevo.', '#A32D2D', 5000);
+    return;
   }
   if (typeof mostrarToast === 'function') mostrarToast('📊 Generando informe ejecutivo...', '#0C447C', 4000);
 

@@ -8598,7 +8598,7 @@ function renderCarteraHome() {
     var W=500, H=130, PL=52, PR=10, PT=14, PB=26;
     var CW=W-PL-PR, CH=H-PT-PB;
     var bw=Math.max(20,Math.min(60,CW/nM*0.55));
-    var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;max-width:100%" xmlns="http://www.w3.org/2000/svg">';
+    var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px">';
     // Líneas de referencia y etiquetas eje Y
     for(var t=0;t<=4;t++){
       var yv=Math.round(PT+CH-(t/4)*CH);
@@ -10390,7 +10390,7 @@ function renderErGrafico() {
 
   var W=500,H=130,PL=54,PR=12,PT=16,PB=26,CW=W-PL-PR,CH=H-PT-PB,y0=PT+CH;
 
-  var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto">';
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px">';
 
   var steps=[0,maxV*0.33,maxV*0.67,maxV];
 
@@ -12514,7 +12514,7 @@ function renderGastosDashboard() {
 
     var W=500,H=130,PL=46,PR=10,PT=14,PB=26,CW=W-PL-PR,CH=H-PT-PB,bw=Math.max(40,Math.min(80,CW/meses.length*0.5));
 
-    var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto">';
+    var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px">';
 
     for(var t=0;t<=2;t++){var yv=PT+CH-(t/2)*CH;svg+='<line x1="'+PL+'" y1="'+yv+'" x2="'+(W-PR)+'" y2="'+yv+'" stroke="#f0ede8" stroke-width="1"/><text x="'+(PL-4)+'" y="'+(yv+3)+'" text-anchor="end" font-size="9" fill="#bbb">$'+Math.round(maxV*t/2/1000000)+'M</text>';}
 
@@ -15211,6 +15211,8 @@ function tabHome() {
   if (c) c.classList.remove('on');
   var h = document.getElementById('pg-home');
   if (h) h.classList.add('on');
+  var pp = document.getElementById('pg-presupuesto');
+  if (pp) pp.style.display = 'none';
   var tb = document.getElementById('topbar-t');
   if (tb) tb.textContent = 'Inicio';
   document.getElementById('tab-home-btn').style.background='#5DC3DA';
@@ -15225,6 +15227,8 @@ function tabConc() {
   for (var i=0; i<pgs.length; i++) pgs[i].classList.remove('on');
   var c = document.getElementById('pg-conc');
   if (c) c.classList.add('on');
+  var pp2 = document.getElementById('pg-presupuesto');
+  if (pp2) pp2.style.display = 'none';
   var tb = document.getElementById('topbar-t');
   if (tb) tb.textContent = 'Conciliacion Bancaria';
   ['tab-home-btn','tab-pres-btn'].forEach(function(id){var b=document.getElementById(id);if(b){b.style.background='rgba(255,255,255,0.12)';b.style.color='#ccc';}});
@@ -15236,7 +15240,7 @@ function tabPres() {
   var pgs = document.querySelectorAll('.pg');
   for (var i=0; i<pgs.length; i++) pgs[i].classList.remove('on');
   var c = document.getElementById('pg-presupuesto');
-  if (c) c.classList.add('on');
+  if (c) { c.classList.add('on'); c.style.display='block'; }
   var tb = document.getElementById('topbar-t');
   if (tb) tb.textContent = 'Presupuesto 2026';
   ['tab-home-btn','tab-conc-btn','tab-pres-btn'].forEach(function(id,idx){
@@ -16345,7 +16349,7 @@ function renderConc(){
 // init on demand
 </script>
 
-<div id="pg-presupuesto" class="pg on" style="display:block">
+<div id="pg-presupuesto" class="pg">
 <div style="padding:20px 28px;max-width:1100px;margin:0 auto;">
 
   <!-- Header -->

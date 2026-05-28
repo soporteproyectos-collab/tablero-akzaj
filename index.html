@@ -15275,6 +15275,8 @@ function tabPres() {
   // Ocultar pg-home y mostrar presupuesto
   var pgs = document.querySelectorAll('.pg');
   for (var i=0; i<pgs.length; i++) { pgs[i].classList.remove('on'); pgs[i].style.display=''; }
+  var pgHome = document.getElementById('pg-home');
+  if (pgHome) { pgHome.classList.remove('on'); pgHome.style.display='none'; }
   var c = document.getElementById('pg-presupuesto');
   if (c) { c.classList.add('on'); c.style.display='block'; }
   var tb = document.getElementById('topbar-t');

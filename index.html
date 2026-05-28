@@ -1011,6 +1011,11 @@ tbody tr:hover td{background:var(--cyan-light);}
   </div><!-- /h-datos -->
   </div><!-- /home-split-left -->
 
+  <!-- Divisor deslizable -->
+  <div id="home-split-divider" onmousedown="alzakSplitDrag(event)" title="Arrastrar para redimensionar" style="width:8px;background:#e0ddd8;cursor:col-resize;flex-shrink:0;display:flex;align-items:center;justify-content:center;user-select:none">
+    <div style="width:3px;height:48px;background:#bbb;border-radius:3px;pointer-events:none"></div>
+  </div>
+
   <!-- COLUMNA DERECHA: Conciliación bancaria completa con scroll independiente -->
   <div id="home-split-right" style="flex:1;min-width:0;overflow-y:auto;overflow-x:hidden;background:#f5f4f0;">
     <!-- pg-conc se mueve aquí dinámicamente -->
@@ -18150,6 +18155,17 @@ function fcRender() {
 // Hook: refresh flujo on tab switch
 document.addEventListener('DOMContentLoaded', function(){
   // Inicialización: pg-home ya arranca activo, pg-presupuesto oculto por CSS .pg{display:none}
+  // Mover pg-conc al split derecho desde el inicio
+  setTimeout(function() {
+    var right = document.getElementById('home-split-right');
+    var conc  = document.getElementById('pg-conc');
+    if (right && conc) {
+      if (conc.parentElement !== right) right.appendChild(conc);
+      conc.style.cssText = 'display:block; position:relative; height:auto; width:100%;';
+      conc.classList.add('on');
+      if (typeof renderConc === 'function') renderConc();
+    }
+  }, 800);
 
   // Limpiar caché viejo al cargar nueva versión
   try {
@@ -21691,6 +21707,46 @@ function renderHomeConcPanel() {
     + '</div>';
 
   el.innerHTML = h;
+}
+</script>
+
+
+<script>
+// ── Divisor deslizable del split Home ─────────────────────
+function alzakSplitDrag(e) {
+  e.preventDefault();
+  var split    = document.getElementById('home-split');
+  var left     = document.getElementById('home-split-left');
+  var right    = document.getElementById('home-split-right');
+  var divider  = document.getElementById('home-split-divider');
+  if (!split || !left || !right) return;
+
+  var startX   = e.clientX;
+  var startW   = left.getBoundingClientRect().width;
+  var totalW   = split.getBoundingClientRect().width - (divider ? divider.offsetWidth : 8);
+
+  divider.style.background = '#5DC3DA';
+
+  function onMove(ev) {
+    var dx    = ev.clientX - startX;
+    var newW  = Math.max(300, Math.min(totalW - 300, startW + dx));
+    var pct   = (newW / totalW * 100).toFixed(1);
+    left.style.flex  = 'none';
+    left.style.width = pct + '%';
+    right.style.flex = 'none';
+    right.style.width = (100 - parseFloat(pct) - 0.5) + '%';
+  }
+
+  function onUp() {
+    divider.style.background = '#e0ddd8';
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup',   onUp);
+    // Re-renderizar conciliación por si cambió el ancho
+    if (typeof renderConc === 'function') setTimeout(renderConc, 100);
+  }
+
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup',   onUp);
 }
 </script>
 

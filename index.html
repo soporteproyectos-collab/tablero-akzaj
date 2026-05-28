@@ -422,7 +422,6 @@ tbody tr:hover td{background:var(--cyan-light);}
 
 <div id="tab-nav" style="background:#333;padding:8px 28px;gap:8px;align-items:center;display:none;position:sticky;top:0;z-index:999;">
   <button id="tab-home-btn" onclick="tabHome()" style="padding:6px 18px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif;background:#5DC3DA;color:#fff;">&#127968; Tablero</button>
-  <button id="tab-conc-btn" onclick="tabConc()" style="padding:6px 18px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif;background:rgba(255,255,255,0.12);color:#ccc;">&#127970; Conciliaci&#243;n</button>
   <button id="tab-pres-btn" onclick="tabPres()" style="padding:6px 18px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif;background:rgba(255,255,255,0.12);color:#ccc;">&#128203; Presupuesto</button>
   <button id="tab-sync-btn" onclick="alzakSincronizarSheets()" title="Sincronizar datos desde Google Sheets" style="padding:6px 14px;border-radius:20px;border:1px solid rgba(93,195,218,0.4);cursor:pointer;font-size:11px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif;background:rgba(93,195,218,0.15);color:#5DC3DA;">&#128260; Sincronizar</button>
   <button onclick="if(confirm('¿Limpiar caché y recargar todo desde Sheets?')) alzakLimpiarCache()" title="Limpiar caché" style="padding:6px 14px;border-radius:20px;border:1px solid rgba(255,100,100,0.3);cursor:pointer;font-size:11px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif;background:rgba(255,100,100,0.12);color:#ff9999;">&#128465; Limpiar</button>
@@ -15171,7 +15170,7 @@ function renderBcol() {
 
 </script>
 
-<div id="pg-conc" class="pg">
+<div id="pg-conc">
 <div class="header">
   <div style="display:flex;align-items:center;gap:13px">
     <div>
@@ -15250,35 +15249,15 @@ function tabHome() {
   if (tb) tb.textContent = 'Inicio';
   document.getElementById('tab-home-btn').style.background='#5DC3DA';
   document.getElementById('tab-home-btn').style.color='#fff';
-  document.getElementById('tab-conc-btn').style.background='rgba(255,255,255,0.12)';
-  document.getElementById('tab-conc-btn').style.color='#ccc';
-  if (typeof renderHome === 'function') renderHome();
+      if (typeof renderHome === 'function') renderHome();
 }
 function tabConc() {
-  if(typeof devolverModulosAHome==="function") devolverModulosAHome();
-  var pgs = document.querySelectorAll('.pg');
-  for (var i=0; i<pgs.length; i++) pgs[i].classList.remove('on');
-  // Si pg-conc está en el split, sacarlo y ponerlo en el contenedor principal
-  var conc = document.getElementById('pg-conc');
-  var right = document.getElementById('home-split-right');
-  var mainContent = document.getElementById('content') || document.body;
-  if (conc && right && conc.parentElement === right) {
-    mainContent.insertBefore(conc, mainContent.firstChild);
-  }
-  var c = document.getElementById('pg-conc');
-  if (c) {
-    c.classList.add('on');
-    c.style.display  = 'block';
-    c.style.position = '';
-    c.style.height   = '';
-  }
-  var pp2 = document.getElementById('pg-presupuesto');
-  if (pp2) pp2.style.display = 'none';
-  var tb = document.getElementById('topbar-t');
-  if (tb) tb.textContent = 'Conciliacion Bancaria';
-  ['tab-home-btn','tab-pres-btn'].forEach(function(id){var b=document.getElementById(id);if(b){b.style.background='rgba(255,255,255,0.12)';b.style.color='#ccc';}});
-  var cb=document.getElementById('tab-conc-btn');if(cb){cb.style.background='#5DC3DA';cb.style.color='#fff';}
-  setTimeout(function(){ try{ renderConc(); }catch(e){} }, 60);
+  // Conciliación ahora vive en el home — hacer tabHome y scroll a conciliación
+  tabHome();
+  setTimeout(function(){
+    var conc = document.getElementById('pg-conc');
+    if (conc) conc.scrollIntoView({ behavior:'smooth', block:'start' });
+  }, 400);
 }
 
 function tabPres() {
@@ -15288,7 +15267,7 @@ function tabPres() {
   if (c) { c.classList.add('on'); c.style.display='block'; }
   var tb = document.getElementById('topbar-t');
   if (tb) tb.textContent = 'Presupuesto 2026';
-  ['tab-home-btn','tab-conc-btn','tab-pres-btn'].forEach(function(id,idx){
+  ['tab-home-btn','tab-pres-btn'].forEach(function(id,idx){
     var b = document.getElementById(id);
     if (b) { b.style.background='rgba(255,255,255,0.12)'; b.style.color='#ccc'; }
   });
@@ -15312,7 +15291,7 @@ document.addEventListener('DOMContentLoaded', function() {
       var pp=document.getElementById('pg-presupuesto');
       if(pp) pp.classList.remove('on');
       origIr(id);
-      ['tab-home-btn','tab-conc-btn','tab-pres-btn'].forEach(function(id2){
+      ['tab-home-btn','tab-pres-btn'].forEach(function(id2){
         var b = document.getElementById(id2);
         if (b) { b.style.background='rgba(255,255,255,0.12)'; b.style.color='#ccc'; }
       });
@@ -21709,7 +21688,6 @@ function renderHomeConcPanel() {
 
   // Botón ver conciliación completa
   h += '<div style="margin-top:16px;text-align:center">'
-    + '<button onclick="tabConc()" style="background:#5DC3DA;color:#fff;border:none;border-radius:20px;padding:8px 20px;font-size:11px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif">Ver conciliación completa →</button>'
     + '</div>';
 
   el.innerHTML = h;

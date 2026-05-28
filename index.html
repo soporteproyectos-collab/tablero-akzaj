@@ -431,25 +431,13 @@ tbody tr:hover td{background:var(--cyan-light);}
 </div>
 <div id="pg-home" class="pg on">
 
-<!-- LAYOUT 2 COLUMNAS: izquierda KPIs / derecha Bancos -->
-<div id="home-layout" style="display:flex;gap:14px;align-items:flex-start;margin-bottom:12px">
+<!-- LAYOUT SPLIT: Tablero izquierda / Conciliación derecha -->
+<div id="home-split" style="display:flex;gap:0;height:calc(100vh - 70px);overflow:hidden">
 
-  <!-- COLUMNA IZQUIERDA: Resumen financiero -->
-  <div id="home-col-left" style="flex:1.5;min-width:0">
-    <div id="widget-resumen"></div>
-  </div>
-
-  <!-- COLUMNA DERECHA: Saldos bancarios en tiempo real -->
-  <div id="home-col-right" style="flex:1;min-width:280px;max-width:380px">
-    <div style="background:#fff;border-radius:12px;border:0.5px solid #e0ddd8;padding:14px 16px">
-      <div style="font-size:11px;font-weight:700;color:#5DC3DA;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">💳 Disponible ALZAK</div>
-      <div id="home-bancos-panel">
-        <div style="color:#aaa;font-size:11px">Sincroniza para ver saldos</div>
-      </div>
-    </div>
-  </div>
-
-</div>
+  <!-- COLUMNA IZQUIERDA: Tablero financiero (scrollable) -->
+  <div id="home-split-left" style="flex:1;min-width:0;overflow-y:auto;padding:20px 16px 20px 28px;border-right:1px solid #e8e5e0">
+    <div id="widget-resumen" style="margin-bottom:12px"></div>
+    <div id="home-bancos-panel-mini" style="display:none"></div>
 
 <div id="h-datos">
 
@@ -1021,7 +1009,17 @@ tbody tr:hover td{background:var(--cyan-light);}
 
 </div>
 
-</div>
+  </div><!-- /h-datos -->
+  </div><!-- /home-split-left -->
+
+  <!-- COLUMNA DERECHA: Conciliación bancaria embebida -->
+  <div id="home-split-right" style="flex:1;min-width:0;overflow-y:auto;background:#0e1c2e;">
+    <div id="home-conc-embed" style="height:100%">
+      <!-- Se renderiza con renderConc() al cargar -->
+    </div>
+  </div>
+
+</div><!-- /home-split -->
 
 <div id="pg-facturas" class="pg">
 
@@ -3886,6 +3884,20 @@ function renderHome() {
 
   renderResumenTablero();
   if (typeof renderHomeBancosPanel === 'function') setTimeout(renderHomeBancosPanel, 100);
+  // Renderizar conciliación en columna derecha del split
+  setTimeout(function() {
+    var embed = document.getElementById('home-conc-embed');
+    var conc  = document.getElementById('pg-conc');
+    if (embed && conc) {
+      // Clonar el contenido de conciliación en el embed
+      embed.innerHTML = '';
+      var clone = conc.cloneNode(true);
+      clone.id = 'pg-conc-clone';
+      clone.style.display = 'block';
+      clone.style.background = 'transparent';
+      embed.appendChild(clone);
+    }
+  }, 500);
 
   renderConcCards();
 

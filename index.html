@@ -15233,8 +15233,11 @@ function renderBcol() {
 <script>
 function tabHome() {
   if(typeof devolverModulosAHome==="function") devolverModulosAHome();
+  // Restaurar el split
+  var split = document.getElementById('home-split');
+  if (split) split.style.display = 'flex';
   var pgs = document.querySelectorAll('.pg');
-  for (var i=0; i<pgs.length; i++) pgs[i].classList.remove('on');
+  for (var i=0; i<pgs.length; i++) { pgs[i].classList.remove('on'); pgs[i].style.display=''; }
   var c = document.getElementById('pg-conc');
   if (c) c.classList.remove('on');
   var h = document.getElementById('pg-home');
@@ -15266,13 +15269,17 @@ function tabConc() {
 }
 
 function tabPres() {
+  // Ocultar el split del home
+  var split = document.getElementById('home-split');
+  if (split) split.style.display = 'none';
+  // Ocultar pg-home y mostrar presupuesto
   var pgs = document.querySelectorAll('.pg');
-  for (var i=0; i<pgs.length; i++) pgs[i].classList.remove('on');
+  for (var i=0; i<pgs.length; i++) { pgs[i].classList.remove('on'); pgs[i].style.display=''; }
   var c = document.getElementById('pg-presupuesto');
   if (c) { c.classList.add('on'); c.style.display='block'; }
   var tb = document.getElementById('topbar-t');
   if (tb) tb.textContent = 'Presupuesto 2026';
-  ['tab-home-btn','tab-pres-btn'].forEach(function(id,idx){
+  ['tab-home-btn','tab-pres-btn'].forEach(function(id){
     var b = document.getElementById(id);
     if (b) { b.style.background='rgba(255,255,255,0.12)'; b.style.color='#ccc'; }
   });

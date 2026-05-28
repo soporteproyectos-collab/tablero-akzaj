@@ -18,7 +18,7 @@ body{background:#f5f4f0;color:#54504F;min-height:100vh}
 
 #main{display:block;width:100%}
 
-#content{padding:20px 28px;max-width:1100px;margin:0 auto}
+#content{padding:20px 28px;max-width:1600px;margin:0 auto}
 
 .pg{display:none}
 
@@ -1012,10 +1012,10 @@ tbody tr:hover td{background:var(--cyan-light);}
   </div><!-- /h-datos -->
   </div><!-- /home-split-left -->
 
-  <!-- COLUMNA DERECHA: Conciliación bancaria embebida -->
-  <div id="home-split-right" style="flex:1;min-width:0;overflow-y:auto;background:#0e1c2e;">
-    <div id="home-conc-embed" style="height:100%">
-      <!-- Se renderiza con renderConc() al cargar -->
+  <!-- COLUMNA DERECHA: Conciliación bancaria -->
+  <div id="home-split-right" style="flex:1;min-width:0;overflow-y:auto;background:#f5f4f0;border-left:1px solid #e0ddd8;">
+    <div id="home-conc-embed" style="min-height:100%;padding:0">
+      <div style="color:#aaa;font-size:12px;padding:20px">Cargando conciliación...</div>
     </div>
   </div>
 
@@ -3884,20 +3884,18 @@ function renderHome() {
 
   renderResumenTablero();
   if (typeof renderHomeBancosPanel === 'function') setTimeout(renderHomeBancosPanel, 100);
-  // Renderizar conciliación en columna derecha del split
+  // Mover pg-conc al panel derecho del split y renderizarlo
   setTimeout(function() {
     var embed = document.getElementById('home-conc-embed');
     var conc  = document.getElementById('pg-conc');
     if (embed && conc) {
-      // Clonar el contenido de conciliación en el embed
       embed.innerHTML = '';
-      var clone = conc.cloneNode(true);
-      clone.id = 'pg-conc-clone';
-      clone.style.display = 'block';
-      clone.style.background = 'transparent';
-      embed.appendChild(clone);
+      conc.style.display = 'block';
+      conc.style.background = 'transparent';
+      embed.appendChild(conc);
+      if (typeof renderConc === 'function') renderConc();
     }
-  }, 500);
+  }, 300);
 
   renderConcCards();
 
@@ -15254,8 +15252,14 @@ function tabConc() {
   if(typeof devolverModulosAHome==="function") devolverModulosAHome();
   var pgs = document.querySelectorAll('.pg');
   for (var i=0; i<pgs.length; i++) pgs[i].classList.remove('on');
+  // Restaurar pg-conc a su posición original si fue movido al split
+  var conc = document.getElementById('pg-conc');
+  var mainDiv = document.getElementById('content') || document.body;
+  if (conc && conc.parentElement && conc.parentElement.id === 'home-conc-embed') {
+    mainDiv.appendChild(conc);
+  }
   var c = document.getElementById('pg-conc');
-  if (c) c.classList.add('on');
+  if (c) { c.classList.add('on'); c.style.display = 'block'; }
   var pp2 = document.getElementById('pg-presupuesto');
   if (pp2) pp2.style.display = 'none';
   var tb = document.getElementById('topbar-t');

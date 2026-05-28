@@ -4658,7 +4658,7 @@ function renderConcResumen() {
 
   function makeSVG(items, col_fn, val_fn, lbl_fn) {
 
-    var W=500,H=120,PL=70,PR=10,PT=16,PB=26,CW=W-PL-PR,CH=H-PT-PB;
+    var W=500,H=130,PL=70,PR=10,PT=16,PB=26,CW=W-PL-PR,CH=H-PT-PB;
 
     var maxV=0; items.forEach(function(it){ if(val_fn(it)>maxV) maxV=val_fn(it); }); maxV=maxV*1.15||1;
 
@@ -10388,9 +10388,9 @@ function renderErGrafico() {
 
   maxV=maxV*1.2||1;
 
-  var W=500,H=180,PL=54,PR=12,PT=16,PB=30,CW=W-PL-PR,CH=H-PT-PB,y0=PT+CH;
+  var W=500,H=130,PL=54,PR=12,PT=16,PB=26,CW=W-PL-PR,CH=H-PT-PB,y0=PT+CH;
 
-  var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px">';
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto">';
 
   var steps=[0,maxV*0.33,maxV*0.67,maxV];
 
@@ -12512,9 +12512,9 @@ function renderGastosDashboard() {
 
     var maxV=0;for(var i=0;i<meses.length;i++)if(mesGr[meses[i]]>maxV)maxV=mesGr[meses[i]];maxV=maxV*1.15||1;
 
-    var W=500,H=100,PL=46,PR=10,PT=10,PB=22,CW=W-PL-PR,CH=H-PT-PB,bw=Math.max(40,Math.min(80,CW/meses.length*0.5));
+    var W=500,H=130,PL=46,PR=10,PT=14,PB=26,CW=W-PL-PR,CH=H-PT-PB,bw=Math.max(40,Math.min(80,CW/meses.length*0.5));
 
-    var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px">';
+    var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto">';
 
     for(var t=0;t<=2;t++){var yv=PT+CH-(t/2)*CH;svg+='<line x1="'+PL+'" y1="'+yv+'" x2="'+(W-PR)+'" y2="'+yv+'" stroke="#f0ede8" stroke-width="1"/><text x="'+(PL-4)+'" y="'+(yv+3)+'" text-anchor="end" font-size="9" fill="#bbb">$'+Math.round(maxV*t/2/1000000)+'M</text>';}
 
@@ -12634,7 +12634,7 @@ function renderPGnew() {
 
   var srcEl=g('pg-fuente');if(srcEl)srcEl.textContent=(GASTOS_DATA&&GASTOS_DATA.length)?'Devengado real':'Flujo de caja';
 
-  var W=el.offsetWidth||540,H=220,PL=52,PR=12,PT=20,PB=30,CW=W-PL-PR,CH=H-PT-PB,maxV=0;
+  var W=500,H=130,PL=52,PR=12,PT=14,PB=26,CW=W-PL-PR,CH=H-PT-PB,maxV=0;
 
   for(var i=0;i<meses.length;i++){var v=Math.max(ingPM[meses[i]]||0,gasPM[meses[i]]||0);if(v>maxV)maxV=v;} maxV=maxV*1.15||1;
 
@@ -13779,7 +13779,7 @@ function renderBcol() {
 
   if(chartEl){
 
-    var W=560,H=150,PL=56,PR=12,PT=16,PB=28,CW=W-PL-PR,CH=H-PT-PB;
+    var W=500,H=130,PL=54,PR=10,PT=14,PB=26,CW=W-PL-PR,CH=H-PT-PB;
 
     var items=MESES.map(function(m){var r=BCOL_RESUMEN[m]||{};return{m:m,lbl:m.replace(' 2026','').substring(0,3),sfin:r.sfin||0,ent:r.tab_real||0,sal:r.tcar_real||0,gmf:r.gmf||0};});
 
@@ -15245,7 +15245,7 @@ function tabPres() {
   });
   var pb = document.getElementById('tab-pres-btn');
   if (pb) { pb.style.background='#5DC3DA'; pb.style.color='#fff'; }
-  setTimeout(function(){ try{ renderPresupuesto(); }catch(e){} try{ pfRender(); }catch(e){} }, 60);
+  setTimeout(function(){ try{ renderPresupuesto(); }catch(e){} try{ pfRender(); }catch(e){} try{ fcRender(); }catch(e){} }, 60);
 }
 
 // Intercept tablero's ir() to also hide pg-conc/pg-balance and update tabs
@@ -18762,6 +18762,7 @@ function alzakCargarDatosSheets(callback) {
       }
 
       if (typeof renderBalance === 'function') setTimeout(renderBalance, 300);
+      if (typeof fcRender === 'function') setTimeout(fcRender, 400);
       mostrarToast('✅ Sheets sincronizados — ' + cargados.join(' · '), '#2E7D32', 4000);
       if (callback) callback();
       } catch(procErr) {
@@ -21476,10 +21477,20 @@ async function alzakGenerarInforme() {
   s5.addText('soporteproyectos@alzak.com.co', { x:0.5, y:4.2, w:9, h:0.4, fontSize:12, color:WHITE, fontFace:'Calibri', align:'center' });
   s5.addText('Cartagena, Colombia · NIT 900.898.741-8', { x:0.5, y:4.7, w:9, h:0.35, fontSize:10, color:'8BB8D4', fontFace:'Calibri', align:'center' });
 
-  // Guardar PPTX
+  // Guardar PPTX — usar stream para forzar descarga en el navegador
   var fileName = 'Informe_Ejecutivo_ALZAK_' + new Date().toISOString().split('T')[0] + '.pptx';
-  await pres.writeFile({ fileName: fileName });
-  if (typeof mostrarToast === 'function') mostrarToast('✅ PPTX descargado — para PDF usa Ctrl+P desde el tablero', '#1D9E75', 5000);
+  try {
+    var output = await pres.write({ outputType: 'blob' });
+    var url = URL.createObjectURL(output);
+    var a = document.createElement('a');
+    a.href = url; a.download = fileName; a.style.display = 'none';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 2000);
+    if (typeof mostrarToast === 'function') mostrarToast('✅ Informe descargado: ' + fileName, '#1D9E75', 5000);
+  } catch(err) {
+    console.error('Error generando PPTX:', err);
+    if (typeof mostrarToast === 'function') mostrarToast('❌ Error: ' + err.message, '#A32D2D', 5000);
+  }
 }
 </script>
 

@@ -422,7 +422,7 @@ tbody tr:hover td{background:var(--cyan-light);}
 
 <div id="tab-nav" style="background:#333;padding:8px 28px;gap:8px;align-items:center;display:none;position:sticky;top:0;z-index:999;">
   <button id="tab-home-btn" onclick="tabHome()" style="padding:6px 18px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif;background:#5DC3DA;color:#fff;">&#127968; Tablero</button>
-  <button id="tab-fc-btn" onclick="tabFlujoCaja()" style="padding:6px 18px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif;background:rgba(255,255,255,0.12);color:#ccc;">💰 Flujo de Caja</button>
+
   <button id="tab-sync-btn" onclick="alzakSincronizarSheets()" title="Sincronizar datos desde Google Sheets" style="padding:6px 14px;border-radius:20px;border:1px solid rgba(93,195,218,0.4);cursor:pointer;font-size:11px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif;background:rgba(93,195,218,0.15);color:#5DC3DA;">&#128260; Sincronizar</button>
   <button onclick="if(confirm('¿Limpiar caché y recargar todo desde Sheets?')) alzakLimpiarCache()" title="Limpiar caché" style="padding:6px 14px;border-radius:20px;border:1px solid rgba(255,100,100,0.3);cursor:pointer;font-size:11px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif;background:rgba(255,100,100,0.12);color:#ff9999;">&#128465; Limpiar</button>
   <button onclick="alzakGenerarInforme()" title="Generar informe ejecutivo PPT + PDF" style="padding:6px 14px;border-radius:20px;border:1px solid rgba(93,195,218,0.3);cursor:pointer;font-size:11px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif;background:rgba(93,195,218,0.12);color:#5DC3DA;">📊 Informe</button>
@@ -819,6 +819,48 @@ tbody tr:hover td{background:var(--cyan-light);}
   </div>
 
   </div><!-- /fr-iva-body -->
+</div>
+
+
+<!-- ══ FLUJO DE CAJA ══════════════════════════════════ -->
+<div class="card" style="border:1.5px solid #1E3A5F;margin-bottom:12px">
+
+  <!-- Header colapsable -->
+  <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="alzakToggleFC()">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="font-size:22px">💰</div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#1E3A5F;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Proyección</div>
+        <div style="font-size:15px;font-weight:700;color:#54504F">Flujo de Caja 2026</div>
+        <div style="font-size:11px;color:#888;margin-top:2px">Ingresos vs Egresos · Proyección mensual</div>
+      </div>
+    </div>
+    <span id="ico-fc" style="font-size:14px;color:#888">▼</span>
+  </div>
+
+  <!-- Cuerpo colapsable -->
+  <div id="fc-body" style="display:none;margin-top:16px">
+
+    <!-- Tabla flujo de caja -->
+    <div id="fc-tabla-main" style="margin-bottom:16px">
+      <div style="color:#aaa;font-size:12px">Sincroniza para ver el flujo de caja.</div>
+    </div>
+
+    <!-- Facturación Programada -->
+    <div style="border-top:1px solid #f0ede8;padding-top:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#7C3AED">🗓️ Facturación Programada</div>
+          <div style="font-size:10px;color:#aaa;margin-top:2px">Facturas que planeas emitir — alimentan el flujo automáticamente</div>
+        </div>
+        <button onclick="fpAgregarNuevo()" style="background:#7C3AED;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif">+ Agregar</button>
+      </div>
+      <div id="fp-lista">
+        <div style="color:#aaa;font-size:11px;padding:4px">Sin facturas programadas aún.</div>
+      </div>
+    </div>
+
+  </div>
 </div>
 
 
@@ -16590,93 +16632,24 @@ function fcRender() {
 </script>
 
 
-<!-- ══════════════════════════════════════════════════
-     FLUJO DE CAJA — página independiente
-══════════════════════════════════════════════════ -->
-<div id="pg-fc" style="display:none;position:fixed;top:56px;left:0;right:0;bottom:0;overflow-y:auto;background:#f5f4f0;z-index:100;padding:24px 32px;box-sizing:border-box">
-
-  <div style="max-width:1200px;margin:0 auto">
-
-    <!-- Header -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-      <div>
-        <div style="font-size:18px;font-weight:700;color:#0C447C">💰 Flujo de Caja Proyectado 2026</div>
-        <div style="font-size:11px;color:#aaa;margin-top:3px">ALZAK GROUP SAS · Ingresos vs Egresos · Proyección mensual</div>
-      </div>
-      <button onclick="fcActualizar()" style="background:#0C447C;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:12px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif">↺ Actualizar</button>
-    </div>
-
-    <!-- Tabla Flujo de Caja -->
-    <div style="background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);padding:20px;margin-bottom:16px">
-      <div id="fc-tabla-main">
-        <div style="color:#aaa;font-size:12px;padding:12px">Cargando datos...</div>
-      </div>
-    </div>
-
-    <!-- Facturación Programada -->
-    <div style="background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);padding:20px;margin-bottom:16px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <div>
-          <div style="font-size:14px;font-weight:700;color:#7C3AED">🗓️ Facturación Programada</div>
-          <div style="font-size:11px;color:#aaa;margin-top:2px">Facturas que planeas emitir — alimentan el flujo automáticamente</div>
-        </div>
-        <button onclick="fpAgregarNuevo()" style="background:#7C3AED;color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:11px;font-weight:700;cursor:pointer">+ Agregar</button>
-      </div>
-      <div id="fp-lista">
-        <div style="color:#aaa;font-size:12px;padding:8px">Sin facturas programadas aún.</div>
-      </div>
-    </div>
-
-  </div>
-</div>
 
 <script>
 // ══ FLUJO DE CAJA ══════════════════════════════════════
-
-function tabFlujoCaja() {
-  // Ocultar home split
-  var split = document.getElementById('home-split');
-  if (split) split.style.display = 'none';
-  var pgHome = document.getElementById('pg-home');
-  if (pgHome) { pgHome.classList.remove('on'); pgHome.style.display = 'none'; }
-  // Ocultar todas las .pg
-  var pgs = document.querySelectorAll('.pg');
-  for (var i=0; i<pgs.length; i++) { pgs[i].classList.remove('on'); pgs[i].style.display=''; }
-  // Mostrar flujo de caja
-  var pg = document.getElementById('pg-fc');
-  if (pg) pg.style.display = 'block';
-  // Resaltar botón
-  ['tab-home-btn','tab-fc-btn'].forEach(function(id){
-    var b = document.getElementById(id);
-    if (b) { b.style.background='rgba(255,255,255,0.12)'; b.style.color='#ccc'; }
-  });
-  var fb = document.getElementById('tab-fc-btn');
-  if (fb) { fb.style.background='#5DC3DA'; fb.style.color='#fff'; }
-  // Renderizar
-  fcActualizar();
-  fpRenderLista();
+function alzakToggleFC() {
+  var body = document.getElementById('fc-body');
+  var ico  = document.getElementById('ico-fc');
+  if (!body) return;
+  var open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if (ico) ico.textContent = open ? '▼' : '▲';
+  if (!open) { fcActualizar(); fpRenderLista(); }
 }
-
-function fcCerrar() {
-  var pg = document.getElementById('pg-fc');
-  if (pg) pg.style.display = 'none';
-  if (typeof tabHome === 'function') tabHome();
-}
-
-// Al hacer click en Tablero, cerrar flujo de caja también
-var _tabHomeOrig = window.tabHome;
-window.tabHome = function() {
-  var pg = document.getElementById('pg-fc');
-  if (pg) pg.style.display = 'none';
-  if (typeof _tabHomeOrig === 'function') _tabHomeOrig();
-};
 
 function fcActualizar() {
   var el = document.getElementById('fc-tabla-main');
   if (!el) return;
-
+  var MNC = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   var anio = 2026;
-  var MNC  = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
   // Ingresos reales
   var ingReal = new Array(12).fill(0);
@@ -16696,8 +16669,7 @@ function fcActualizar() {
   // Ingresos programados
   var ingProg = new Array(12).fill(0);
   try {
-    var fp = JSON.parse(localStorage.getItem('alzak_fp_2026')||'[]');
-    fp.forEach(function(r) {
+    JSON.parse(localStorage.getItem('alzak_fp_2026')||'[]').forEach(function(r) {
       for (var m=0; m<12; m++) ingProg[m] += parseFloat(r['m'+(m+1)]||0);
     });
   } catch(e) {}
@@ -16710,93 +16682,82 @@ function fcActualizar() {
       if (dp.length < 3 || parseInt(dp[2]) !== anio) return;
       var m = parseInt(dp[1]) - 1;
       var c = (r['Concepto']||'').toLowerCase();
-      if (c.indexOf('abono factura')>=0 || c.indexOf('pago final factura')>=0) return;
+      if (c.indexOf('abono factura') >= 0 || c.indexOf('pago final factura') >= 0) return;
       if (m >= 0 && m < 12) egr[m] += parseFloat(r['Total (COP)']||0);
     });
   }
 
   function fm(n) {
     if (!n) return '<span style="color:#ddd">—</span>';
-    var neg = n < 0;
-    return (neg?'<span style="color:#E53E3E">-$':'<span style="color:'+(neg?'#E53E3E':'inherit')+'">$') +
-      Math.round(Math.abs(n)).toLocaleString('es-CO') + '</span>';
+    return (n<0?'<span style="color:#E53E3E">':'<span style="color:#0C447C">') +
+      (n<0?'-':'') + '$' + Math.round(Math.abs(n)).toLocaleString('es-CO') + '</span>';
   }
 
   var hoy = new Date().getMonth();
-  var html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:900px">';
-
-  // Encabezado
-  html += '<thead><tr style="background:#0C447C;color:#fff">';
-  html += '<th style="padding:10px 12px;text-align:left;white-space:nowrap">Concepto</th>';
-  MNC.forEach(function(m, i) {
-    html += '<th style="padding:10px 8px;text-align:right;'+(i===hoy?'background:#1a5a9e':'')+'">'+m+'</th>';
-  });
-  html += '<th style="padding:10px 8px;text-align:right">Acum.</th></tr></thead><tbody>';
+  var html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:820px">';
+  html += '<thead><tr style="background:#1E3A5F;color:#fff">';
+  html += '<th style="padding:9px 12px;text-align:left;min-width:170px">Concepto</th>';
+  MNC.forEach(function(m,i){ html += '<th style="padding:9px 6px;text-align:right;'+(i===hoy?'background:#2a5298':'')+'">'+m+'</th>'; });
+  html += '<th style="padding:9px 8px;text-align:right">Total</th></tr></thead><tbody>';
 
   var filas = [
-    { lbl:'🟢 Ingresos facturados', vals:ingReal, bg:'#F0FFF4', bold:true },
-    { lbl:'✅ Cobrado',              vals:ingCob,  bg:'#EBF8FF', bold:false },
-    { lbl:'🗓️ Prog. a facturar',    vals:ingProg, bg:'#FAF5FF', bold:false },
-    { lbl:'🔴 Egresos radicados',   vals:egr.map(function(v){return -v;}), bg:'#FFF5F5', bold:true },
+    {lbl:'🟢 Facturado', vals:ingReal, bg:'#F0FFF4'},
+    {lbl:'✅ Cobrado',   vals:ingCob,  bg:'#EBF8FF'},
+    {lbl:'🗓️ Programado', vals:ingProg, bg:'#FAF5FF'},
+    {lbl:'🔴 Egresos',  vals:egr.map(function(v){return -v;}), bg:'#FFF5F5'},
   ];
 
   filas.forEach(function(f) {
-    var total = f.vals.reduce(function(a,b){return a+b;},0);
+    var tot = f.vals.reduce(function(a,b){return a+b;},0);
     html += '<tr style="background:'+f.bg+';border-bottom:1px solid #f0ede8">';
-    html += '<td style="padding:8px 12px;font-weight:'+(f.bold?700:400)+';white-space:nowrap">'+f.lbl+'</td>';
-    f.vals.forEach(function(v, mi) {
-      html += '<td style="padding:8px;text-align:right;'+(mi===hoy?'background:#EBF8FF':'')+'">'+fm(v)+'</td>';
+    html += '<td style="padding:8px 12px;font-weight:600;font-size:11px">'+f.lbl+'</td>';
+    f.vals.forEach(function(v,mi){
+      html += '<td style="padding:8px 6px;text-align:right;'+(mi===hoy?'background:#e8f0fe':'')+'">'+fm(v)+'</td>';
     });
-    html += '<td style="padding:8px;text-align:right;font-weight:700">'+fm(total)+'</td></tr>';
+    html += '<td style="padding:8px;text-align:right;font-weight:700">'+fm(tot)+'</td></tr>';
   });
 
   // Saldo neto
-  html += '<tr style="background:#0C447C;color:#fff;font-weight:700">';
-  html += '<td style="padding:10px 12px">📊 Saldo neto</td>';
-  var acum = 0;
+  html += '<tr style="background:#1E3A5F;color:#fff;font-weight:700">';
+  html += '<td style="padding:9px 12px">📊 Saldo neto</td>';
   for (var m=0; m<12; m++) {
-    var neto = ingReal[m] + ingProg[m] - egr[m];
-    acum += neto;
-    var col = neto >= 0 ? '#68D391' : '#FC8181';
-    html += '<td style="padding:10px 8px;text-align:right;color:'+col+'">'+(neto?fm(neto):'—')+'</td>';
+    var n = ingReal[m] + ingProg[m] - egr[m];
+    var col = n >= 0 ? '#68D391' : '#FC8181';
+    html += '<td style="padding:9px 6px;text-align:right;'+(m===hoy?'background:#2a5298':'')+';color:'+col+'">'+(n?fm(n):'—')+'</td>';
   }
-  html += '<td style="padding:10px 8px;text-align:right;color:'+(acum>=0?'#68D391':'#FC8181')+'">'+fm(acum)+'</td>';
-  html += '</tr></tbody></table></div>';
-
+  var totNeto = ingReal.reduce(function(a,b){return a+b;},0) + ingProg.reduce(function(a,b){return a+b;},0) - egr.reduce(function(a,b){return a+b;},0);
+  html += '<td style="padding:9px 8px;text-align:right;color:'+(totNeto>=0?'#68D391':'#FC8181')+'">'+fm(totNeto)+'</td></tr>';
+  html += '</tbody></table></div>';
   el.innerHTML = html;
 }
 
-// ══ FACTURACIÓN PROGRAMADA ═══════════════════════════
-
+// ══ FACTURACIÓN PROGRAMADA ════════════════════════════
 function fpRenderLista() {
   var el = document.getElementById('fp-lista');
   if (!el) return;
   var data = [];
   try { data = JSON.parse(localStorage.getItem('alzak_fp_2026')||'[]'); } catch(e) {}
   if (!data.length) {
-    el.innerHTML = '<div style="color:#aaa;font-size:12px;padding:8px">Sin facturas programadas. Usa el botón "+ Agregar".</div>';
+    el.innerHTML = '<div style="color:#aaa;font-size:11px;padding:4px">Sin facturas programadas. Usa el botón &quot;+ Agregar&quot;.</div>';
     return;
   }
   var MNC = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   var html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:700px">';
   html += '<thead><tr style="background:#7C3AED;color:#fff">';
-  html += '<th style="padding:8px 10px;text-align:left">Cliente</th><th style="padding:8px 10px;text-align:left">Proyecto</th>';
-  MNC.forEach(function(m){ html += '<th style="padding:8px 6px;text-align:right">'+m+'</th>'; });
-  html += '<th style="padding:8px;text-align:right">Total</th><th></th></tr></thead><tbody>';
-
+  html += '<th style="padding:7px 10px;text-align:left">Cliente</th><th style="padding:7px 10px;text-align:left">Proyecto</th>';
+  MNC.forEach(function(m){ html += '<th style="padding:7px 5px;text-align:right">'+m+'</th>'; });
+  html += '<th style="padding:7px 8px;text-align:right">Total</th><th></th></tr></thead><tbody>';
   data.forEach(function(r, i) {
-    var total = 0;
-    html += '<tr style="background:'+(i%2===0?'#fff':'#faf8ff')+';border-bottom:1px solid #f0ede8">';
+    var tot = 0;
+    html += '<tr style="background:'+(i%2?'#faf8ff':'#fff')+';border-bottom:1px solid #f0ede8">';
     html += '<td style="padding:7px 10px;font-weight:600;color:#54504F">'+r.cliente+'</td>';
     html += '<td style="padding:7px 10px;color:#777">'+r.proyecto+'</td>';
     for (var m=0; m<12; m++) {
-      var v = parseFloat(r['m'+(m+1)]||0);
-      total += v;
-      html += '<td style="padding:7px 6px;text-align:right;color:'+(v?'#0C447C':'#ddd')+'">'+(v?'$'+Math.round(v).toLocaleString('es-CO'):'—')+'</td>';
+      var v = parseFloat(r['m'+(m+1)]||0); tot += v;
+      html += '<td style="padding:7px 5px;text-align:right;color:'+(v?'#0C447C':'#ddd')+'">'+(v?'$'+Math.round(v).toLocaleString('es-CO'):'—')+'</td>';
     }
-    html += '<td style="padding:7px 8px;text-align:right;font-weight:700;color:#0C447C">$'+Math.round(total).toLocaleString('es-CO')+'</td>';
-    html += '<td style="padding:4px"><button onclick="fpEliminar('+i+')" style="background:none;border:1px solid #fca5a5;color:#ef4444;border-radius:4px;padding:2px 7px;cursor:pointer;font-size:10px">✕</button></td>';
-    html += '</tr>';
+    html += '<td style="padding:7px 8px;text-align:right;font-weight:700;color:#0C447C">$'+Math.round(tot).toLocaleString('es-CO')+'</td>';
+    html += '<td><button onclick="fpEliminar('+i+')" style="background:none;border:1px solid #fca5a5;color:#ef4444;border-radius:4px;padding:2px 6px;cursor:pointer;font-size:10px">✕</button></td></tr>';
   });
   html += '</tbody></table></div>';
   el.innerHTML = html;
@@ -16809,20 +16770,16 @@ function fpAgregarNuevo() {
   if (proyecto === null) return;
   var MN = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   var nuevo = { cliente: cliente, proyecto: proyecto };
-  var alguno = false;
   for (var m=0; m<12; m++) {
-    var v = prompt('Valor ' + MN[m] + ' 2026 (0 = no aplica):');
-    if (v === null) break;
-    var n = parseFloat(v.replace(/[^0-9.]/g,''))||0;
-    nuevo['m'+(m+1)] = n;
-    if (n > 0) alguno = true;
+    var v = prompt('Valor ' + MN[m] + ' 2026 (Enter = 0):');
+    if (v === null) { nuevo['m'+(m+1)] = 0; continue; }
+    nuevo['m'+(m+1)] = parseFloat(v.replace(/[^0-9.]/g,''))||0;
   }
   var data = [];
   try { data = JSON.parse(localStorage.getItem('alzak_fp_2026')||'[]'); } catch(e) {}
   data.push(nuevo);
   localStorage.setItem('alzak_fp_2026', JSON.stringify(data));
-  fpRenderLista();
-  fcActualizar();
+  fpRenderLista(); fcActualizar();
   if (typeof mostrarToast === 'function') mostrarToast('✅ Factura programada agregada', '#1D9E75', 2000);
 }
 
@@ -16832,9 +16789,14 @@ function fpEliminar(idx) {
   try { data = JSON.parse(localStorage.getItem('alzak_fp_2026')||'[]'); } catch(e) {}
   data.splice(idx, 1);
   localStorage.setItem('alzak_fp_2026', JSON.stringify(data));
-  fpRenderLista();
-  fcActualizar();
+  fpRenderLista(); fcActualizar();
 }
+
+// Actualizar flujo de caja cuando se sincroniza
+document.addEventListener('alzakSyncDone', function() {
+  var body = document.getElementById('fc-body');
+  if (body && body.style.display !== 'none') { fcActualizar(); fpRenderLista(); }
+});
 </script>
 
 </body>

@@ -15277,8 +15277,11 @@ function tabPres() {
   for (var i=0; i<pgs.length; i++) { pgs[i].classList.remove('on'); pgs[i].style.display=''; }
   var pgHome = document.getElementById('pg-home');
   if (pgHome) { pgHome.classList.remove('on'); pgHome.style.display='none'; }
+  // Forzar que #content tenga altura visible para pg-presupuesto
+  var cnt = document.getElementById('content');
+  if (cnt) { cnt.style.height = 'auto'; cnt.style.minHeight = '100vh'; cnt.style.overflow = 'auto'; }
   var c = document.getElementById('pg-presupuesto');
-  if (c) { c.classList.add('on'); c.style.display='block'; }
+  if (c) { c.classList.add('on'); c.style.cssText = 'display:block !important; min-height:100vh; width:100%;'; }
   var tb = document.getElementById('topbar-t');
   if (tb) tb.textContent = 'Presupuesto 2026';
   ['tab-home-btn','tab-pres-btn'].forEach(function(id){
@@ -16388,7 +16391,7 @@ function renderConc(){
 </script>
 
 <div id="pg-presupuesto" class="pg">
-<div style="padding:20px 28px;max-width:1100px;margin:0 auto;">
+<div id="pres-inner" style="padding:20px 28px;width:100%;box-sizing:border-box">
 
   <!-- Header -->
   <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px;">
@@ -16398,391 +16401,20 @@ function renderConc(){
     </div>
   </div>
 
-  <!-- Módulos Equipo Base y MSD VSR -->
-  <div id="pres-eb-slot"><div class="card" id="bloque-equipo-base" style="margin-bottom:12px;border:1.5px solid #2E7D32">
-
-  <!-- Encabezado -->
-
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
-
-    <div>
-
-      <div style="font-size:11px;font-weight:700;color:#2E7D32;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">👥 Equipo Base</div>
-
-      <div style="font-size:15px;font-weight:700;color:#54504F">Presupuesto de Honorarios — Contratistas OPS</div>
-
-      <div style="font-size:11px;color:#888;margin-top:2px">Haz clic en cada celda para marcar como <b style="color:#2E7D32">pagado</b> (verde) o <b style="color:#A32D2D">adeudado</b> (rojo) · 2026</div>
-
-    </div>
-
-    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-
-      <button class="btn" onclick="equipoBaseReset()" style="font-size:11px;color:#A32D2D;border-color:#f0ccc8">↺ Reiniciar</button>
-
-      <button onclick="equipoBaseToggle()" id="btn-eb-toggle"
-
-        style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:700;color:#54504F;font-family:'Montserrat',Helvetica,Arial,sans-serif;display:flex;align-items:center;gap:5px">
-
-        <span id="ico-eb">▶</span>
-
-      </button>
-
-    </div>
-
-  </div>
-
-  <!-- KPIs resumen -->
-
-  <div id="eb-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
-
-    <div style="background:#f1faf1;border-radius:10px;padding:11px 13px;border:1px solid #c8e6c9">
-
-      <div style="font-size:10px;font-weight:700;color:#2E7D32;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">✅ Total pagado</div>
-
-      <div id="eb-kpi-pagado" style="font-size:17px;font-weight:700;color:#2E7D32">$0</div>
-
-    </div>
-
-    <div style="background:#fff5f5;border-radius:10px;padding:11px 13px;border:1px solid #ffcdd2">
-
-      <div style="font-size:10px;font-weight:700;color:#A32D2D;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">⚠️ Total adeudado</div>
-
-      <div id="eb-kpi-adeudado" style="font-size:17px;font-weight:700;color:#A32D2D">$0</div>
-
-    </div>
-
-    <div style="background:#f9f8f5;border-radius:10px;padding:11px 13px;border:1px solid #e0ddd8">
-
-      <div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">📋 Presupuesto total</div>
-
-      <div id="eb-kpi-total" style="font-size:17px;font-weight:700;color:#54504F">$0</div>
-
-    </div>
-
-  </div>
-
-  <!-- Tabla colapsable -->
-
-  <div id="panel-equipo-base" style="overflow-x:auto;display:none">
-
-    <table id="eb-tabla" style="width:100%;border-collapse:collapse;font-size:11px;min-width:900px">
-
-      <thead>
-
-        <tr style="background:#f1faf1">
-
-          <th style="text-align:left;padding:7px 10px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-transform:uppercase;letter-spacing:.05em;min-width:180px;position:sticky;left:0;background:#f1faf1;z-index:1">Contratista</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">ENE</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">FEB</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">MAR</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">ABR</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">MAY</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">JUN</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">JUL</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">AGO</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">SEP</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">OCT</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">NOV</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#2E7D32;text-align:center">DIC</th>
-
-          <th style="padding:7px 10px;border-bottom:2px solid #2E7D32;font-size:10px;font-weight:700;color:#A32D2D;text-align:right;min-width:100px">TOTAL ADEUDADO</th>
-
-        </tr>
-
-      </thead>
-
-      <tbody id="eb-tbody"></tbody>
-
-      <tfoot id="eb-tfoot"></tfoot>
-
-    </table>
-
-  </div>
-
-  <div style="margin-top:8px;font-size:10px;color:#aaa">💡 Clic en celda roja = marcar pagado · Clic en celda verde = marcar adeudado · "editar" debajo del valor para cambiar monto · Clic en nombre para renombrar</div>
-
-</div>
-
-<!-- Modal Equipo Base -->
-
-<div id="eb-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:99999;align-items:center;justify-content:center">
-
-  <div style="background:#fff;border-radius:14px;padding:28px 28px 22px;width:340px;max-width:95%;box-shadow:0 24px 60px rgba(0,0,0,0.3)">
-
-    <div id="eb-modal-titulo" style="font-size:15px;font-weight:700;color:#333;margin-bottom:6px"></div>
-
-    <div id="eb-modal-sub" style="font-size:11px;color:#888;margin-bottom:16px"></div>
-
-    <input id="eb-modal-input" type="text" style="width:100%;padding:10px 12px;border:1.5px solid #e0ddd8;border-radius:9px;font-size:14px;font-family:'Montserrat',Helvetica,Arial,sans-serif;box-sizing:border-box;outline:none" placeholder="">
-
-    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
-
-      <button onclick="ebModalCancelar()" style="padding:9px 18px;border:1px solid #d0cec8;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-family:'Montserrat',Helvetica,Arial,sans-serif">Cancelar</button>
-
-      <button onclick="ebModalAceptar()" style="padding:9px 20px;border:none;border-radius:8px;background:#2E7D32;color:#fff;cursor:pointer;font-size:13px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif">Guardar</button>
-
-    </div>
-
-  </div>
-
-</div>
-
-<!-- Modal confirmación eliminar Equipo Base -->
-
-<div id="eb-modal-confirm" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:99999;align-items:center;justify-content:center">
-
-  <div style="background:#fff;border-radius:14px;padding:28px;width:320px;max-width:95%;box-shadow:0 24px 60px rgba(0,0,0,0.3)">
-
-    <div style="font-size:15px;font-weight:700;color:#A32D2D;margin-bottom:10px">🗑 Eliminar contratista</div>
-
-    <div id="eb-confirm-msg" style="font-size:13px;color:#555;margin-bottom:20px"></div>
-
-    <div style="display:flex;gap:8px;justify-content:flex-end">
-
-      <button onclick="ebConfirmCancelar()" style="padding:9px 18px;border:1px solid #d0cec8;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-family:'Montserrat',Helvetica,Arial,sans-serif">Cancelar</button>
-
-      <button onclick="ebConfirmAceptar()" style="padding:9px 20px;border:none;border-radius:8px;background:#A32D2D;color:#fff;cursor:pointer;font-size:13px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif">Eliminar</button>
-
-    </div>
-
-  </div>
-
-</div>
-
-<!-- ══════════════════════════════════════════════════════════
-
-     MÓDULO PROYECTO MSD VSR
-
-     ══════════════════════════════════════════════════════════ -->
-
-<div class="card" id="bloque-msd-vsr" style="margin-bottom:12px;border:1.5px solid #7B1FA2">
-
-  <!-- Encabezado -->
-
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px">
-
-    <div>
-
-      <div style="font-size:11px;font-weight:700;color:#7B1FA2;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">🔬 Proyecto MSD VSR</div>
-
-      <div style="font-size:15px;font-weight:700;color:#54504F">Presupuesto de Costos — Proyecto MSD VSR 2026</div>
-
-      <div style="font-size:11px;color:#888;margin-top:2px">
-
-        Se marca <b style="color:#2E7D32">verde (pagado)</b> automáticamente si el proveedor aparece en Egresos ·
-
-        También puedes hacer clic manual · Celda gris = sin costo ese mes
-
-      </div>
-
-    </div>
-
-    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-
-      <button class="btn" onclick="msdReset()" style="font-size:11px;color:#A32D2D;border-color:#f0ccc8">↺ Reiniciar</button>
-
-      <button onclick="msdToggle()" style="background:none;border:none;cursor:pointer;font-size:13px;font-weight:700;color:#54504F;font-family:'Montserrat',Helvetica,Arial,sans-serif;display:flex;align-items:center;gap:5px">
-
-        <span id="ico-msd">▶</span>
-
-      </button>
-
-    </div>
-
-  </div>
-
-  <!-- KPIs -->
-
-  <div id="msd-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
-
-    <div style="background:#f3e5f5;border-radius:10px;padding:11px 13px;border:1px solid #ce93d8">
-
-      <div style="font-size:10px;font-weight:700;color:#7B1FA2;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">✅ Total pagado</div>
-
-      <div id="msd-kpi-pagado" style="font-size:17px;font-weight:700;color:#7B1FA2">$0</div>
-
-    </div>
-
-    <div style="background:#fff5f5;border-radius:10px;padding:11px 13px;border:1px solid #ffcdd2">
-
-      <div style="font-size:10px;font-weight:700;color:#A32D2D;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">⚠️ Total adeudado</div>
-
-      <div id="msd-kpi-adeudado" style="font-size:17px;font-weight:700;color:#A32D2D">$0</div>
-
-    </div>
-
-    <div style="background:#f9f8f5;border-radius:10px;padding:11px 13px;border:1px solid #e0ddd8">
-
-      <div style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">📋 Presupuesto total</div>
-
-      <div id="msd-kpi-total" style="font-size:17px;font-weight:700;color:#54504F">$0</div>
-
-    </div>
-
-  </div>
-
-  <!-- Tabla -->
-
-  <div id="panel-msd-vsr" style="overflow-x:auto;display:none">
-
-    <table id="msd-tabla" style="width:100%;border-collapse:collapse;font-size:11px;min-width:900px">
-
-      <thead>
-
-        <tr style="background:#f3e5f5">
-
-          <th style="text-align:left;padding:7px 10px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-transform:uppercase;letter-spacing:.05em;min-width:220px;position:sticky;left:0;background:#f3e5f5;z-index:1">Ítem / Proveedor</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">ENE</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">FEB</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">MAR</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">ABR</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">MAY</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">JUN</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">JUL</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">AGO</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">SEP</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">OCT</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">NOV</th>
-
-          <th style="padding:7px 6px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#7B1FA2;text-align:center">DIC</th>
-
-          <th style="padding:7px 10px;border-bottom:2px solid #7B1FA2;font-size:10px;font-weight:700;color:#A32D2D;text-align:right;min-width:110px">TOTAL ADEUDADO</th>
-
-        </tr>
-
-      </thead>
-
-      <tbody id="msd-tbody"></tbody>
-
-      <tfoot id="msd-tfoot"></tfoot>
-
-    </table>
-
-  </div>
-
-  <div style="margin-top:8px;font-size:10px;color:#aaa">
-
-    🟢 Verde automático = detectado en Egresos · 🔴 Rojo = pendiente · Clic para cambiar estado · "editar" para cambiar valor · Clic en nombre para renombrar
-
-  </div>
-
-</div>
-
-<!-- Modal input MSD VSR -->
-
-<div id="msd-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:99999;align-items:center;justify-content:center">
-
-  <div style="background:#fff;border-radius:14px;padding:28px 28px 22px;width:340px;max-width:95%;box-shadow:0 24px 60px rgba(0,0,0,0.3)">
-
-    <div id="msd-modal-titulo" style="font-size:15px;font-weight:700;color:#7B1FA2;margin-bottom:6px"></div>
-
-    <div id="msd-modal-sub" style="font-size:11px;color:#888;margin-bottom:16px"></div>
-
-    <input id="msd-modal-input" type="text" style="width:100%;padding:10px 12px;border:1.5px solid #e0ddd8;border-radius:9px;font-size:14px;font-family:'Montserrat',Helvetica,Arial,sans-serif;box-sizing:border-box;outline:none">
-
-    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
-
-      <button onclick="msdModalCancelar()" style="padding:9px 18px;border:1px solid #d0cec8;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-family:'Montserrat',Helvetica,Arial,sans-serif">Cancelar</button>
-
-      <button onclick="msdModalAceptar()" style="padding:9px 20px;border:none;border-radius:8px;background:#7B1FA2;color:#fff;cursor:pointer;font-size:13px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif">Guardar</button>
-
-    </div>
-
-  </div>
-
-</div>
-
-<!-- Modal confirmación eliminar MSD VSR -->
-
-<div id="msd-modal-confirm" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:99999;align-items:center;justify-content:center">
-
-  <div style="background:#fff;border-radius:14px;padding:28px;width:320px;max-width:95%;box-shadow:0 24px 60px rgba(0,0,0,0.3)">
-
-    <div style="font-size:15px;font-weight:700;color:#A32D2D;margin-bottom:10px">🗑 Eliminar ítem</div>
-
-    <div id="msd-confirm-msg" style="font-size:13px;color:#555;margin-bottom:20px"></div>
-
-    <div style="display:flex;gap:8px;justify-content:flex-end">
-
-      <button onclick="msdConfirmCancelar()" style="padding:9px 18px;border:1px solid #d0cec8;border-radius:8px;background:#fff;cursor:pointer;font-size:13px;font-family:'Montserrat',Helvetica,Arial,sans-serif">Cancelar</button>
-
-      <button onclick="msdConfirmAceptar()" style="padding:9px 20px;border:none;border-radius:8px;background:#A32D2D;color:#fff;cursor:pointer;font-size:13px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif">Eliminar</button>
-
-    </div>
-
-  </div>
-
-</div>
-
-</div>
-  <div id="pres-msd-slot"></div>
-
-  <!-- Presupuesto por Facturar 2026 -->
-  <div class="card" style="margin-bottom:12px;border:1.5px solid #5DC3DA;">
-
-    <!-- Header -->
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div style="font-size:24px;">📄</div>
+  <!-- Equipo Base -->
+  <div id="pres-eb-slot" style="margin-bottom:12px"></div>
+
+  <!-- MSD VSR -->
+  <div id="pres-msd-slot" style="margin-bottom:12px"></div>
+
+  <!-- Flujo de Caja -->
+  <div class="card" style="margin-bottom:12px;border:1.5px solid #1E3A5F;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="font-size:22px">💰</div>
         <div>
-          <div style="font-size:13px;font-weight:700;color:#5DC3DA;">Matriz de Proyección de Facturación 2026</div>
-          <div style="font-size:11px;color:#aaa;margin-top:1px;">Proyectos a ejecutar · editable · con IVA</div>
-        </div>
-      </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;">
-        <button onclick="pfAddRow()" style="background:#1E3A5F;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">+ Fila</button>
-        <button onclick="pfAddCol()" style="background:#1E3A5F;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">+ Columna</button>
-        <button onclick="pfExportCSV()" style="background:#1E3A5F;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">↓ CSV</button>
-      </div>
-    </div>
-
-    <!-- Resumen por mes -->
-    <div id="pf-resumen" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;"></div>
-
-    <!-- Tabla -->
-    <div style="overflow-x:auto;" id="pf-tabla-wrap">
-      <table id="pf-tabla" style="width:100%;border-collapse:collapse;font-size:12px;">
-        <thead id="pf-thead"></thead>
-        <tbody id="pf-tbody"></tbody>
-        <tfoot id="pf-tfoot"></tfoot>
-      </table>
-    </div>
-
-    <!-- Totales -->
-    <div id="pf-totales" style="margin-top:12px;padding:10px 14px;background:#F0F8FF;border-radius:8px;font-size:12px;"></div>
-  </div>
-
-  <!-- ── Flujo de Caja ─────────────────────────────────── -->
-  <div class="card" style="margin-bottom:12px;border:1.5px solid #2E7D32;">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div style="font-size:24px;">💰</div>
-        <div>
-          <div style="font-size:13px;font-weight:700;color:#2E7D32;">Flujo de Caja Mensual 2026</div>
-          <div style="font-size:11px;color:#aaa;margin-top:1px;">Basado en facturas del Tablero · actualización automática</div>
+          <div style="font-size:13px;font-weight:700;color:#1E3A5F">Flujo de Caja Proyectado 2026</div>
+          <div style="font-size:11px;color:#aaa">Ingresos confirmados + proyectados vs egresos</div>
         </div>
       </div>
       <button onclick="fcRender()" style="background:#1E3A5F;color:#fff;border:none;border-radius:8px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer;">↺ Actualizar</button>
@@ -16792,392 +16424,23 @@ function renderConc(){
     </div>
   </div>
 
-  <!-- ── Facturación Programada ───────────────────────────── -->
+  <!-- Facturación Programada -->
   <div class="card" style="margin-bottom:12px;border:1.5px solid #7C3AED;">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div style="font-size:24px;">🗓️</div>
-        <div>
-          <div style="font-size:13px;font-weight:700;color:#7C3AED;">Facturación Programada</div>
-          <div style="font-size:11px;color:#aaa;margin-top:1px;">Facturas proyectadas · agregan al flujo de caja automáticamente</div>
-        </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <div style="font-size:22px">🗓️</div>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#7C3AED">Facturación Programada</div>
+        <div style="font-size:11px;color:#aaa">Facturas proyectadas · agregan al flujo de caja automáticamente</div>
       </div>
-      <button onclick="fpAddRow()" style="background:#1E3A5F;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">+ Agregar</button>
     </div>
-
-    <div style="overflow-x:auto;">
-      <table style="width:100%;border-collapse:collapse;font-size:12px;">
-        <thead>
-          <tr style="background:#F5F3FF;">
-            <th style="padding:7px 10px;text-align:left;font-weight:700;color:#7C3AED;border-bottom:2px solid #7C3AED;white-space:nowrap;">N° Fact. Programada</th>
-            <th style="padding:7px 10px;text-align:left;font-weight:700;color:#7C3AED;border-bottom:2px solid #7C3AED;">Cliente</th>
-            <th style="padding:7px 10px;text-align:left;font-weight:700;color:#7C3AED;border-bottom:2px solid #7C3AED;">Concepto</th>
-            <th style="padding:7px 10px;text-align:right;font-weight:700;color:#7C3AED;border-bottom:2px solid #7C3AED;">Valor</th>
-            <th style="padding:7px 10px;text-align:center;font-weight:700;color:#7C3AED;border-bottom:2px solid #7C3AED;">Fecha fact.</th>
-            <th style="padding:7px 10px;text-align:center;font-weight:700;color:#7C3AED;border-bottom:2px solid #7C3AED;">Días pago</th>
-            <th style="padding:7px 10px;text-align:center;font-weight:700;color:#7C3AED;border-bottom:2px solid #7C3AED;">Cobro est.</th>
-            <th style="padding:7px 10px;text-align:center;font-weight:700;color:#7C3AED;border-bottom:2px solid #7C3AED;">Estado</th>
-            <th style="padding:7px 4px;border-bottom:2px solid #7C3AED;"></th>
-          </tr>
-        </thead>
-        <tbody id="fp-tbody"></tbody>
-        <tfoot id="fp-tfoot"></tfoot>
-      </table>
+    <div id="pf-tabla-wrap"></div>
+    <div style="margin-top:12px">
+      <button onclick="pfAgregar()" style="background:#7C3AED;color:#fff;border:none;border-radius:8px;padding:6px 16px;font-size:11px;font-weight:700;cursor:pointer;">+ Agregar factura programada</button>
     </div>
-    <div id="fp-total" style="margin-top:10px;padding:8px 12px;background:#F5F3FF;border-radius:8px;font-size:12px;"></div>
   </div>
 
-  
-
 </div>
 </div>
-<script>
-  // ══════════════════════════════════════════════════════
-  //  PRESUPUESTO 2026 — Motor completo
-  // ══════════════════════════════════════════════════════
-
-  var PF_CLIENTES = [
-    'ABBVIE','ALZAK FOUNDATION','BAYER','BIIB','SURA',
-    'JANSSEN','MERCK','MSD','MSD VSR','VAXTHERA',
-    'NOVARTIS','NOVO NORDISK','PFIZER','SANOFI','SERVIER',
-    'AMGEN','ADIUM','GRUNENTHAL','ROCHE','ASTRAZENECA',
-    'BOEHRINGER','LAFRANCOL','TECNOQUÍMICAS'
-  ];
-
-  var PF_ESTADOS = [
-    'ABIERTO','CERRADO','PROXIMO A CERRARSE',
-    'PENDIENTE ENTREGABLES','EN NEGOCIACIÓN','PARA FIRMA DE CONTRATO'
-  ];
-
-  var PF_ESTADO_COLORES = {
-    'ABIERTO':                '#2E7D32',
-    'CERRADO':                '#888',
-    'PROXIMO A CERRARSE':     '#B45309',
-    'PENDIENTE ENTREGABLES':  '#C2410C',
-    'EN NEGOCIACIÓN':         '#0C447C',
-    'PARA FIRMA DE CONTRATO': '#7C3AED'
-  };
-
-  // Columnas base — id, label, tipo, editable
-  var PF_COLS_DEFAULT = [
-    {id:'desc',     label:'Descripción del Proyecto', tipo:'text',   edit:true,  w:'220px'},
-    {id:'cliente',  label:'Cliente',                  tipo:'select', edit:true,  w:'130px'},
-    {id:'idproy',   label:'ID Proyecto',               tipo:'text',   edit:true,  w:'90px'},
-    {id:'valor',    label:'Valor',                     tipo:'money',  edit:true,  w:'120px'},
-    {id:'iva',      label:'IVA (19%)',                 tipo:'calc',   edit:false, w:'110px'},
-    {id:'total',    label:'Total',                     tipo:'calc',   edit:false, w:'120px'},
-    {id:'estado',   label:'Estado',                    tipo:'estado', edit:true,  w:'160px'}
-  ];
-
-  // ── Persistencia ────────────────────────────────────────
-  function pfLoad() {
-    try {
-      var raw = localStorage.getItem('pf2026v2');
-      if (raw) { var d=JSON.parse(raw); if(d && d.rows) return d; }
-    } catch(e){}
-    return {
-      cols: JSON.parse(JSON.stringify(PF_COLS_DEFAULT)),
-      rows: [
-        {desc:'Bayer Propuesta Integral',                    cliente:'BAYER',    idproy:'3524', valor:77010888,  estado:'ABIERTO'},
-        {desc:'Bayer HALE Aflibercept',                      cliente:'BAYER',    idproy:'1925', valor:91825978,  estado:'ABIERTO'},
-        {desc:'MSD VSR Carga Clínica y Económica',           cliente:'MSD',      idproy:'6024', valor:381009037, estado:'ABIERTO'},
-        {desc:'Vaxthera proyectos',                          cliente:'VAXTHERA', idproy:'3825', valor:27000000,  estado:'ABIERTO'},
-        {desc:'Estimación costos osteoporosis',              cliente:'AMGEN',    idproy:'4125', valor:19910400,  estado:'ABIERTO'},
-        {desc:'Charla Epidemiológica - Esquizofrenia J&J',   cliente:'JANSSEN',  idproy:'3625', valor:3874500,   estado:'ABIERTO'},
-        {desc:'Estudio Nirsevimab Guatemala',                cliente:'SANOFI',   idproy:'426',  valor:50300941,  estado:'ABIERTO'},
-        {desc:'Vaxthera Manuscritos Influenza y VPH',        cliente:'VAXTHERA', idproy:'926',  valor:35130000,  estado:'ABIERTO'},
-        {desc:'Charla Osteoporosis Monteria',                cliente:'AMGEN',    idproy:'6226', valor:5205400,   estado:'ABIERTO'},
-        {desc:'Charla Dra Angela Carrasquilla',              cliente:'SANOFI',   idproy:'1026', valor:6320842,   estado:'ABIERTO'}
-      ]
-    };
-  }
-
-  function pfSave(data) {
-    try { localStorage.setItem('pf2026v2', JSON.stringify(data)); } catch(e){}
-    // Sync to Sheet
-    if(window.GS_SYNC_ACTIVO && typeof gsPost === 'function') {
-      try { gsPost('pf2026', 'set', [['json'],[JSON.stringify(data)]]); } catch(e){}
-    }
-  }
-
-  // ── Helpers ──────────────────────────────────────────────
-  function pfFmt(n) {
-    if(!n && n!==0) return '—';
-    return '$ ' + Math.round(n).toLocaleString('es-CO');
-  }
-  function escH(s) {
-    return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
-  }
-  function pfCalcIVA(row)   { return Math.round((row.valor||0)*0.19); }
-  function pfCalcTotal(row) { return Math.round((row.valor||0)*1.19); }
-
-  // ── Render ───────────────────────────────────────────────
-  function pfRender() {
-    var data  = pfLoad();
-    var cols  = data.cols;
-    var rows  = data.rows;
-    var thead = document.getElementById('pf-thead');
-    var tbody = document.getElementById('pf-tbody');
-    var tfoot = document.getElementById('pf-tfoot');
-    if(!thead||!tbody||!tfoot) return;
-
-    // ─ THEAD ─
-    var htr = '<tr style="background:#EBF3FB;">';
-    htr += '<th style="padding:6px 8px;font-size:10px;font-weight:700;color:#0C447C;border-bottom:2px solid #5DC3DA;white-space:nowrap;min-width:30px;">#</th>';
-    cols.forEach(function(col){
-      htr += '<th style="padding:6px 8px;font-size:10px;font-weight:700;color:#0C447C;border-bottom:2px solid #5DC3DA;white-space:nowrap;min-width:'+col.w+';">'
-           + '<div style="display:flex;align-items:center;gap:4px;">'
-           + '<span>'+escH(col.label)+'</span>'
-           + '<button onclick="pfEditColLabel(\''+col.id+'\')" title="Renombrar" style="background:none;border:none;cursor:pointer;font-size:10px;color:#aaa;padding:0;">✏️</button>'
-           + (col.id!=='iva'&&col.id!=='total' ? '<button onclick="pfDelCol(\''+col.id+'\')" title="Quitar columna" style="background:none;border:none;cursor:pointer;font-size:10px;color:#ccc;padding:0;">✕</button>' : '')
-           + '</div></th>';
-    });
-    htr += '<th style="padding:6px 4px;border-bottom:2px solid #5DC3DA;min-width:30px;"></th></tr>';
-    thead.innerHTML = htr;
-
-    // ─ TBODY ─
-    tbody.innerHTML = '';
-    rows.forEach(function(row, ri) {
-      var tr = document.createElement('tr');
-      tr.style.borderBottom = '1px solid #f0eeec';
-      tr.style.background = ri%2===0?'#fff':'#fafbfc';
-
-      // # row number
-      var tdN = document.createElement('td');
-      tdN.style.cssText='padding:5px 8px;font-size:10px;color:#aaa;text-align:center;';
-      tdN.textContent = ri+1;
-      tr.appendChild(tdN);
-
-      cols.forEach(function(col){
-        var td = document.createElement('td');
-        td.style.cssText='padding:5px 6px;';
-        td.innerHTML = pfCellHtml(col, row, ri);
-        tr.appendChild(td);
-      });
-
-      // Eliminar fila
-      var tdDel = document.createElement('td');
-      tdDel.style.cssText='padding:5px 4px;text-align:center;';
-      tdDel.innerHTML='<button onclick="pfDelRow('+ri+')" title="Eliminar fila" style="background:#fee;border:none;border-radius:5px;color:#A32D2D;font-size:12px;cursor:pointer;padding:2px 6px;">✕</button>';
-      tr.appendChild(tdDel);
-      tbody.appendChild(tr);
-    });
-
-    // ─ TFOOT totales ─
-    var sumValor = rows.reduce(function(a,r){return a+(r.valor||0);},0);
-    var sumIVA   = rows.reduce(function(a,r){return a+pfCalcIVA(r);},0);
-    var sumTotal = rows.reduce(function(a,r){return a+pfCalcTotal(r);},0);
-    var ftr = '<tr style="background:#EBF3FB;font-weight:700;">';
-    ftr += '<td style="padding:7px 8px;font-size:11px;color:#0C447C;" colspan="2">TOTAL ('+rows.length+' proyectos)</td>';
-    cols.forEach(function(col, ci){
-      if(ci===0) return; // skip desc (covered by colspan)
-      var val='';
-      if(col.id==='valor') val='<span style="color:#0C447C;">'+pfFmt(sumValor)+'</span>';
-      else if(col.id==='iva') val='<span style="color:#B45309;">'+pfFmt(sumIVA)+'</span>';
-      else if(col.id==='total') val='<span style="color:#2E7D32;font-size:13px;">'+pfFmt(sumTotal)+'</span>';
-      ftr += '<td style="padding:7px 8px;text-align:'+(col.tipo==='money'||col.tipo==='calc'?'right':'left')+';">'+val+'</td>';
-    });
-    ftr += '<td></td></tr>';
-    tfoot.innerHTML = ftr;
-
-    pfRenderResumen(data);
-    pfRenderTotales(sumValor, sumIVA, sumTotal, rows);
-  }
-
-  function pfCellHtml(col, row, ri) {
-    var val = row[col.id];
-    var tipo = col.tipo;
-
-    if(tipo==='calc') {
-      var n = col.id==='iva' ? pfCalcIVA(row) : pfCalcTotal(row);
-      return '<span style="color:'+(col.id==='total'?'#2E7D32':'#B45309')+';font-weight:700;white-space:nowrap;">'+pfFmt(n)+'</span>';
-    }
-    if(!col.edit) return escH(String(val||''));
-
-    if(tipo==='select') {
-      // Cliente dropdown + "Otro" input
-      var enLista = PF_CLIENTES.indexOf(val) >= 0;
-      var selVal  = enLista ? val : '__otro__';
-      var opts = PF_CLIENTES.map(function(c){
-        return '<option value="'+escH(c)+'"'+(c===selVal?' selected':'')+'>'+c+'</option>';
-      }).join('');
-      opts += '<option value="__otro__"'+(!enLista?' selected':'')+'>✏️ Otro...</option>';
-      var inputDisp = enLista ? 'none' : 'inline-block';
-      var inputVal  = enLista ? '' : escH(val||'');
-      return '<div style="display:flex;gap:3px;align-items:center;flex-wrap:wrap;">'
-        +'<select id="pfsel-'+ri+'" onchange="pfSelChange('+ri+',\'cliente\',this)"'
-        +' style="border:1px solid #ddd;border-radius:5px;padding:3px 5px;font-size:11px;max-width:130px;">'+opts+'</select>'
-        +'<input id="pfinp-'+ri+'" value="'+inputVal+'" placeholder="Nombre..."'
-        +' onblur="pfCellEdit('+ri+',\'cliente\',this.value)"'
-        +' style="display:'+inputDisp+';border:1px solid #5DC3DA;border-radius:5px;padding:3px 5px;font-size:11px;width:90px;">'
-        +'</div>';
-    }
-
-    if(tipo==='estado') {
-      var eCol = PF_ESTADO_COLORES[val] || '#888';
-      var opts2 = PF_ESTADOS.map(function(e){
-        return '<option value="'+escH(e)+'"'+(e===val?' selected':'')+'>'+e+'</option>';
-      }).join('');
-      return '<select onchange="pfCellEdit('+ri+',\'estado\',this.value)"'
-        +' style="border:1px solid #ddd;border-radius:5px;padding:3px 5px;font-size:10px;font-weight:700;color:'+eCol+';min-width:130px;">'+opts2+'</select>';
-    }
-
-    if(tipo==='money') {
-      return '<input type="number" value="'+(val||0)+'"'
-        +' onblur="pfCellEdit('+ri+',\''+col.id+'\',+this.value)"'
-        +' style="border:1px solid #ddd;border-radius:5px;padding:3px 6px;font-size:11px;width:100%;min-width:90px;text-align:right;">';
-    }
-
-    // default: text
-    return '<input value="'+escH(String(val||''))+'"'
-      +' onblur="pfCellEdit('+ri+',\''+col.id+'\',this.value)"'
-      +' style="border:1px solid #ddd;border-radius:5px;padding:3px 6px;font-size:11px;width:100%;min-width:80px;">';
-  }
-
-  // ── Resumen por mes ──────────────────────────────────────
-  function pfRenderResumen(data) {
-    var el = document.getElementById('pf-resumen');
-    if(!el) return;
-    var rows = data.rows;
-    var total = rows.reduce(function(a,r){return a+(r.valor||0);},0);
-    var byCliente = {};
-    rows.forEach(function(r){
-      var c = r.cliente||'Sin cliente';
-      byCliente[c] = (byCliente[c]||0) + (r.valor||0);
-    });
-    var html = '<div style="background:#EBF3FB;border-radius:8px;padding:6px 12px;border:1px solid #5DC3DA30;">'
-      +'<div style="font-size:10px;font-weight:700;color:#0C447C;">TOTAL PROYECTADO</div>'
-      +'<div style="font-size:14px;font-weight:700;color:#5DC3DA;">'+pfFmt(total)+'</div>'
-      +'</div>';
-    Object.keys(byCliente).sort().forEach(function(c){
-      html += '<div style="background:#f8f8f8;border-radius:8px;padding:5px 10px;border:1px solid #eee;">'
-        +'<div style="font-size:9px;font-weight:700;color:#888;">'+escH(c)+'</div>'
-        +'<div style="font-size:12px;font-weight:700;color:#333;">'+pfFmt(byCliente[c])+'</div>'
-        +'</div>';
-    });
-    el.innerHTML = html;
-  }
-
-  function pfRenderTotales(sumValor, sumIVA, sumTotal, rows) {
-    var el = document.getElementById('pf-totales');
-    if(!el) return;
-    var byEstado = {};
-    rows.forEach(function(r){
-      var e=r.estado||'Sin estado';
-      byEstado[e]=(byEstado[e]||0)+(r.valor||0);
-    });
-    var html = '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;">'
-      +'<div><span style="color:#888;">Valor bruto:</span> <strong style="color:#0C447C;">'+pfFmt(sumValor)+'</strong></div>'
-      +'<div><span style="color:#B45309;">IVA 19%:</span> <strong style="color:#B45309;">'+pfFmt(sumIVA)+'</strong></div>'
-      +'<div><span style="color:#2E7D32;font-weight:700;">Total con IVA:</span> <strong style="color:#2E7D32;font-size:14px;">'+pfFmt(sumTotal)+'</strong></div>'
-      +'</div>'
-      +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">'
-      +Object.keys(byEstado).map(function(e){
-        var c=PF_ESTADO_COLORES[e]||'#888';
-        return '<div style="font-size:11px;"><span style="color:'+c+';font-weight:700;">'+escH(e)+':</span> <span>'+pfFmt(byEstado[e])+'</span></div>';
-      }).join('')
-      +'</div>';
-    el.innerHTML = html;
-  }
-
-  // ── Edición ──────────────────────────────────────────────
-  function pfCellEdit(ri, colId, val) {
-    var data = pfLoad();
-    if(!data.rows[ri]) return;
-    data.rows[ri][colId] = val;
-    pfSave(data);
-    pfRender();
-  }
-
-  function pfSelChange(ri, colId, sel) {
-    var inp = document.getElementById('pfinp-'+ri);
-    if(sel.value === '__otro__') {
-      if(inp){ inp.style.display='inline-block'; inp.focus(); }
-    } else {
-      if(inp) inp.style.display='none';
-      pfCellEdit(ri, colId, sel.value);
-    }
-  }
-
-  // ── Filas ────────────────────────────────────────────────
-  function pfAddRow() {
-    var data = pfLoad();
-    var emptyRow = {desc:'', cliente:'', idproy:'', valor:0, estado:'ABIERTO'};
-    data.cols.forEach(function(c){ if(!(c.id in emptyRow)) emptyRow[c.id]=''; });
-    data.rows.push(emptyRow);
-    pfSave(data);
-    pfRender();
-    // Scroll to bottom of table
-    setTimeout(function(){
-      var wrap = document.getElementById('pf-tabla-wrap');
-      if(wrap) wrap.scrollTop = wrap.scrollHeight;
-    }, 80);
-  }
-
-  function pfDelRow(ri) {
-    if(!confirm('¿Eliminar esta fila?')) return;
-    var data = pfLoad();
-    data.rows.splice(ri,1);
-    pfSave(data);
-    pfRender();
-  }
-
-  // ── Columnas ─────────────────────────────────────────────
-  function pfAddCol() {
-    var label = prompt('Nombre de la nueva columna:');
-    if(!label || !label.trim()) return;
-    var id = 'col_' + Date.now();
-    var data = pfLoad();
-    // Insert before "estado" column
-    var estadoIdx = data.cols.findIndex(function(c){return c.id==='estado';});
-    var newCol = {id:id, label:label.trim(), tipo:'text', edit:true, w:'120px'};
-    if(estadoIdx >= 0) data.cols.splice(estadoIdx, 0, newCol);
-    else data.cols.push(newCol);
-    data.rows.forEach(function(r){ r[id]=''; });
-    pfSave(data);
-    pfRender();
-  }
-
-  function pfDelCol(colId) {
-    var protegidas = ['desc','cliente','idproy','valor','iva','total','estado'];
-    if(protegidas.indexOf(colId)>=0){ alert('Esta columna no se puede eliminar.'); return; }
-    if(!confirm('¿Eliminar esta columna?')) return;
-    var data = pfLoad();
-    data.cols = data.cols.filter(function(c){return c.id!==colId;});
-    pfSave(data);
-    pfRender();
-  }
-
-  function pfEditColLabel(colId) {
-    var data = pfLoad();
-    var col = data.cols.find(function(c){return c.id===colId;});
-    if(!col) return;
-    var nuevo = prompt('Nuevo nombre para la columna:', col.label);
-    if(nuevo && nuevo.trim()) { col.label=nuevo.trim(); pfSave(data); pfRender(); }
-  }
-
-  // ── Exportar CSV ─────────────────────────────────────────
-  function pfExportCSV() {
-    var data = pfLoad();
-    var cols = data.cols;
-    var rows = data.rows;
-    var lines = [cols.map(function(c){return c.label;}).join(',')];
-    rows.forEach(function(r){
-      lines.push(cols.map(function(c){
-        var v = c.tipo==='iva' ? pfCalcIVA(r) : c.tipo==='calc' ? pfCalcTotal(r) : (r[c.id]||'');
-        return '"'+String(v).replace(/"/g,'""')+'"';
-      }).join(','));
-    });
-    var blob = new Blob(['\uFEFF'+lines.join('\n')], {type:'text/csv;charset=utf-8;'});
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'presupuesto_alzak_2026.csv';
-    a.click();
-  }
-
-  document.addEventListener('DOMContentLoaded', function(){ pfRender(); });
-  var _pfOrigTabPres = typeof tabPres === 'function' ? tabPres : null;
-  </script>
 <script>
 function renderPresupuesto() {
   // Modulos EB y MSD viven estaticamente en pg-presupuesto
@@ -21756,6 +21019,205 @@ function alzakSplitDrag(e) {
 
   document.addEventListener('mousemove', onMove);
   document.addEventListener('mouseup',   onUp);
+}
+</script>
+
+
+<script>
+// ══════════════════════════════════════════════════════
+//  MÓDULO PRESUPUESTO — renderizado limpio
+// ══════════════════════════════════════════════════════
+
+function renderPresupuesto() {
+  // Renderizar Equipo Base y MSD en sus slots
+  if (typeof renderEquipoBase === 'function') {
+    var eb = document.getElementById('pres-eb-slot');
+    if (eb && !eb.innerHTML.trim()) renderEquipoBase();
+  }
+  if (typeof renderMSD === 'function') {
+    var msd = document.getElementById('pres-msd-slot');
+    if (msd && !msd.innerHTML.trim()) renderMSD();
+  }
+}
+
+function devolverModulosAHome() {
+  // no-op — módulos viven en presupuesto
+}
+
+// Facturación Programada
+function pfRender() {
+  var wrap = document.getElementById('pf-tabla-wrap');
+  if (!wrap) return;
+  var raw = localStorage.getItem('pf2026v2');
+  var data = [];
+  try { if (raw) data = JSON.parse(raw); } catch(e) {}
+  if (!data.length) {
+    wrap.innerHTML = '<div style="color:#aaa;font-size:12px;padding:8px">Sin facturas programadas. Agrega una con el botón de abajo.</div>';
+    return;
+  }
+  var MN = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  var totales = new Array(12).fill(0);
+  var html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">';
+  html += '<thead><tr style="background:#7C3AED;color:#fff">';
+  html += '<th style="padding:8px;text-align:left">Cliente</th><th style="padding:8px;text-align:left">Proyecto</th>';
+  MN.forEach(function(m){ html += '<th style="padding:8px;text-align:right">'+m+'</th>'; });
+  html += '<th style="padding:8px;text-align:right">Total</th></tr></thead><tbody>';
+
+  data.forEach(function(r, i) {
+    var rowTotal = 0;
+    html += '<tr style="background:'+(i%2?'#f9f8f7':'#fff')+';border-bottom:1px solid #f0ede8">';
+    html += '<td style="padding:7px 8px;font-weight:600;color:#54504F">' + (r.cliente||'—') + '</td>';
+    html += '<td style="padding:7px 8px;color:#777">' + (r.proyecto||'—') + '</td>';
+    for (var m=0; m<12; m++) {
+      var v = parseFloat(r['m'+(m+1)]||0);
+      totales[m] += v;
+      rowTotal += v;
+      html += '<td style="padding:7px 8px;text-align:right;color:'+(v?'#0C447C':'#ddd')+'">'+
+        (v ? '$'+(Math.round(v)).toLocaleString('es-CO') : '—') + '</td>';
+    }
+    html += '<td style="padding:7px 8px;text-align:right;font-weight:700;color:#0C447C">$'+(Math.round(rowTotal)).toLocaleString('es-CO')+'</td>';
+    html += '<td style="padding:4px"><button onclick="pfEliminar('+i+')" style="background:none;border:none;color:#ccc;cursor:pointer;font-size:12px">✕</button></td>';
+    html += '</tr>';
+  });
+
+  // Fila de totales
+  var grandTotal = totales.reduce(function(a,b){return a+b;},0);
+  html += '<tr style="background:#1E3A5F;color:#fff;font-weight:700">';
+  html += '<td colspan="2" style="padding:8px">TOTAL PROGRAMADO</td>';
+  totales.forEach(function(t){
+    html += '<td style="padding:8px;text-align:right">$'+(t?Math.round(t).toLocaleString('es-CO'):'—')+'</td>';
+  });
+  html += '<td style="padding:8px;text-align:right">$'+Math.round(grandTotal).toLocaleString('es-CO')+'</td><td></td></tr>';
+  html += '</tbody></table></div>';
+  wrap.innerHTML = html;
+}
+
+function pfAgregar() {
+  var cliente  = prompt('Cliente / Empresa:');
+  if (!cliente) return;
+  var proyecto = prompt('Proyecto / Descripción:');
+  var raw = localStorage.getItem('pf2026v2');
+  var data = [];
+  try { if (raw) data = JSON.parse(raw); } catch(e) {}
+  var nuevo = { cliente: cliente, proyecto: proyecto||'' };
+  var MN = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  for (var m=0; m<12; m++) {
+    var v = prompt('Valor ' + MN[m] + ' (0 si no aplica):');
+    nuevo['m'+(m+1)] = parseFloat(v)||0;
+  }
+  data.push(nuevo);
+  localStorage.setItem('pf2026v2', JSON.stringify(data));
+  pfRender();
+  if (typeof fcRender === 'function') fcRender();
+}
+
+function pfEliminar(idx) {
+  if (!confirm('¿Eliminar esta fila?')) return;
+  var raw = localStorage.getItem('pf2026v2');
+  var data = [];
+  try { if (raw) data = JSON.parse(raw); } catch(e) {}
+  data.splice(idx, 1);
+  localStorage.setItem('pf2026v2', JSON.stringify(data));
+  pfRender();
+  if (typeof fcRender === 'function') fcRender();
+}
+
+// Flujo de Caja
+function fcRender() {
+  var el = document.getElementById('fc-container');
+  if (!el) return;
+
+  var anio = new Date().getFullYear();
+  var MN   = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  var MNC  = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+  // Ingresos reales de FACTURAS
+  var ingReal = new Array(12).fill(0);
+  var ingCob  = new Array(12).fill(0);
+  if (typeof FACTURAS !== 'undefined') {
+    FACTURAS.forEach(function(f) {
+      var dp = typeof fFechaPartes==='function' ? fFechaPartes(f.fecha||'') : (f.fecha||'').split('/');
+      if (dp.length < 3 || parseInt(dp[2]) !== anio) return;
+      var m = parseInt(dp[1]) - 1;
+      if (m >= 0 && m < 12) {
+        ingReal[m] += (f.total||0);
+        if (f.pagada) ingCob[m] += (f.total||0);
+      }
+    });
+  }
+
+  // Ingresos programados de pfRender data
+  var ingProg = new Array(12).fill(0);
+  try {
+    var raw = localStorage.getItem('pf2026v2');
+    if (raw) {
+      JSON.parse(raw).forEach(function(r) {
+        for (var m=0; m<12; m++) ingProg[m] += parseFloat(r['m'+(m+1)]||0);
+      });
+    }
+  } catch(e) {}
+
+  // Egresos reales de FR_DATA
+  var egr = new Array(12).fill(0);
+  if (typeof FR_DATA !== 'undefined') {
+    FR_DATA.forEach(function(r) {
+      var dp = (r['Fecha']||'').split('/');
+      if (dp.length < 3 || parseInt(dp[2]) !== anio) return;
+      var m = parseInt(dp[1]) - 1;
+      var c = (r['Concepto']||'').toLowerCase();
+      if (c.indexOf('abono factura')>=0 || c.indexOf('pago final factura')>=0) return;
+      if (m >= 0 && m < 12) egr[m] += parseFloat(r['Total (COP)']||0);
+    });
+  }
+
+  function fm(n) { return '$'+(Math.round(Math.abs(n))).toLocaleString('es-CO'); }
+
+  var hoy = new Date().getMonth();
+  var html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">';
+
+  // Encabezado meses
+  html += '<thead><tr style="background:#1E3A5F;color:#fff">';
+  html += '<th style="padding:8px;text-align:left;min-width:160px">Concepto</th>';
+  MNC.forEach(function(m, i) {
+    var esHoy = i === hoy;
+    html += '<th style="padding:8px;text-align:right;'+(esHoy?'background:#2E5A8F':'')+'">'+m+'</th>';
+  });
+  html += '<th style="padding:8px;text-align:right">Total</th></tr></thead><tbody>';
+
+  var filas = [
+    { lbl:'✅ Ingresos facturados',   vals:ingReal, col:'#1D9E75', bold:true },
+    { lbl:'💰 Cobrado efectivo',       vals:ingCob,  col:'#0C447C', bold:false },
+    { lbl:'🗓️ Ingresos programados',  vals:ingProg, col:'#7C3AED', bold:false },
+    { lbl:'📤 Egresos radicados',      vals:egr.map(function(v){return -v;}), col:'#A32D2D', bold:true },
+  ];
+
+  filas.forEach(function(f, fi) {
+    var total = f.vals.reduce(function(a,b){return a+b;},0);
+    html += '<tr style="background:'+(fi%2?'#f9f8f7':'#fff')+';border-bottom:1px solid #f0ede8">';
+    html += '<td style="padding:7px 8px;font-weight:'+(f.bold?'700':'400')+';color:'+f.col+'">'+f.lbl+'</td>';
+    f.vals.forEach(function(v, mi) {
+      var esHoy = mi === hoy;
+      html += '<td style="padding:7px 8px;text-align:right;color:'+(v>0?f.col:v<0?'#A32D2D':'#ccc')+';'+(esHoy?'background:#f0f8ff':'')+'">'+
+        (v ? (v<0?'-':'')+fm(v) : '—') + '</td>';
+    });
+    html += '<td style="padding:7px 8px;text-align:right;font-weight:700;color:'+f.col+'">'+(total?fm(total):'—')+'</td>';
+    html += '</tr>';
+  });
+
+  // Fila saldo neto
+  html += '<tr style="background:#1E3A5F;color:#fff;font-weight:700">';
+  html += '<td style="padding:8px">📊 Saldo neto mes</td>';
+  var acum = 0;
+  for (var m=0; m<12; m++) {
+    var neto = ingReal[m] + ingProg[m] - egr[m];
+    acum += neto;
+    var col = neto >= 0 ? '#68D391' : '#FC8181';
+    html += '<td style="padding:8px;text-align:right;color:'+col+'">'+(neto?(neto<0?'-':'')+fm(neto):'—')+'</td>';
+  }
+  html += '<td style="padding:8px;text-align:right;color:'+(acum>=0?'#68D391':'#FC8181')+'">'+fm(acum)+'</td>';
+  html += '</tr></tbody></table></div>';
+
+  el.innerHTML = html;
 }
 </script>
 

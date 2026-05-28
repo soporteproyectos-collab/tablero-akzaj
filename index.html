@@ -8593,10 +8593,10 @@ function renderCarteraHome() {
 
     // Gráfico de barras — SVG responsivo con etiquetas legibles
     var nM=meses.length;
-    var W=Math.max(380, nM*72+60), H=130, PL=52, PR=10, PT=16, PB=28;
+    var W=Math.max(340, nM*65+50), H=120, PL=48, PR=8, PT=14, PB=26;
     var CW=W-PL-PR, CH=H-PT-PB;
-    var bw=Math.max(28,Math.min(56,CW/nM*0.52));
-    var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;max-width:100%;height:auto;display:block" xmlns="http://www.w3.org/2000/svg">';
+    var bw=Math.max(22,Math.min(48,CW/nM*0.50));
+    var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;max-width:600px;max-height:120px;height:auto;display:block" xmlns="http://www.w3.org/2000/svg">';
     // Líneas de referencia y etiquetas eje Y
     for(var t=0;t<=4;t++){
       var yv=Math.round(PT+CH-(t/4)*CH);
@@ -18143,6 +18143,10 @@ document.addEventListener('DOMContentLoaded', function(){
   setTimeout(function(){
     try { alzakCargarDatosSheets(); } catch(e) { console.warn('Auto-sync Sheets:', e); }
   }, 1500);
+  // Ocultar saldos por defecto al abrir
+  setTimeout(function(){
+    try { if (typeof alzakToggleSaldos === 'function' && !_alzakOculto) alzakToggleSaldos(); } catch(e) {}
+  }, 3000);
 });
 </script>
 
@@ -20377,6 +20381,16 @@ function frGetFiltered() {
   var est   = (document.getElementById('fr-fil-estado')||{}).value || '';
   var bus   = ((document.getElementById('fr-buscar')||{}).value || '').toLowerCase();
   var result = FR_DATA.filter(function(r) {
+    // Excluir abonos y pagos de créditos — no son facturas radicadas
+    var concepto = (r['Concepto'] || '').toLowerCase();
+    var ncomp    = (r['N Comprobante'] || '').toString().toUpperCase();
+    if (concepto.indexOf('abono factura') >= 0) return false;
+    if (concepto.indexOf('abono cuota') >= 0)   return false;
+    if (concepto.indexOf('pago factura') >= 0)  return false;
+    if (concepto.indexOf('cuota factura') >= 0) return false;
+    // Excluir comprobantes tipo CC-1-xx (abonos de crédito)
+    if (/^CC-1-\d/.test(ncomp)) return false;
+
     var fecha = r['Fecha'] || '';
     // Extraer mes y año de la fecha (formato dd/MM/yyyy)
     var partes = fecha.split('/');

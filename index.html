@@ -18,7 +18,7 @@ body{background:#f5f4f0;color:#54504F;min-height:100vh}
 
 #main{display:block;width:100%}
 
-#content{padding:20px 28px;max-width:1600px;margin:0 auto}
+#content{padding:0;max-width:100%;margin:0}
 
 .pg{display:none}
 
@@ -432,10 +432,10 @@ tbody tr:hover td{background:var(--cyan-light);}
 <div id="pg-home" class="pg on">
 
 <!-- LAYOUT SPLIT: Tablero izquierda / Conciliación derecha -->
-<div id="home-split" style="display:flex;gap:0;height:calc(100vh - 70px);overflow:hidden">
+<div id="home-split" style="display:flex;gap:0;height:calc(100vh - 56px);overflow:hidden;width:100%">
 
   <!-- COLUMNA IZQUIERDA: Tablero financiero (scrollable) -->
-  <div id="home-split-left" style="flex:1;min-width:0;overflow-y:auto;padding:20px 16px 20px 28px;border-right:1px solid #e8e5e0">
+  <div id="home-split-left" style="flex:1.1;min-width:0;overflow-y:auto;padding:16px 14px 16px 20px;border-right:1px solid #e8e5e0">
     <div id="widget-resumen" style="margin-bottom:12px"></div>
     <div id="home-bancos-panel-mini" style="display:none"></div>
 
@@ -1012,11 +1012,9 @@ tbody tr:hover td{background:var(--cyan-light);}
   </div><!-- /h-datos -->
   </div><!-- /home-split-left -->
 
-  <!-- COLUMNA DERECHA: Conciliación bancaria -->
-  <div id="home-split-right" style="flex:1;min-width:0;overflow-y:auto;background:#f5f4f0;border-left:1px solid #e0ddd8;">
-    <div id="home-conc-embed" style="min-height:100%;padding:0">
-      <div style="color:#aaa;font-size:12px;padding:20px">Cargando conciliación...</div>
-    </div>
+  <!-- COLUMNA DERECHA: Conciliación bancaria completa con scroll independiente -->
+  <div id="home-split-right" style="flex:1;min-width:0;overflow-y:auto;overflow-x:hidden;background:#f5f4f0;">
+    <!-- pg-conc se mueve aquí dinámicamente -->
   </div>
 
 </div><!-- /home-split -->
@@ -3884,18 +3882,21 @@ function renderHome() {
 
   renderResumenTablero();
   if (typeof renderHomeBancosPanel === 'function') setTimeout(renderHomeBancosPanel, 100);
-  // Mover pg-conc al panel derecho del split y renderizarlo
+  // Mover pg-conc al panel derecho del split
   setTimeout(function() {
-    var embed = document.getElementById('home-conc-embed');
+    var right = document.getElementById('home-split-right');
     var conc  = document.getElementById('pg-conc');
-    if (embed && conc) {
-      embed.innerHTML = '';
-      conc.style.display = 'block';
-      conc.style.background = 'transparent';
-      embed.appendChild(conc);
-      if (typeof renderConc === 'function') renderConc();
+    if (right && conc && conc.parentElement !== right) {
+      right.appendChild(conc);
     }
-  }, 300);
+    if (conc) {
+      conc.classList.add('on');
+      conc.style.display  = 'block';
+      conc.style.position = 'relative';
+      conc.style.height   = 'auto';
+    }
+    if (typeof renderConc === 'function') renderConc();
+  }, 200);
 
   renderConcCards();
 
@@ -15240,6 +15241,15 @@ function tabHome() {
   if (h) h.classList.add('on');
   var pp = document.getElementById('pg-presupuesto');
   if (pp) pp.style.display = 'none';
+  // Devolver pg-conc al split derecho
+  var conc2 = document.getElementById('pg-conc');
+  var right2 = document.getElementById('home-split-right');
+  if (conc2 && right2 && conc2.parentElement !== right2) {
+    right2.appendChild(conc2);
+    conc2.classList.add('on');
+    conc2.style.display = 'block';
+    if (typeof renderConc === 'function') setTimeout(renderConc, 100);
+  }
   var tb = document.getElementById('topbar-t');
   if (tb) tb.textContent = 'Inicio';
   document.getElementById('tab-home-btn').style.background='#5DC3DA';
@@ -15252,14 +15262,20 @@ function tabConc() {
   if(typeof devolverModulosAHome==="function") devolverModulosAHome();
   var pgs = document.querySelectorAll('.pg');
   for (var i=0; i<pgs.length; i++) pgs[i].classList.remove('on');
-  // Restaurar pg-conc a su posición original si fue movido al split
+  // Si pg-conc está en el split, sacarlo y ponerlo en el contenedor principal
   var conc = document.getElementById('pg-conc');
-  var mainDiv = document.getElementById('content') || document.body;
-  if (conc && conc.parentElement && conc.parentElement.id === 'home-conc-embed') {
-    mainDiv.appendChild(conc);
+  var right = document.getElementById('home-split-right');
+  var mainContent = document.getElementById('content') || document.body;
+  if (conc && right && conc.parentElement === right) {
+    mainContent.insertBefore(conc, mainContent.firstChild);
   }
   var c = document.getElementById('pg-conc');
-  if (c) { c.classList.add('on'); c.style.display = 'block'; }
+  if (c) {
+    c.classList.add('on');
+    c.style.display  = 'block';
+    c.style.position = '';
+    c.style.height   = '';
+  }
   var pp2 = document.getElementById('pg-presupuesto');
   if (pp2) pp2.style.display = 'none';
   var tb = document.getElementById('topbar-t');
@@ -21593,6 +21609,103 @@ function renderHomeBancosPanel() {
   }
 
   el.innerHTML = html;
+}
+</script>
+
+
+<script>
+// ══════════════════════════════════════════════════════
+//  PANEL DE CONCILIACIÓN — columna derecha del Home
+// ══════════════════════════════════════════════════════
+function renderHomeConcPanel() {
+  var el = document.getElementById('home-conc-content');
+  if (!el) return;
+
+  if (typeof P === 'undefined' || !P.length) {
+    el.innerHTML = '<div style="color:#5DC3DA;font-size:12px;text-align:center;padding:40px 0">Carga extractos en la pestaña<br>🏦 Conciliación</div>';
+    return;
+  }
+
+  var p = P[typeof pi === 'function' ? pi() : P.length-1];
+  if (!p) return;
+
+  function fm(n) { return n ? '$'+(Math.round(n)).toLocaleString('es-CO') : '$0'; }
+  function fmS(n) { return (n>=0?'+':'')+fm(n); }
+
+  // Colores cuentas
+  var CC = { bcol:'#5DC3DA', fid:'#9F7AEA', caja:'#F6AD55', bold:'#68D391' };
+
+  // Saldo total
+  var sfBcol = p.sF || 0;
+  var sfFid  = (p.fid && p.fid.sF) || 0;
+  var sfCaja = (p.caja && p.caja.sF) || 0;
+  var sfBold = (p.bold && p.bold.sF) || 0;
+  var total  = sfBcol + sfFid + sfCaja + sfBold;
+
+  var h = '';
+
+  // Período
+  h += '<div style="color:#8899aa;font-size:10px;margin-bottom:14px">Período: '+p.label+'</div>';
+
+  // Total grande
+  h += '<div style="text-align:center;background:rgba(93,195,218,0.1);border-radius:10px;padding:14px;margin-bottom:16px">'
+    + '<div style="font-size:11px;color:#5DC3DA;font-weight:700;margin-bottom:4px">TOTAL DISPONIBLE ALZAK</div>'
+    + '<div style="font-size:28px;font-weight:700;color:#fff">'+fm(total)+'</div>'
+    + '</div>';
+
+  // Barra proporcional
+  if (total > 0) {
+    h += '<div style="display:flex;height:8px;border-radius:6px;overflow:hidden;margin-bottom:14px">';
+    [[sfBcol,CC.bcol],[sfFid,CC.fid],[sfCaja,CC.caja],[sfBold,CC.bold]].forEach(function(c){
+      h += '<div style="width:'+(c[0]/total*100).toFixed(1)+'%;background:'+c[1]+'"></div>';
+    });
+    h += '</div>';
+  }
+
+  // Cuentas
+  var cuentas = [
+    {lbl:'Bancolombia Ahorros', num:'*6556', sf:sfBcol, col:CC.bcol, sA:p.sA, tAb:p.tAb, tCar:p.tCar},
+    {lbl:'Fiducuenta',          num:'*1771', sf:sfFid,  col:CC.fid,  sA:p.fid&&p.fid.sA, tAb:p.fid&&p.fid.tAb, tCar:p.fid&&p.fid.tCar},
+    {lbl:'Caja Social',         num:'*2970', sf:sfCaja, col:CC.caja, sA:p.caja&&p.caja.sA, tAb:p.caja&&p.caja.tAb, tCar:p.caja&&p.caja.tCar},
+    {lbl:'Bold CF',             num:'*2371', sf:sfBold, col:CC.bold, sA:p.bold&&p.bold.sA, tAb:p.bold&&p.bold.tAb, tCar:p.bold&&p.bold.tCar}
+  ];
+
+  cuentas.forEach(function(c) {
+    h += '<div style="background:rgba(255,255,255,0.05);border-radius:8px;padding:12px;margin-bottom:10px;border-left:3px solid '+c.col+'">'
+      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'
+      + '<div><div style="font-size:12px;font-weight:700;color:#fff">'+c.lbl+'</div>'
+      + '<div style="font-size:10px;color:#8899aa">'+c.num+'</div></div>'
+      + '<div style="font-size:14px;font-weight:700;color:'+c.col+'">'+fm(c.sf)+'</div>'
+      + '</div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">'
+      + '<div style="font-size:10px;color:#8899aa">Apertura: <span style="color:#ccc">'+fm(c.sA||0)+'</span></div>'
+      + '<div style="font-size:10px;color:#8899aa">Entradas: <span style="color:#68D391">+'+fm(c.tAb||0)+'</span></div>'
+      + '<div style="font-size:10px;color:#8899aa">Salidas: <span style="color:#FC8181">-'+fm(c.tCar||0)+'</span></div>'
+      + '<div style="font-size:10px;color:#8899aa">Cierre: <span style="color:'+c.col+'">'+fm(c.sf)+'</span></div>'
+      + '</div></div>';
+  });
+
+  // Rendimientos y GMF acumulados
+  var rend = 0, gmf = 0;
+  P.forEach(function(pp){
+    if (pp.fid && pp.fid.rendNetos) rend += pp.fid.rendNetos;
+    if (pp.gmf) gmf += pp.gmf;
+  });
+  if (rend || gmf) {
+    h += '<div style="background:rgba(159,122,234,0.1);border-radius:8px;padding:10px;margin-top:6px">'
+      + '<div style="font-size:10px;font-weight:700;color:#9F7AEA;margin-bottom:6px">ACUMULADO ENE–'+p.label.replace(' 2026','')+'</div>'
+      + '<div style="display:flex;justify-content:space-between">'
+      + '<div style="font-size:10px;color:#8899aa">Rendimientos: <span style="color:#68D391">+'+fm(rend)+'</span></div>'
+      + '<div style="font-size:10px;color:#8899aa">GMF 4×1000: <span style="color:#FC8181">-'+fm(Math.abs(gmf))+'</span></div>'
+      + '</div></div>';
+  }
+
+  // Botón ver conciliación completa
+  h += '<div style="margin-top:16px;text-align:center">'
+    + '<button onclick="tabConc()" style="background:#5DC3DA;color:#fff;border:none;border-radius:20px;padding:8px 20px;font-size:11px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif">Ver conciliación completa →</button>'
+    + '</div>';
+
+  el.innerHTML = h;
 }
 </script>
 

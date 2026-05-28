@@ -8593,10 +8593,10 @@ function renderCarteraHome() {
 
     // Gráfico de barras — SVG responsivo con etiquetas legibles
     var nM=meses.length;
-    var W=Math.max(340, nM*65+50), H=120, PL=48, PR=8, PT=14, PB=26;
+    var W=Math.max(420, nM*80+70), H=160, PL=54, PR=12, PT=18, PB=30;
     var CW=W-PL-PR, CH=H-PT-PB;
-    var bw=Math.max(22,Math.min(48,CW/nM*0.50));
-    var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;max-width:600px;max-height:120px;height:auto;display:block" xmlns="http://www.w3.org/2000/svg">';
+    var bw=Math.max(26,Math.min(54,CW/nM*0.52));
+    var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;max-width:700px;height:'+H+'px;display:block" xmlns="http://www.w3.org/2000/svg">';
     // Líneas de referencia y etiquetas eje Y
     for(var t=0;t<=4;t++){
       var yv=Math.round(PT+CH-(t/4)*CH);
@@ -20384,10 +20384,12 @@ function frGetFiltered() {
     // Excluir abonos y pagos de créditos — no son facturas radicadas
     var concepto = (r['Concepto'] || '').toLowerCase();
     var ncomp    = (r['N Comprobante'] || '').toString().toUpperCase();
-    if (concepto.indexOf('abono factura') >= 0) return false;
-    if (concepto.indexOf('abono cuota') >= 0)   return false;
-    if (concepto.indexOf('pago factura') >= 0)  return false;
-    if (concepto.indexOf('cuota factura') >= 0) return false;
+    if (concepto.indexOf('abono factura') >= 0)     return false;
+    if (concepto.indexOf('abono cuota') >= 0)        return false;
+    if (concepto.indexOf('pago factura') >= 0)       return false;
+    if (concepto.indexOf('pago final factura') >= 0) return false;
+    if (concepto.indexOf('cuota factura') >= 0)      return false;
+    if (concepto.indexOf('pago final') >= 0 && concepto.indexOf('mac center') >= 0) return false;
     // Excluir comprobantes tipo CC-1-xx (abonos de crédito)
     if (/^CC-1-\d/.test(ncomp)) return false;
 

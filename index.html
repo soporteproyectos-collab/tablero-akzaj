@@ -1837,6 +1837,11 @@ function alzakCargarDatosSheets(callback) {
     .then(function(r) { return r.json(); })
     .then(function(data) {
       var cargados = [];
+      console.log('ALZAK SYNC response keys:', Object.keys(data));
+      console.log('facturacion rows:', data.facturacion ? data.facturacion.length : 'N/A');
+      console.log('radicadas rows:', data.radicadas ? data.radicadas.length : 'N/A');
+      console.log('egresos rows:', data.egresos ? data.egresos.length : 'N/A');
+      if (data.facturacion && data.facturacion[0]) console.log('primera factura keys:', Object.keys(data.facturacion[0]));
 
       // ── Facturas Radicadas → FR_DATA ────────────────────
       if (data.radicadas && data.radicadas.length) {
@@ -1878,21 +1883,40 @@ function alzakCargarDatosSheets(callback) {
 
       // ── Facturación → FACTURAS ───────────────────────────
       if (data.facturacion && data.facturacion.length) {
-        var objs = data.facturacion;
-        objs.forEach(function(f) {
+        FACTURAS = data.facturacion.map(function(f) {
+          // Normalizar estado
           var est = String(f.Estado || f.estado || f.pagada || '').toLowerCase().trim();
           f.pagada = (est === 'pagada' || est === 'cobrada' || est === 'si' || est === 'sí' || est === 'true' || est === '1');
-          ['Subtotal_COP','IVA_COP','RetefuenteCOP','ReteIVA_COP','Total_COP'].forEach(function(c){
-            if (f[c] !== undefined) f[c] = parseFloat(String(f[c]).replace(/[^0-9.-]/g,'')) || 0;
-          });
-          f.total = f.Total_COP || f.total || 0;
-          f.fecha = f.Fecha || f.fecha || '';
-          f.num   = f.N_Factura || f.num || '';
-          f.cliente = f.Cliente || f.cliente || '';
-          f.vence = f.Vencimiento || f.vence || '';
+          // Normalizar montos — el tablero usa bruto/iva/retefuente/reteiva/total
+          function nm(v) { return parseFloat(String(v||0).replace(/[^0-9.-]/g,'')) || 0; }
+          f.bruto      = nm(f.Subtotal_COP || f.bruto || f.subtotal || 0);
+          f.iva        = nm(f.IVA_COP || f.iva || 0);
+          f.retefuente = nm(f.RetefuenteCOP || f.Retefuente || f.retefuente || 0);
+          f.reteiva    = nm(f.ReteIVA_COP || f.reteiva || 0);
+          f.total      = nm(f.Total_COP || f.total || 0);
+          // Campos de texto
+          f.num        = String(f.N_Factura || f.num || '').trim();
+          f.fecha      = String(f.Fecha || f.fecha || '').trim();
+          f.cliente    = String(f.Cliente || f.cliente || '').trim();
+          f.nit        = String(f.NIT || f.nit || '').trim();
+          f.vence      = String(f.Vencimiento || f.vence || '').trim();
+          f.descripcion = String(f.Concepto || f.descripcion || '').trim();
+          f.estado     = f.pagada ? 'Pagada' : 'Pendiente';
+          // Normalizar fecha a dd/MM/yyyy
+          if (f.fecha && f.fecha.indexOf('-') > 0) {
+            var dp = f.fecha.substring(0,10).split('-');
+            f.fecha = dp[2]+'/'+dp[1]+'/'+dp[0];
+          }
+          if (f.vence && f.vence.indexOf('-') > 0) {
+            var dv = f.vence.substring(0,10).split('-');
+            f.vence = dv[2]+'/'+dv[1]+'/'+dv[0];
+          }
+          return f;
         });
-        FACTURAS = objs;
         cargados.push('Facturación: ' + FACTURAS.length);
+        // También sincronizar con el sistema de renderizado original
+        if (typeof renderFacturas === 'function') setTimeout(renderFacturas, 50);
+        if (typeof renderCarteraHome === 'function') setTimeout(renderCarteraHome, 80);
       }
 
       // ── Invalidar caché de cruce ─────────────────────────
@@ -13125,8 +13149,8 @@ function gsCargarDatos() {
     var g2 = localStorage.getItem(LS_GASTOS);
     if (g2) { var pg=JSON.parse(g2); if(pg&&pg.length) GASTOS_DATA=pg; }
   } catch(e){ console.error('gsCargarDatos error:', e); }
-  // Load from Google Sheets (overwrites localStorage with latest shared data)
-  if (typeof gsCargarDesdeSheets === 'function') gsCargarDesdeSheets();
+  // Sistema viejo desactivado — se usa alzakCargarDatosSheets
+  // if (typeof gsCargarDesdeSheets === 'function') gsCargarDesdeSheets();
   // Render immediately with local data while Sheet loads in background
   if (typeof renderFacturas === 'function') setTimeout(renderFacturas, 50);
   if (typeof renderCarteraHome === 'function') setTimeout(renderCarteraHome, 60);

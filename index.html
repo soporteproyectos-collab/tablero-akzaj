@@ -680,11 +680,11 @@ tbody tr:hover td{background:var(--cyan-light);}
 
     <span>📋 Ver detalle de gastos por categoría</span>
 
-    <span id="ico-detalle-gastos" style="font-size:14px;transition:transform .2s;transform:rotate(0deg)">▼</span>
+    <span id="ico-detalle-gastos" style="font-size:14px;transition:transform .2s;transform:rotate(180deg)">▼</span>
 
   </button>
 
-  <div id="gd-grupos" style="display:none;margin-top:12px"></div>
+  <div id="gd-grupos" style="display:block;margin-top:12px"></div>
 
 </div>
 
@@ -1852,115 +1852,155 @@ document.addEventListener('keydown', function(e) {
 var ALZAK_GS_URL = 'https://script.google.com/macros/s/AKfycbxdFspEmxI7srLsz09eP6ZDb8otgCGftv6jyyYG0IA8LwuChBjUhmrE0ojv79UTcsoJ/exec';
 
 function alzakCargarDatosSheets(callback) {
-  var url = ALZAK_GS_URL + '?tab=_datos_todos&_t=' + Date.now();
-  if (typeof mostrarToast === 'function') mostrarToast('🔄 Sincronizando con Sheets...', '#54504F', 3000);
-
-  fetch(url)
-    .then(function(r) { return r.json(); })
+  var url = ALZAK_GS_URL + '?tab=_datos_todos';
+  mostrarToast('🔄 Sincronizando datos desde Google Sheets...', '#0C447C', 4000);
+  fetch(url, { mode: 'cors' })
+    .then(function(r){ return r.json(); })
     .then(function(data) {
-      var cargados = [];
-      console.log('ALZAK SYNC response keys:', Object.keys(data));
-      console.log('facturacion rows:', data.facturacion ? data.facturacion.length : 'N/A');
-      console.log('radicadas rows:', data.radicadas ? data.radicadas.length : 'N/A');
-      console.log('egresos rows:', data.egresos ? data.egresos.length : 'N/A');
-      if (data.facturacion && data.facturacion[0]) console.log('primera factura keys:', Object.keys(data.facturacion[0]));
+      try {
+      console.log('ALZAK Sheets response:', JSON.stringify(data).substring(0, 500));
+      if (!data.ok) { mostrarToast('⚠️ Error al cargar Sheets: ' + (data.error||''), '#993C1D'); return; }
+      console.log('Radicadas:', data.radicadas ? data.radicadas.length : 'vacío', '| Egresos:', data.egresos ? data.egresos.length : 'vacío', '| Facturación:', data.facturacion ? data.facturacion.length : 'vacío');
 
-      // ── Facturas Radicadas → FR_DATA ────────────────────
+      var cargados = [];
+
+      // Facturas Radicadas → FR_DATA
+      // Columnas exactas: Fecha, Categoria, Proveedor / Beneficiario, Concepto, N Comprobante, Subtotal (COP), IVA (COP), Total (COP)
       if (data.radicadas && data.radicadas.length) {
         FR_DATA = data.radicadas.map(function(r) {
-          var rawFecha = r['Fecha'] || '';
+          // Normalizar fecha a dd/MM/yyyy
+          var rawFecha = r['Fecha']||'';
           var fecha = '';
           if (rawFecha) {
             var s = String(rawFecha).trim();
-            if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
-              fecha = s;
-            } else if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+            if (s.indexOf('T') >= 0) {
+              // ISO timestamp → extraer yyyy-MM-dd sin UTC y convertir
               var dp = s.substring(0,10).split('-');
-              fecha = dp[2]+'/'+dp[1]+'/'+dp[0];
-            } else if (s.indexOf('T') >= 0) {
-              var dp2 = s.substring(0,10).split('-');
-              if (dp2.length === 3) fecha = dp2[2]+'/'+dp2[1]+'/'+dp2[0];
-            } else if (/^\d{4,6}$/.test(s)) {
-              var serial = parseInt(s);
-              var d = new Date(Math.round((serial - 25569)*86400*1000));
-              fecha = ('0'+d.getUTCDate()).slice(-2)+'/'+ ('0'+(d.getUTCMonth()+1)).slice(-2)+'/'+d.getUTCFullYear();
-            } else { fecha = s; }
+              if (dp.length === 3) fecha = dp[2]+'/'+dp[1]+'/'+dp[0];
+            } else if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+              fecha = s; // ya dd/MM/yyyy
+            } else if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+              var dp2 = s.split('-');
+              fecha = dp2[2]+'/'+dp2[1]+'/'+dp2[0];
+            } else {
+              fecha = s;
+            }
           }
-          r['Fecha'] = fecha;
-          // Asegurar que N Comprobante es string
-          if (r['N Comprobante'] !== undefined) r['N Comprobante'] = String(r['N Comprobante']).trim();
-          return r;
-        }).filter(function(r) { return r['Fecha'] && (r['Categoria'] || r['Categoría']); });
-        cargados.push('Radicadas: ' + FR_DATA.length);
+          return {
+            'Fecha':                    fecha,
+            'Categoria':                r['Categoria']||r['Categoría']||'',
+            'Proveedor / Beneficiario': r['Proveedor / Beneficiario']||r['Proveedor']||r['Beneficiario']||'',
+            'Concepto':                 r['Concepto']||'',
+            'N Comprobante':            r['N Comprobante']||r['N_Comprobante']||'',
+            'Subtotal (COP)':           parseFloat(r['Subtotal (COP)']||r['Subtotal ($)']||0),
+            'IVA (COP)':                parseFloat(r['IVA (COP)']||r['IVA ($)']||0),
+            'Total (COP)':              parseFloat(r['Total (COP)']||r['Total ($)']||0),
+            'Estado':                   r['Estado']||''
+          };
+        });
+        if (typeof frActualizarFiltros === 'function') frActualizarFiltros();
+        if (typeof frRender === 'function') { _FR_FUENTE_CACHE={}; _FR_MOVS_POOL=null; frRender(); }
+        cargados.push('Facturas Radicadas: ' + FR_DATA.length);
       }
 
-      // ── Egresos → GASTOS_DATA ────────────────────────────
+      // Egresos → GASTOS_DATA
+      // Columnas exactas: Sección, Mes, Fecha, Categoría, Beneficiario, Concepto, N_Comprobante, Subtotal ($), IVA ($), Total ($), Cuenta_Origen, N_Transaccion, Medio_Pago, Tipo_Movimiento, Estado, Observaciones
       if (data.egresos && data.egresos.length) {
-        GASTOS_DATA = data.egresos.map(function(r) {
-          // Normalizar N_Comprobante
-          if (r['N_Comprobante'] !== undefined) r['N_Comprobante'] = String(r['N_Comprobante']).trim();
-          // Normalizar Total_COP desde "Total ($)" que es el nombre real del campo en el Sheet
-          if (!r['Total_COP'] && r['Total ($)'] !== undefined) r['Total_COP'] = parseFloat(r['Total ($)']) || 0;
-          // Normalizar Categoria sin tilde
-          if (!r['Categoria'] && r['Categoría']) r['Categoria'] = r['Categoría'];
-          // Normalizar Beneficiario
-          if (!r['Proveedor / Beneficiario'] && r['Beneficiario']) r['Proveedor / Beneficiario'] = r['Beneficiario'];
-          return r;
+        GASTOS_DATA = data.egresos.map(function(r, idx) {
+          var mes = r['Mes']||'';
+          // Si el mes no tiene año, agregarlo (ej: "Enero" → "Enero 2026")
+          if (mes && !/\d{4}/.test(mes)) mes = mes + ' 2026';
+          var total = parseFloat(r['Total ($)']||0);
+          var sub   = parseFloat(r['Subtotal ($)']||0);
+          var iva   = parseFloat(r['IVA ($)']||0);
+          return {
+            '_id':            'GS-EG-' + idx,
+            'Sección':        r['Sección']||r['Seccion']||'',
+            'Mes':            mes,
+            'Fecha':          r['Fecha']||'',
+            'Categoria':      r['Categoría']||r['Categoria']||'',
+            'Proveedor':      r['Beneficiario']||r['Proveedor']||'',
+            'Beneficiario':   r['Beneficiario']||'',
+            'Concepto':       r['Concepto']||'',
+            'N_Factura':      r['N_Comprobante']||'',
+            'N_Comprobante':  r['N_Comprobante']||'',
+            'Subtotal ($)':   sub,
+            'Subtotal_COP':   sub,
+            'IVA ($)':        iva,
+            'IVA_COP':        iva,
+            'Total ($)':      total,
+            'Total_COP':      total,
+            'Cuenta_Origen':  r['Cuenta_Origen']||'',
+            'N_Transaccion':  r['N_Transaccion']||'',
+            'Medio_Pago':     r['Medio_Pago']||'',
+            'Tipo_Movimiento':r['Tipo_Movimiento']||'',
+            'Estado':         r['Estado']||'',
+            '_pagada':        (r['Estado']||'').toUpperCase() === 'PAGADO',
+            'Observaciones':  r['Observaciones']||''
+          };
         });
+        if (typeof actualizarTodo === 'function') actualizarTodo();
+        else if (typeof renderGastosDashboard === 'function') renderGastosDashboard();
+        if (typeof renderResumenTablero === 'function') renderResumenTablero();
         cargados.push('Egresos: ' + GASTOS_DATA.length);
-
-        // Mapear GASTOS_DATA → PAG_DATA (que usa renderHomeGastos)
-        PAG_DATA = GASTOS_DATA.map(function(r) {
-          var obj = {};
-          // Copiar todos los campos originales
-          Object.keys(r).forEach(function(k){ obj[k] = r[k]; });
-          // Normalizar campos que el tablero espera
-          obj['Proveedor / Beneficiario'] = r['Proveedor / Beneficiario'] || r['Proveedor'] || r['Beneficiario'] || '';
-          obj['Valor']      = parseFloat(r['Total_COP'] || r['Total ($)'] || r['Total (COP)'] || r['Valor'] || 0);
-          obj['Fecha_Pago'] = r['Fecha'] || r['Fecha_Pago'] || '';
-          obj['Categoria']  = r['Categoria'] || r['Categoría'] || '';
-          obj['N_Comprobante'] = String(r['N_Comprobante'] || r['N Comprobante'] || '').trim();
-          obj['_pagada'] = true; // Los egresos son pagos confirmados
-          return obj;
-        });
       }
 
-      // ── Facturación → FACTURAS ───────────────────────────
+      // Facturación → FACTURAS — SIEMPRE reemplazar con datos frescos de Sheets
       if (data.facturacion && data.facturacion.length) {
-        FACTURAS = data.facturacion.map(function(f) {
-          // Normalizar estado
-          var est = String(f.Estado || f.estado || f.pagada || '').toLowerCase().trim();
-          f.pagada = (est === 'pagada' || est === 'cobrada' || est === 'si' || est === 'sí' || est === 'true' || est === '1');
-          // Normalizar montos — el tablero usa bruto/iva/retefuente/reteiva/total
-          function nm(v) { return parseFloat(String(v||0).replace(/[^0-9.-]/g,'')) || 0; }
-          f.bruto      = nm(f.Subtotal_COP || f.bruto || f.subtotal || 0);
-          f.iva        = nm(f.IVA_COP || f.iva || 0);
-          f.retefuente = nm(f.RetefuenteCOP || f.Retefuente || f.retefuente || 0);
-          f.reteiva    = nm(f.ReteIVA_COP || f.reteiva || 0);
-          f.total      = nm(f.Total_COP || f.total || 0);
-          // Campos de texto
-          f.num        = String(f.N_Factura || f.num || '').trim();
-          f.fecha      = String(f.Fecha || f.fecha || '').trim();
-          f.cliente    = String(f.Cliente || f.cliente || '').trim();
-          f.nit        = String(f.NIT || f.nit || '').trim();
-          f.vence      = String(f.Vencimiento || f.vence || '').trim();
-          f.descripcion = String(f.Concepto || f.descripcion || '').trim();
-          f.estado     = f.pagada ? 'Pagada' : 'Pendiente';
-          // Normalizar fecha a dd/MM/yyyy
-          if (f.fecha && f.fecha.indexOf('-') > 0) {
-            var dp = f.fecha.substring(0,10).split('-');
-            f.fecha = dp[2]+'/'+dp[1]+'/'+dp[0];
-          }
-          if (f.vence && f.vence.indexOf('-') > 0) {
-            var dv = f.vence.substring(0,10).split('-');
-            f.vence = dv[2]+'/'+dv[1]+'/'+dv[0];
-          }
-          return f;
-        });
-        cargados.push('Facturación: ' + FACTURAS.length);
-        // También sincronizar con el sistema de renderizado original
-        if (typeof renderFacturas === 'function') setTimeout(renderFacturas, 50);
-        if (typeof renderCarteraHome === 'function') setTimeout(renderCarteraHome, 80);
+          FACTURAS = data.facturacion.map(function(r, idx) {
+            var bruto = parseFloat(r['Subtotal_COP']||r['Subtotal (COP)']||r['Subtotal']||r['Base gravable']||r['Valor']||0);
+            var iva   = parseFloat(r['IVA_COP']||r['IVA (COP)']||r['IVA']||0);
+            var total = parseFloat(r['Total_COP']||r['Total (COP)']||r['Total']||bruto+iva||0);
+            var rete  = parseFloat(r['Retefuente']||r['RteFuente']||r['Retención']||0);
+            var _vRaw = r['Vencimiento']||r['Fecha Vencimiento']||r['Vence']||'';
+            // FORZAR yyyy-MM-dd — extraer fecha SIN conversión UTC
+            var _vClean = '';
+            if (_vRaw) {
+              var _vs = String(_vRaw).trim();
+              if (_vs.indexOf('T') >= 0) _vs = _vs.substring(0,10); // quitar hora UTC
+              if (/^\d{2}\/\d{2}\/\d{4}$/.test(_vs)) { // dd/MM/yyyy → yyyy-MM-dd
+                var _vp = _vs.split('/'); _vClean = _vp[2]+'-'+_vp[1]+'-'+_vp[0];
+              } else if (/^\d{4}-\d{2}-\d{2}$/.test(_vs)) {
+                _vClean = _vs;
+              }
+            }
+            var venceDias    = _vClean;   // yyyy-MM-dd para diasHasta()
+            var venceDisplay = _vClean ? _vClean.split('-').reverse().join('/') : ''; // dd/MM/yyyy
+            var fechaDisplay = alzakFechaDisplay(r['Fecha']||'');
+            var pagada = (r['Estado']||'').toLowerCase().indexOf('pagad') >= 0 ||
+                         (r['Estado']||'').toLowerCase() === 'cobrada';
+            return {
+              id:          'GS-' + idx,
+              num:         r['N_Factura']||r['N Factura']||r['Factura']||r['N°']||'',
+              fecha:       fechaDisplay || alzakFechaAISO(r['Fecha']||''),
+              vence:       venceDias,       // yyyy-MM-dd para diasHasta()
+              venceDisplay:venceDisplay,    // dd/MM/yyyy para mostrar
+              cliente:     r['Cliente']||'',
+              nit:         r['NIT']||'',
+              descripcion: r['Concepto']||r['Descripcion']||'',
+              bruto:       bruto,
+              iva:         iva,
+              retefuente:  rete,
+              reteiva:     Math.round(iva * 0.15),
+              total:       total,
+              pagada:      pagada,
+              estado:      r['Estado']||'pendiente'
+            };
+          });
+          if (typeof renderFacturas === 'function') renderFacturas();
+          if (typeof renderCarteraHome === 'function') renderCarteraHome();
+          if (typeof renderResumenTablero === 'function') renderResumenTablero();
+          if (typeof renderEstadoResultados === 'function') setTimeout(renderEstadoResultados, 200);
+          if (typeof frActualizarFiltros === 'function') frActualizarFiltros();
+          try {
+            localStorage.setItem('alzak_facturas_gs', JSON.stringify(FACTURAS));
+          } catch(e) {}
+          cargados.push('Facturación: ' + FACTURAS.length);
+      }
+
+      } catch(procErr) {
+        console.error('Error procesando datos de Sheets:', procErr);
+        mostrarToast('⚠️ Error procesando datos: ' + procErr.message, '#993C1D');
       }
 
       // ── Invalidar caché de cruce ─────────────────────────
@@ -1976,6 +2016,8 @@ function alzakCargarDatosSheets(callback) {
       if (typeof renderEstadoResultados === 'function') setTimeout(renderEstadoResultados, 250);
       if (typeof renderBalance          === 'function') setTimeout(renderBalance, 300);
       if (typeof renderHomeBancosPanel  === 'function') setTimeout(renderHomeBancosPanel, 350);
+      if (typeof renderGastosDashboard  === 'function') setTimeout(renderGastosDashboard, 400);
+      if (typeof frRender               === 'function') setTimeout(function(){ _FR_FUENTE_CACHE={}; _FR_MOVS_POOL=null; frRender(); }, 450);
       if (typeof fcActualizar           === 'function') setTimeout(function(){ var b=document.getElementById('fc-body'); if(b&&b.style.display!=='none') fcActualizar(); }, 500);
 
       if (typeof mostrarToast === 'function') mostrarToast('✅ Sincronizado — ' + cargados.join(' · '), '#1D9E75', 4000);
@@ -17882,6 +17924,10 @@ function frToggleTabla(){
   var open=t.style.display!=='none';
   t.style.display=open?'none':'block';
   if(a)a.innerHTML=open?'&#9660;':'&#9650;';
+  // Re-renderizar si la tabla estaba vacía (sync corrió con tabla oculta)
+  if(!open && (!t.innerHTML || t.innerHTML.trim()==='' || t.innerHTML.indexOf('Carga las facturas')>=0)) {
+    if(typeof frRender==='function') frRender();
+  }
 }
 
 function frRenderIVA(){}

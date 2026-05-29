@@ -1901,6 +1901,21 @@ function alzakCargarDatosSheets(callback) {
           return r;
         });
         cargados.push('Egresos: ' + GASTOS_DATA.length);
+
+        // Mapear GASTOS_DATA → PAG_DATA (que usa renderHomeGastos)
+        PAG_DATA = GASTOS_DATA.map(function(r) {
+          var obj = {};
+          // Copiar todos los campos originales
+          Object.keys(r).forEach(function(k){ obj[k] = r[k]; });
+          // Normalizar campos que el tablero espera
+          obj['Proveedor / Beneficiario'] = r['Proveedor / Beneficiario'] || r['Proveedor'] || r['Beneficiario'] || '';
+          obj['Valor']      = parseFloat(r['Total_COP'] || r['Total (COP)'] || r['Valor'] || 0);
+          obj['Fecha_Pago'] = r['Fecha'] || r['Fecha_Pago'] || '';
+          obj['Categoria']  = r['Categoria'] || r['Categoría'] || '';
+          obj['N_Comprobante'] = String(r['N_Comprobante'] || r['N Comprobante'] || '').trim();
+          obj['_pagada'] = true; // Los egresos son pagos confirmados
+          return obj;
+        });
       }
 
       // ── Facturación → FACTURAS ───────────────────────────
@@ -1949,6 +1964,7 @@ function alzakCargarDatosSheets(callback) {
       if (typeof renderFacturas         === 'function') setTimeout(renderFacturas, 50);
       if (typeof renderCarteraHome      === 'function') setTimeout(renderCarteraHome, 100);
       if (typeof renderResumenTablero   === 'function') setTimeout(renderResumenTablero, 150);
+      if (typeof renderHomeGastos        === 'function') setTimeout(renderHomeGastos, 180);
       if (typeof frRender               === 'function') setTimeout(function(){ _FR_FUENTE_CACHE={}; _FR_MOVS_POOL=null; frRender(); }, 200);
       if (typeof renderEstadoResultados === 'function') setTimeout(renderEstadoResultados, 250);
       if (typeof renderBalance          === 'function') setTimeout(renderBalance, 300);
@@ -17117,6 +17133,1011 @@ function alzakSplitDrag(e) {
   document.addEventListener('mousemove', onMove);
   document.addEventListener('mouseup', onUp);
 }
+</script>
+
+
+
+<script>
+// ══ FUNCIONES FACTURAS RADICADAS ══
+function frEstadoReal(r) {
+  var total = frTotalVal(r);
+  if (total <= 0) return 'PAGADO';
+
+  var fuente = frFuentePago(r);
+  var ab     = frCalcularAbonado(r);
+
+  // Con extracto del período → cruce estricto
+  if (frPeriodoTieneExtracto(r)) {
+    if (fuente !== null || ab > 0) return ab >= total ? 'PAGADO' : 'ABONO';
+    return 'PENDIENTE';
+  }
+
+  // Sin extracto: si hay fuente de egreso = PAGADO (todo lo de egresos ya fue pagado)
+  if (fuente !== null) return 'PAGADO';
+  
+  // Sin extracto y sin egreso → pendiente de verificar
+  return 'SIN-EXTRACTO';
+}
+
+
+
+function frRender() {
+  // Resetear pool y caché para cruce fresco
+  frResetPool();
+  _FR_FUENTE_CACHE = {};
+
+  // FILTRAR PRIMERO — luego calcular fuentes solo para los filtrados
+  var filtered = frGetFiltered();
+  
+  // Pre-calcular fuentes SOLO para las facturas filtradas
+  filtered.forEach(function(r) { frFuentePago(r); });
+
+  var kpiEl    = document.getElementById('fr-kpis');
+  var tablaEl  = document.getElementById('fr-tabla');
+  var countEl  = document.getElementById('fr-count');
+  var tabCount = document.getElementById('fr-tabla-count');
+
+  if (countEl) countEl.textContent = filtered.length + ' registros';
+
+  // ── KPIs ──────────────────────────────────────────────────────────────
+  // Pre-calcular fuentes para coherencia del pool
+  filtered.forEach(function(r){ frFuentePago(r); });
+
+  var totalOblig = 0, totalPagado = 0, totalDeuda = 0, totalSinExtr = 0, nDIAN = 0;
+  filtered.forEach(function(r) {
+    var tot    = frTotalVal(r);
+    var est    = frEstadoReal(r);
+    var ab     = frCalcularAbonado(r);
+    var fuente = frFuentePago(r);
+    totalOblig += tot;
+    if (est === 'PAGADO')       totalPagado  += (ab > 0 ? ab : tot);
+    else if (est === 'ABONO')   totalPagado  += ab;
+    else if (est === 'SIN-EXTRACTO') totalSinExtr += tot;
+    else                        totalDeuda   += tot;
+    if (frEsDIAN && frEsDIAN(r)) nDIAN++;
+  });
+
+  function kpiCard(label, val, sub, bg, col, onclick) {
+    var oc = onclick ? ' onclick="'+onclick+'" style="cursor:pointer;background:'+bg+';border-radius:12px;padding:14px 16px;"' 
+                     : ' style="background:'+bg+';border-radius:12px;padding:14px 16px;"';
+    return '<div'+oc+'>'
+      +'<div style="font-size:10px;font-weight:700;color:'+col+';text-transform:uppercase;margin-bottom:4px;letter-spacing:.5px;">'+label+'</div>'
+      +'<div style="font-size:15px;font-weight:700;color:'+col+';">'+frFmt(val)+'</div>'
+      +'<div style="font-size:10px;color:'+col+';opacity:.7;margin-top:2px;">'+sub+'</div>'
+      +'</div>';
+  }
+
+  var selEst = (document.getElementById('fr-fil-estado')||{}).value||'';
+  if (kpiEl) kpiEl.innerHTML =
+    kpiCard('Total obligaciones', totalOblig, filtered.length+' registros', '#EBF3FB', '#0C447C', "frFiltrarKPI('')")
+    + kpiCard('✅ Pagado confirmado', totalPagado, 'Verificado en extractos', '#DCFCE7', '#166534', "frFiltrarKPI('PAGADO')")
+    + kpiCard('🔴 Lo que debes hoy', totalDeuda, 'Extracto cargado, sin pago', '#FEE2E2', '#991B1B', "frFiltrarKPI('PENDIENTE')")
+    + kpiCard('⏳ Sin extracto', totalSinExtr, 'Cargar extracto del período', '#F8FAFC', '#64748B', "frFiltrarKPI('SIN-EXTRACTO')");
+
+  // ── Tabla por categorías ─────────────────────────────────────────────
+  if (!tablaEl) return;
+
+  if (!filtered.length) {
+    tablaEl.innerHTML = '<div style="padding:30px;text-align:center;color:#aaa;font-size:12px;">Carga las facturas radicadas con el botón CSV / Excel</div>';
+    return;
+  }
+
+  // Agrupar por categoría
+  var grupos = {};
+  filtered.forEach(function(r) {
+    var cat = r['Categoria'] || 'Sin categoría';
+    if (!grupos[cat]) grupos[cat] = { total:0, pagado:0, saldo:0, rows:[] };
+    var tot = frTotalVal(r);
+    var est = frEstadoReal(r);
+    var ab  = frCalcularAbonado(r);
+    var pg  = (est === 'PAGADO') ? (ab>0?ab:tot) : (est === 'ABONO' ? ab : 0);
+    grupos[cat].total  += tot;
+    grupos[cat].pagado += pg;
+    grupos[cat].saldo  += Math.max(0, tot - pg);
+    grupos[cat].rows.push(r);
+  });
+
+  var cats = Object.keys(grupos).sort(function(a,b){ return grupos[b].saldo - grupos[a].saldo; });
+  var CAT_COLS = {
+    'Nómina y Honorarios':'#0C447C','Gastos de Viaje':'#2E7D32',
+    'Equipos de Oficina':'#B45309','Gastos de Representación':'#6950B8',
+    'Servicios Generales':'#0F6E56','Procesamiento Electrónico de Datos':'#1D4ED8',
+    'Capacitación e Investigación':'#7C3AED','Gastos Legales y Notariales':'#991B1B',
+    'Obligación Tributaria DIAN':'#C2410C','Préstamos':'#64748B',
+    'Mobiliario y Enseres':'#A16207','Compras de Oficina':'#0369A1',
+  };
+
+  var html = '';
+  cats.forEach(function(cat) {
+    var gd  = grupos[cat];
+    var col = CAT_COLS[cat] || '#888';
+    var open = _frOpenGrupos && _frOpenGrupos[encodeURIComponent(cat)];
+    var ek  = encodeURIComponent(cat);
+
+    html += '<div style="border:1px solid #e0ddd8;border-radius:10px;overflow:hidden;margin-bottom:8px;">';
+    html += '<div data-cat="'+ek+'" onclick="frToggleGrupo(this.dataset.cat)" '
+      +'style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;cursor:pointer;background:#fafaf9;">'
+      +'<div style="display:flex;align-items:center;gap:8px;">'
+      +'<span style="width:4px;height:20px;background:'+col+';border-radius:2px;display:inline-block;"></span>'
+      +'<span style="font-size:11px;font-weight:700;color:'+col+';">'+frEsc(cat)+'</span>'
+      +'<span style="font-size:10px;color:#aaa;">'+gd.rows.length+' registros</span>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:16px;">'
+      +'<span style="font-size:10px;color:#aaa;">Saldo: <strong style="color:'+(gd.saldo>0?'#991B1B':'#166534')+';">'+frFmt(gd.saldo)+'</strong></span>'
+      +'<span style="font-size:12px;font-weight:700;color:'+col+';">'+frFmt(gd.total)+'</span>'
+      +'<span style="font-size:11px;color:#888;" id="fr-arrow-'+ek+'">'+(open?'&#9650;':'&#9660;')+'</span>'
+      +'</div>'
+      +'</div>';
+
+    html += '<div id="fr-panel-'+ek+'" style="display:'+(open?'block':'none')+';">';
+    html += '<table style="width:100%;border-collapse:collapse;font-size:10px;">';
+    html += '<thead><tr style="background:#F8F9FA;">'
+      +'<th style="padding:6px 10px;text-align:left;color:#555;font-weight:700;">Fecha</th>'
+      +'<th style="padding:6px 10px;text-align:left;color:#555;font-weight:700;">Proveedor / Contratista</th>'
+      +'<th style="padding:6px 10px;text-align:left;color:#555;font-weight:700;">Concepto</th>'
+      +'<th style="padding:6px 10px;text-align:left;color:#555;font-weight:700;">N° Comp.</th>'
+      +'<th style="padding:6px 10px;text-align:right;color:#555;font-weight:700;">Total</th>'
+      +'<th style="padding:6px 10px;text-align:right;color:#555;font-weight:700;">Saldo</th>'
+      +'<th style="padding:6px 10px;text-align:center;color:#555;font-weight:700;">Estado / Fuente</th>'
+      +'</tr></thead><tbody>';
+
+    gd.rows.forEach(function(r, ri) {
+      var tot    = frTotalVal(r);
+      var est    = frEstadoReal(r);
+      var ab     = frCalcularAbonado(r);
+      var saldo  = Math.max(0, tot - (est==='PAGADO'?(ab>0?ab:tot):ab));
+      var badge  = frBadgeEstado(r);
+      var bg     = ri%2===0 ? '#fff' : '#FAFAF9';
+      var sCol   = saldo > 0 ? '#991B1B' : '#166534';
+      html += '<tr style="background:'+bg+';border-bottom:1px solid #F0EEEC;">'
+        +'<td style="padding:6px 10px;color:#6B7280;white-space:nowrap;">'+frEsc(r['Fecha']||'')+'</td>'
+        +'<td style="padding:6px 10px;font-weight:600;color:#374151;">'+frEsc((r['Proveedor / Beneficiario']||'').substring(0,35))+'</td>'
+        +'<td style="padding:6px 10px;color:#6B7280;">'+frEsc((r['Concepto']||'').substring(0,50))+'</td>'
+        +'<td style="padding:6px 10px;color:#6B7280;white-space:nowrap;">'+frEsc(r['N Comprobante']||r['N_Comprobante']||'')+'</td>'
+        +'<td style="padding:6px 10px;text-align:right;font-weight:700;color:#374151;">'+frFmt(tot)+'</td>'
+        +'<td style="padding:6px 10px;text-align:right;font-weight:700;color:'+sCol+';">'+frFmt(saldo)+'</td>'
+        +'<td style="padding:6px 10px;text-align:center;">'+badge+'</td>'
+        +'</tr>';
+    });
+
+    html += '</tbody></table></div></div>';
+  });
+
+    tablaEl.innerHTML = html;
+  if (tabCount) tabCount.textContent = filtered.length + ' registros';
+}
+
+var _frOpenGrupos = {};
+function frFiltrarKPI(tipo) {
+  var selEst = document.getElementById('fr-fil-estado');
+  if (selEst) selEst.value = tipo;
+  frRender();
+}
+function frGetFiltered() {
+  var anio  = (document.getElementById('fr-fil-anio')||{}).value || '';
+  var mes   = (document.getElementById('fr-fil-mes')||{}).value || '';
+  var est   = (document.getElementById('fr-fil-estado')||{}).value || '';
+  var bus   = ((document.getElementById('fr-buscar')||{}).value || '').toLowerCase();
+  var result = FR_DATA.filter(function(r) {
+    var fecha = r['Fecha'] || '';
+    // Extraer mes y año de la fecha (formato dd/MM/yyyy)
+    var partes = fecha.split('/');
+    var fMes = partes.length >= 3 ? partes[1] : '';   // "05"
+    var fAnio = partes.length >= 3 ? partes[2] : '';  // "2026"
+    var fMesAnio = fMes + '/' + fAnio;                // "05/2026"
+    
+    if (anio && fAnio !== anio) return false;
+    if (mes  && fMesAnio !== mes) return false;
+    // Usar estado real (cruce TC + Egresos), no el campo del CSV
+    if (est) {
+      var estadoReal = frEstadoReal(r);
+      if (est === 'PAGADO'    && estadoReal !== 'PAGADO') return false;
+      if (est === 'PENDIENTE' && estadoReal === 'PAGADO') return false;
+    }
+    if (bus) {
+      // Filtro especial DIAN — busca en categoría
+      if (bus === 'dian') {
+        var cat = (r['Categoria']||'').toLowerCase();
+        if (cat.indexOf('dian') < 0 && cat.indexOf('tributaria') < 0) return false;
+      } else {
+        var h = ((r['Proveedor / Beneficiario']||'') + ' ' + (r['Concepto']||'')).toLowerCase();
+        if (!h.includes(bus)) return false;
+      }
+    }
+    return true;
+  });
+  return result;
+}
+// Fuente 1: GASTOS_DATA (CSV egresos cargado por usuario)
+// Fuente 2: DATA TC (extractos TC BCS cargados en el tablero)
+// Fuente 3: Estado explícito en el CSV de radicadas
+
+// Tabla de normalización: descripcion TC → fragmento proveedor en radicadas
+var FR_TC_MAP = [
+  ['IKEA',              'IKSO'],
+  ['DIGITALOCEAN',      'DIGITALOCEAN'],
+  ['POSIT SOFTWARE',    'POSIT'],
+  ['OPENAI',            'OPENAI'],
+  ['GODADDY',           'GODADDY'],
+  ['MERCADOLI',         'MERCADOLI'],
+  ['CUEROSVEL',         'CUEROS VELEZ'],
+  ['INFORMATICA Y GESTION', 'INFORMATICA'],
+  ['MICROSOFT',         'MICROSOFT'],
+  ['LUCID SOFTWARE',    'LUCID'],
+  ['LATAM AIRLINES',    'LATAM'],
+  ['AEROREPUBLICA',     'WINGO'],
+  ['WINGO',             'WINGO'],
+  ['MISTURA',           'MISTURA'],
+  ['RESTAURANTE VIDA',  'VIDA'],
+  ['DORIAUTOS',         'DORIAUTOS'],
+  ['CREPES Y WAFFLES',  'CREPES'],
+  ['UBER',              'UBER'],
+  ['ISPOR',             'ISPOR'],
+  ['ADOBE',             'ADOBE'],
+  ['HOSTINGER',         'HOSTINGER'],
+  ['TOTTO',             'NALSANI'],
+  ['STANLEY',           'STANLEY'],
+  ['ISIMO',             'ISIMO'],
+  ['GOOGLE',            'GOOGLE'],
+  ['AVIANCA',           'AVIANCA'],
+  ['ASOCIACION300',     'ACICLINICAL'],
+  ['MP*ASOCIACION',     'ACICLINICAL'],
+  // Nuevos proveedores identificados en auditoría Mayo 2026
+  ['FRITOCARIBE',       'FRITOCARIBE'],
+  ['FRITO',             'FRITOCARIBE'],
+  ['SODIMAC',           'SODIMAC'],
+  ['HOMECENTER',        'SODIMAC'],
+  ['CUEROS VEL',        'CUEROS'],
+  ['DORIAUTOS',         'DORISA'],
+  ['INFORMATICA',       'INFORMATICA'],
+  ['INFORMAT',          'INFORMATICA'],
+  ['LUCID',             'LUCID'],
+  ['ISIMO',             'ISIMO'],
+  ['PLAN B',            'ISIMO'],
+  ['IKEA',              'IKEA'],
+  ['LE CABRERA',        'CABRERA'],
+  ['CABRERA',           'CABRERA'],
+  ['AEROREP',           'WINGO'],
+  ['LATAM',             'AERO'],
+  ['EXITO',             'EXITO'],
+  ['ALMACENES',         'EXITO'],
+  ['HOTEL',             'HOTEL'],
+  ['SANTA BARBARA',     'HOTEL'],
+  ['D1 ',               'D1'],
+  ['DIGITAL OCEAN',     'DIGITAL'],
+  ['DIGITALOCEAN',      'DIGITAL'],
+  ['POSIT',             'POSIT'],
+  ['CONFORT',           'CONFORTFRESH'],
+  ['PADEL',             'PADEL'],
+  ['ATRIUM',            'ATRIUM'],
+  ['MILAGROSA',         'MILAGROSA'],
+  ['LA MILAGROSA',      'MILAGROSA'],
+  ['FALABELLA',         'PCTEL'],       // Laptop Pctel S.A.S. pagado via Falabella
+  ['FALABELLA',         'FALABELLA'],
+];
+
+// Obtener todos los movimientos Gasto TC de todos los periodos cargados
+function frGetAllTCGastos() {
+  if (typeof DATA === 'undefined') return [];
+  var gastos = [];
+  var keys = Object.keys(DATA);
+  for (var k = 0; k < keys.length; k++) {
+    var key = keys[k];
+    if (key.indexOf('TC ') !== 0) continue;
+    var periodo = DATA[key];
+    if (!periodo || !periodo.movs) continue;
+    for (var m = 0; m < periodo.movs.length; m++) {
+      var mv = periodo.movs[m];
+      if (mv.car > 0 && mv.tipo === 'Gasto TC') {
+        gastos.push({
+          f: mv.f, doc: mv.doc,
+          desc: (mv.desc || '').toUpperCase(),
+          car: mv.car
+        });
+      }
+    }
+  }
+  return gastos;
+}
+
+// Normalizar descripcion TC para comparar con proveedor de radicada
+function frNormTCDesc(desc) {
+  var d = desc.toUpperCase();
+  for (var i = 0; i < FR_TC_MAP.length; i++) {
+    if (d.indexOf(FR_TC_MAP[i][0]) >= 0) return FR_TC_MAP[i][1];
+  }
+  return d.substring(0,15);
+}
+
+function frCalcularAbonado(r) {
+  var total = frTotalVal(r);
+  if (total <= 0) return 0;
+
+  var ncomp     = String(r['N Comprobante'] || r['N_Comprobante'] || '').trim().toLowerCase();
+  var proveedor = (r['Proveedor / Beneficiario'] || '').trim().toUpperCase();
+  var abonado   = 0;
+
+  // ── FUENTE 1: GASTOS_DATA — si el egreso existe, está pagado ──────────
+  if (typeof GASTOS_DATA !== 'undefined' && GASTOS_DATA.length > 0) {
+    var SKIP2 = {S:1,A:1,SAS:1,DE:1,LA:1,EL:1,LOS:1,Y:1,DEL:1,LTDA:1};
+    var pWords = proveedor.split(/\s+/).filter(function(w){ return w.length>3 && !SKIP2[w]; });
+    for (var i = 0; i < GASTOS_DATA.length; i++) {
+      var gx2   = GASTOS_DATA[i];
+      var gComp2 = String(gx2['N_Comprobante']||gx2['N Comprobante']||gx2['N_Factura']||gx2['Concepto']||'').toLowerCase();
+      var gProv2 = (gx2['Beneficiario']||gx2['Proveedor / Beneficiario']||gx2['Proveedor_Beneficiario']||'').toUpperCase();
+      var gTot2  = parseFloat(gx2['Total ($)']||gx2['Total_COP']||gx2['Total (COP)']||0);
+      // Modo A: N° comprobante
+      if (ncomp.length > 2 && gComp2.indexOf(ncomp.toLowerCase()) >= 0) { abonado = total; break; }
+      // Modo B: monto + proveedor
+      if (Math.abs(gTot2 - total) <= 100 && pWords.some(function(w){ return gProv2.indexOf(w)>=0; })) {
+        abonado = total; break;
+      }
+    }
+  }
+
+    // ── FUENTE 2: Extractos bancarios P[] — via caché de frFuentePago
+  // frCalcularAbonado NO toca el pool directamente para evitar desincronización.
+  // Si frFuentePago ya fue llamada para esta fila, usa su resultado cacheado.
+  if (abonado < total) {
+    var _cacheKey = (r['N Comprobante']||r['N_Comprobante']||'') + '|' + frTotalVal(r);
+    if (typeof _FR_FUENTE_CACHE !== 'undefined' && _FR_FUENTE_CACHE[_cacheKey]) {
+      abonado = total; // ya tiene fuente confirmada
+    }
+  }
+
+  // ── FUENTE 3: Extractos TC BCS (DATA en el tablero) ─────
+  // Siempre disponible — cruce por monto exacto O por proveedor normalizado
+  var tcGastos = frGetAllTCGastos();
+  if (tcGastos.length > 0 && abonado < total) {
+    for (var j = 0; j < tcGastos.length; j++) {
+      var tc = tcGastos[j];
+      // Cruce 2a: monto exacto == total factura (pago total en 1 cargo)
+      if (Math.abs(tc.car - total) < 10) {  // tolerancia $10 por redondeo float
+        // Verificar que el proveedor coincida por normalización
+        var tcNorm = frNormTCDesc(tc.desc);
+        var provNorm = proveedor.toUpperCase();
+        // Chequeo flexible: alguna palabra clave del mapa coincide con el proveedor
+        var provMatch = false;
+        for (var m2 = 0; m2 < FR_TC_MAP.length; m2++) {
+          if (tc.desc.indexOf(FR_TC_MAP[m2][0]) >= 0 &&
+              provNorm.indexOf(FR_TC_MAP[m2][1]) >= 0) {
+            provMatch = true; break;
+          }
+        }
+        // O si el proveedor contiene fragmento del desc TC
+        if (!provMatch) {
+          var tcWords = tc.desc.replace(/[^A-Z0-9 ]/g,' ').split(' ').filter(function(w){return w.length>4;});
+          for (var tw = 0; tw < tcWords.length; tw++) {
+            if (provNorm.indexOf(tcWords[tw]) >= 0) { provMatch = true; break; }
+          }
+        }
+        if (provMatch) { abonado += tc.car; break; }
+      }
+    }
+  }
+
+  return Math.min(abonado, total);
+}
+
+// Fuente del pago para mostrar en el badge
+// ── Pool de movimientos bancarios — cruce ESTRICTO uno a uno ──────────────
+// Regla: si hay 3 facturas de $X, se necesitan 3 movimientos de $X en extractos.
+var _FR_MOVS_POOL = null;
+function frBuildPool() {
+  _FR_MOVS_POOL = [];
+  if (typeof P === 'undefined') return;
+  for (var _pi=0;_pi<P.length;_pi++) {
+    var _per=P[_pi],_lbl=_per.label;
+    if (_per.movs) _per.movs.forEach(function(mv){if(mv.v<0)_FR_MOVS_POOL.push({v:Math.abs(mv.v),d:mv.d,f:mv.f,banco:'BCOL',cuenta:'Bancolombia Ah *6556',label:'BCOL AH',color:'#0C6EAF',periodo:_lbl,usado:false});});
+    if (_per.caja&&_per.caja.movs) _per.caja.movs.forEach(function(mv){if(mv.v<0)_FR_MOVS_POOL.push({v:Math.abs(mv.v),d:mv.d,f:mv.f,banco:'BCS',cuenta:'BCS Cte *2970',label:'BCS CTE',color:'#C2410C',periodo:_lbl,usado:false});});
+    if (_per.bold&&_per.bold.movs) _per.bold.movs.forEach(function(mv){if(mv.v<0)_FR_MOVS_POOL.push({v:Math.abs(mv.v),d:mv.d,f:mv.f,banco:'BOLD',cuenta:'Bold CF *2371',label:'BOLD CF',color:'#1E3A5F',periodo:_lbl,usado:false});});
+    // Incluir DATA[] de Bancolombia empresarial si está disponible
+    if (typeof DATA !== 'undefined') {
+      var dataKeys = Object.keys(DATA);
+      for (var _dk=0; _dk<dataKeys.length; _dk++) {
+        var _dkey = dataKeys[_dk];
+        if (_dkey.indexOf('TC ') === 0) continue; // TC ya va por frGetAllTCGastos
+        var _dper = DATA[_dkey];
+        if (!_dper || !_dper.movs || !_dper.info) continue;
+        // Solo incluir si el período solapa con _lbl (evitar doble conteo entre cuentas)
+        var _dcta = _dper.info.cta || '';
+        var _dlbl = (_dper.info.banco||'') + ' *' + _dcta.slice(-4);
+        if (_dper.info.esTarjeta) continue; // TC ya se maneja por separado
+        _dper.movs.forEach(function(mv){
+          if (mv.ab > 0 || mv.car <= 0) return; // solo egresos
+          // Evitar duplicar si ya está en P[] (misma cuenta y período)
+          _FR_MOVS_POOL.push({
+            v: mv.car, d: mv.desc||mv.d||'', f: mv.f,
+            banco: _dper.info.banco||'BCOL',
+            cuenta: _dlbl,
+            label: _dper.info.banco||'BCOL',
+            color: '#0C6EAF',
+            periodo: _dper.info.ini ? _dper.info.ini.substring(0,7) : _lbl,
+            usado: false
+          });
+        });
+      }
+    }
+  }
+  // Deduplicar por monto+fecha+desc para evitar entradas duplicadas entre P[] y DATA[]
+  var seen = {};
+  _FR_MOVS_POOL = _FR_MOVS_POOL.filter(function(mv){
+    var k = mv.v+'|'+mv.f+'|'+(mv.d||'').substring(0,20);
+    if (seen[k]) return false;
+    seen[k] = true;
+    return true;
+  });
+}
+function frResetPool(){if(_FR_MOVS_POOL)_FR_MOVS_POOL.forEach(function(m){m.usado=false;});else frBuildPool();}
+function frConsumir(total){
+  if(!_FR_MOVS_POOL)frBuildPool();
+  for(var _i=0;_i<_FR_MOVS_POOL.length;_i++){var _mv=_FR_MOVS_POOL[_i];if(!_mv.usado&&Math.abs(_mv.v-total)<=100){_mv.usado=true;return _mv;}}
+  return null;
+}
+// ── Cruce USD: tolerancia porcentual ±FR_TOL_USD_PCT% ────────────────────
+// Usado para suscripciones digitales (Google, Microsoft, DigitalOcean, etc.)
+// cuyo cargo en extracto puede diferir del Total_COP por variación de TRM.
+var FR_TOL_USD_PCT = 8; // % tolerancia por defecto
+var FR_USD_PROVEEDORES = [
+  'GOOGLE','MICROSOFT','DIGITALOCEAN','DIGITAL OCEAN','OPENAI','ADOBE',
+  'HOSTINGER','GODADDY','LUCID','POSIT','ATLASSIAN','SLACK','ZOOM',
+  'DROPBOX','GITHUB','NOTION','HUBSPOT','CANVA','FIGMA','VERCEL',
+  'NETLIFY','CLOUDFLARE','AWS','AMAZON WEB','LINODE','TWILIO',
+  'SENDGRID','MAILCHIMP','STRIPE','SHOPIFY'
+];
+function frEsProveedorUSD(proveedor) {
+  var p = proveedor.toUpperCase();
+  for (var i=0; i<FR_USD_PROVEEDORES.length; i++) {
+    if (p.indexOf(FR_USD_PROVEEDORES[i]) >= 0) return true;
+  }
+  return false;
+}
+// Busca en el pool con tolerancia porcentual (para montos USD convertidos a COP)
+function frConsumirUSD(total) {
+  if (!_FR_MOVS_POOL) frBuildPool();
+  var tol = FR_TOL_USD_PCT / 100;
+  var best = null, bestDiff = Infinity;
+  for (var _i=0; _i<_FR_MOVS_POOL.length; _i++) {
+    var _mv = _FR_MOVS_POOL[_i];
+    if (_mv.usado) continue;
+    var diff = Math.abs(_mv.v - total);
+    var pctDiff = total > 0 ? diff / total : 1;
+    if (pctDiff <= tol && diff < bestDiff) {
+      best = _mv; bestDiff = diff;
+    }
+  }
+  if (best) { best.usado = true; return best; }
+  return null;
+}
+// Cache de resultados de frFuentePago para coherencia con frCalcularAbonado
+var _FR_FUENTE_CACHE = {};
+
+// Retorna objeto {tipo, cuenta, label, color, fecha} o null
+// Cruce automático con extractos bancarios P[] — por monto exacto
+function frFuentePago(r) {
+  // Verificar caché primero
+  var _ck = (r['N Comprobante']||r['N_Comprobante']||'') + '|' + frTotalVal(r);
+  if (_FR_FUENTE_CACHE[_ck] !== undefined) return _FR_FUENTE_CACHE[_ck];
+  var total     = frTotalVal(r);
+  if (total <= 0) return null;
+  var ncomp     = String(r['N Comprobante'] || r['N_Comprobante'] || '').trim().toLowerCase();
+  var proveedor = (r['Proveedor / Beneficiario'] || '').trim().toUpperCase();
+  var fechaFR   = (r['Fecha'] || '');
+
+  // Extraer mes/año de la fecha de la factura para acotar búsqueda
+  var frMes = -1, frAnio = -1;
+  var fp = fechaFR.split('/');
+  if (fp.length >= 3) { frMes = parseInt(fp[1])-1; frAnio = parseInt(fp[2]); }
+
+  // ── FUENTE 1: GASTOS_DATA (CSV egresos = reporte de todos los pagos bancarios)
+  // El CSV de egresos ES la fuente de verdad de pagos — cualquier registro ahí = PAGADO
+  if (typeof GASTOS_DATA !== 'undefined' && GASTOS_DATA.length > 0) {
+    // Palabras clave del proveedor (evitar palabras genéricas)
+    var SKIP = {S:1,A:1,SAS:1,'S.A.S':1,'S.A':1,DE:1,LA:1,EL:1,LOS:1,Y:1,DEL:1,LTDA:1};
+    var provWords = proveedor.split(/[\s.]+/).filter(function(w){
+      return w.length > 3 && !SKIP[w];
+    });
+
+    for (var i = 0; i < GASTOS_DATA.length; i++) {
+      var gx   = GASTOS_DATA[i];
+      var gComp = String(gx['N_Comprobante'] || gx['N Comprobante'] || gx['N_Factura'] || gx['Concepto'] || '').toLowerCase();
+      var gProv = (gx['Beneficiario'] || gx['Proveedor / Beneficiario'] || gx['Proveedor_Beneficiario'] || '').toUpperCase();
+      var gTot  = parseFloat(gx['Total ($)'] || gx['Total_COP'] || gx['Total (COP)'] || 0);
+      var cta   = (gx['Cuenta_Origen'] || '').trim();
+
+      // MODO A: N° comprobante de la factura radicada aparece en el egreso
+      // Busca en N_Comprobante, Concepto Y Observaciones del egreso
+      var gConcepto = String(gx['Concepto'] || '').toLowerCase();
+      var gObs      = String(gx['Observaciones'] || '').toLowerCase();
+      var gCompFull = gComp + ' ' + gConcepto + ' ' + gObs;
+      if (ncomp.length > 2 && gCompFull.indexOf(ncomp.toLowerCase()) >= 0) {
+        var _ra = frParseCuenta(cta, 'egreso');
+        _FR_FUENTE_CACHE[_ck] = _ra; return _ra;
+      }
+
+      // También: si alguna parte del N°comp de la factura (separado por / o espacio) aparece
+      if (ncomp.length > 4) {
+        var ncompParts = ncomp.split(/[\/\s\-]+/).filter(function(p){ return p.length > 3; });
+        if (ncompParts.some(function(p){ return gCompFull.indexOf(p) >= 0; })) {
+          var _ra2 = frParseCuenta(cta, 'egreso');
+          _FR_FUENTE_CACHE[_ck] = _ra2; return _ra2;
+        }
+      }
+
+      // MODO A2: monto exacto + proveedor coincide (sin necesitar N° comprobante)
+      // Todo lo de egresos ya está pagado — si monto y proveedor coinciden = PAGADO
+      if (Math.abs(gTot - total) <= 500 && gProv.length > 3) {
+        if (provWords.length > 0 && provWords.some(function(w){ return gProv.indexOf(w) >= 0; })) {
+          var _ra3 = frParseCuenta(cta, 'egreso');
+          _FR_FUENTE_CACHE[_ck] = _ra3; return _ra3;
+        }
+      }
+
+      // MODO B: monto exacto (±100) + al menos 1 palabra clave del proveedor
+      if (Math.abs(gTot - total) <= 100 && gProv.length > 3) {
+        if (provWords.some(function(w){ return gProv.indexOf(w) >= 0; })) {
+          var _rb = frParseCuenta(cta, 'egreso');
+          _FR_FUENTE_CACHE[_ck] = _rb; return _rb;
+        }
+      }
+    }
+  }
+
+    // ── FUENTE 2: Extractos bancarios P[] — cruce ESTRICTO con pool ────────
+  // Usa frConsumir() que marca cada movimiento como usado — evita que el mismo
+  // movimiento bancario pague múltiples facturas del mismo monto
+  var poolMatch = frConsumir(total);
+  // MODO C: si frConsumir no encontró match, buscar en pool por monto+descripción
+  // Esto cubre casos donde el proveedor en extracto difiere del de la factura
+  // Ej: Atrium Food ↔ "ATRIUM ZONA NORTE", Padel One ↔ "Mucho Padel Col"
+  if (!poolMatch) {
+    var SKIP2 = {S:1,A:1,SAS:1,DE:1,LA:1,EL:1,LOS:1,Y:1,DEL:1,LTDA:1,COL:1};
+    var provW2 = proveedor.split(/[\s.,()+*]+/).filter(function(w){ return w.length>3 && !SKIP2[w]; });
+    if (!_FR_MOVS_POOL) frBuildPool();
+    for (var _mi2=0; _mi2<_FR_MOVS_POOL.length; _mi2++) {
+      var _mv2 = _FR_MOVS_POOL[_mi2];
+      if (_mv2.usado || Math.abs(_mv2.v - total) > 100) continue;
+      var _desc2 = (_mv2.d||'').toUpperCase();
+      // Verificar que alguna palabra clave del proveedor aparece en la descripción del extracto
+      // O que alguna entrada de FR_TC_MAP conecte la descripción con el proveedor
+      var _descMatch = provW2.some(function(w){ return _desc2.indexOf(w) >= 0; });
+      if (!_descMatch) {
+        // Intentar vía FR_TC_MAP
+        for (var _tm2=0; _tm2<FR_TC_MAP.length; _tm2++) {
+          if (_desc2.indexOf(FR_TC_MAP[_tm2][0]) >= 0 && proveedor.indexOf(FR_TC_MAP[_tm2][1]) >= 0) {
+            _descMatch = true; break;
+          }
+        }
+      }
+      if (_descMatch) { _mv2.usado = true; poolMatch = _mv2; break; }
+    }
+  }
+  // Si no hubo match exacto (±100 COP), intentar cruce porcentual para USD
+  if (!poolMatch && frEsProveedorUSD(proveedor)) {
+    poolMatch = frConsumirUSD(total);
+    if (poolMatch) poolMatch._usdMatch = true; // marcar para mostrar nota en badge
+  }
+  if (poolMatch) {
+    var _usdNota = poolMatch._usdMatch ? ' ~USD' : '';
+    var _r2 = {tipo:'extracto', cuenta: poolMatch.cuenta,
+            label: poolMatch.label + _usdNota, color: poolMatch.color,
+            fecha: poolMatch.f + ' (' + poolMatch.periodo + ')',
+            desc:  poolMatch.d, usdMatch: !!poolMatch._usdMatch};
+    _FR_FUENTE_CACHE[_ck] = _r2; return _r2;
+  }
+
+  // ── FUENTE 3: TC BCS — cruce por monto + proveedor ───────────────────
+  var tcGastos = frGetAllTCGastos();
+  var tcExacto = null, tcAprox = null;
+  var esUSD = frEsProveedorUSD(proveedor);
+  var tolTC  = esUSD ? (FR_TOL_USD_PCT / 100 * total) : 100; // tolerancia en COP
+  for (var j = 0; j < tcGastos.length; j++) {
+    var tc = tcGastos[j];
+    var diff = Math.abs(tc.car - total);
+    if (diff > Math.max(100, tolTC)) continue;
+
+    var provMatch = false;
+    // Modo 1: FR_TC_MAP — descripción TC ↔ proveedor factura
+    for (var m2 = 0; m2 < FR_TC_MAP.length; m2++) {
+      if (tc.desc.toUpperCase().indexOf(FR_TC_MAP[m2][0]) >= 0 &&
+          proveedor.indexOf(FR_TC_MAP[m2][1]) >= 0) {
+        provMatch = true; break;
+      }
+    }
+    // Modo 2: palabras de la descripción TC en el proveedor
+    if (!provMatch) {
+      var tcWords = tc.desc.replace(/[^A-Z0-9 ]/gi,' ').toUpperCase().split(' ')
+                     .filter(function(w){return w.length>3;});
+      for (var tw=0; tw<tcWords.length; tw++) {
+        if (proveedor.indexOf(tcWords[tw]) >= 0) { provMatch=true; break; }
+      }
+    }
+    // Modo 3: palabras del proveedor en la descripción TC
+    if (!provMatch) {
+      var provWords2 = proveedor.split(' ').filter(function(w){return w.length>3;});
+      for (var pw=0; pw<provWords2.length; pw++) {
+        if (tc.desc.toUpperCase().indexOf(provWords2[pw]) >= 0) { provMatch=true; break; }
+      }
+    }
+
+    if (provMatch && diff < 10) { tcExacto = tc; break; }
+    if (provMatch && !tcAprox)  { tcAprox  = tc; }
+    // Monto exacto sin proveedor — guardar como último recurso
+    if (diff < 2 && !tcExacto)  { tcAprox  = tcAprox || tc; }
+  }
+
+  var tcMatch = tcExacto || tcAprox;
+  if (tcMatch) {
+    var _tcLabel = 'TC BCS' + (esUSD && Math.abs(tcMatch.car-total)>100 ? ' ~USD' : '');
+    var _r3={tipo:'tc',cuenta:'TC BCS VISA *6529',label:_tcLabel,color:'#DC2626',fecha:tcMatch.f||'',desc:tcMatch.desc};
+    _FR_FUENTE_CACHE[_ck]=_r3; return _r3;
+  }
+  _FR_FUENTE_CACHE[_ck] = null;
+  return null;
+}
+
+
+// Parsear Cuenta_Origen del CSV de egresos a objeto de fuente
+function frParseCuenta(cta, tipo) {
+  var ctaU = cta.toUpperCase();
+  if (ctaU.indexOf('BANCOLOMBIA') >= 0 || ctaU.indexOf('6556') >= 0)
+    return {tipo:tipo, cuenta:'Bancolombia Ah *6556', label:'BCOL AH', color:'#0C6EAF'};
+  if (ctaU.indexOf('CAJA SOCIAL') >= 0 || ctaU.indexOf('BCS') >= 0 || ctaU.indexOf('2970') >= 0)
+    return {tipo:tipo, cuenta:'BCS Cte *2970',        label:'BCS CTE', color:'#C2410C'};
+  if (ctaU.indexOf('BOLD') >= 0 || ctaU.indexOf('2371') >= 0)
+    return {tipo:tipo, cuenta:'Bold CF *2371',         label:'BOLD CF', color:'#1E3A5F'};
+  if (ctaU.indexOf('FIDUCIARIA') >= 0 || ctaU.indexOf('1771') >= 0)
+    return {tipo:tipo, cuenta:'Fiducuenta *1771',      label:'FIDUCIA', color:'#6950B8'};
+  // Si tiene algo pero no reconocemos la cuenta
+  if (cta.length > 0)
+    return {tipo:tipo, cuenta:cta, label:'EGRESO', color:'#0C447C'};
+  return {tipo:'egreso', cuenta:'', label:'EGRESO', color:'#0C447C'};
+}
+
+function frToggleGrupo(key) {
+  var panel = document.getElementById('fr-panel-' + key);
+  var arrow = document.getElementById('fr-arrow-' + key);
+  if (!panel) return;
+  var isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  if (arrow) arrow.innerHTML = isOpen ? '&#9660;' : '&#9650;';
+  if (typeof _frOpen !== 'undefined') _frOpen[key] = !isOpen;
+}
+
+function frTotalVal(r) {
+  return parseFloat(String(r['Total (COP)']||r['Total_COP']||'0').replace(/[^0-9.]/g,''))||0;
+}
+
+function frBadgeEstado(r) {
+  var total   = frTotalVal(r);
+  var fuente  = frFuentePago(r);
+  var abonado = frCalcularAbonado(r);
+  var estado  = frEstadoReal(r);
+
+  // Badge de fuente bancaria
+  var fTag = '';
+  if (fuente) {
+    var fColor = fuente.color || '#0C447C';
+    var fLabel = fuente.label || 'EGRESO';
+    var fTitle = fuente.cuenta ? ' title="Pagado desde: '+fuente.cuenta+'"' : '';
+    fTag = ' <span'+fTitle+' style="font-size:8px;background:'+fColor+';color:#fff;padding:1px 5px;border-radius:4px;margin-left:2px;font-weight:700;">'+fLabel+'</span>';
+  }
+
+  if (estado === 'PAGADO') {
+    var fechaTag = '';
+    if (fuente && fuente.fecha) fechaTag = ' <span style="font-size:8px;color:#166534;opacity:0.8;">'+fuente.fecha+'</span>';
+    return '<span style="background:#DCFCE7;color:#166534;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;">PAGADO'+fTag+'</span>'+fechaTag;
+  }
+  if (estado === 'ABONO') {
+    var pct = Math.round(abonado/total*100);
+    return '<span style="background:#FEF3C7;color:#92400E;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;">ABONO '+pct+'%'+fTag+'</span>';
+  }
+  if (estado === 'SIN-EXTRACTO') {
+    return '<span style="background:#F1F5F9;color:#64748B;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;" title="Cargar extracto bancario del período para verificar">⏳ Sin extracto</span>';
+  }
+  // PENDIENTE
+  return '<span style="background:#FEE2E2;color:#991B1B;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;">PENDIENTE</span>';
+}
+
+
+function frToggleGrupo(key) {
+  var panel = document.getElementById('fr-panel-' + key);
+  var arrow = document.getElementById('fr-arrow-' + key);
+  if (!panel) return;
+  var isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  if (arrow) arrow.innerHTML = isOpen ? '&#9660;' : '&#9650;';
+  if (typeof _frOpenGrupos !== 'undefined') _frOpenGrupos[key] = !isOpen;
+}
+
+function frTotalVal(r) {
+  return parseFloat(String(r['Total (COP)']||r['Total_COP']||'0').replace(/[^0-9.]/g,''))||0;
+}
+
+function frEsc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function frToggleIVAPanel(){
+  var p=document.getElementById('fr-iva-panel');
+  var b=document.getElementById('fr-iva-body');
+  var a=document.getElementById('fr-iva-panel-arr');
+  if(!p)return;
+  var open=b&&b.style.display!=='none';
+  if(b)b.style.display=open?'none':'block';
+  if(a)a.innerHTML=open?'&#9660;':'&#9650;';
+}
+
+function frToggleTabla(){
+  var t=document.getElementById('fr-tabla');
+  var a=document.getElementById('fr-tabla-arr');
+  if(!t)return;
+  var open=t.style.display!=='none';
+  t.style.display=open?'none':'block';
+  if(a)a.innerHTML=open?'&#9660;':'&#9650;';
+}
+
+function frRenderIVA(){}
+
+// ── Exportar PDF facturas radicadas ──────────────────────────────────────
+function frExportPDF() {
+  if (!FR_DATA || !FR_DATA.length) {
+    mostrarToast('Carga las facturas radicadas primero (CSV / Excel)', '#993C1D'); return;
+  }
+  var fecha = new Date().toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'});
+
+  // Leer filtros activos
+  var filAnio   = (document.getElementById('fr-fil-anio')   ||{}).value || '';
+  var filMes    = (document.getElementById('fr-fil-mes')    ||{}).value || '';
+  var filEstado = (document.getElementById('fr-fil-estado') ||{}).value || '';
+  var buscar    = ((document.getElementById('fr-buscar')    ||{}).value || '').trim().toLowerCase();
+
+  // Filtrar igual que frRender
+  var datos = FR_DATA.filter(function(r) {
+    if (filAnio) {
+      var fp = (r['Fecha']||'').split('/');
+      var anioR = fp.length >= 3 ? (fp[2]||'').substring(0,4) : '';
+      if (anioR !== filAnio) return false;
+    }
+    if (filMes && (r['Mes']||'') !== filMes) return false;
+    if (buscar) {
+      var haystack = ((r['Proveedor / Beneficiario']||'')+(r['Concepto']||'')).toLowerCase();
+      if (haystack.indexOf(buscar) < 0) return false;
+    }
+    return true;
+  });
+
+  if (!datos.length) { mostrarToast('No hay registros con los filtros actuales', '#993C1D'); return; }
+
+  function Cf(n){ return '$'+Math.round(parseFloat(n)||0).toLocaleString('es-CO'); }
+  function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // KPIs
+  var total   = datos.reduce(function(a,r){return a+frTotalVal(r);},0);
+  var pagado  = 0, pendiente = 0, sinExtracto = 0;
+  datos.forEach(function(r){
+    var est = frEstadoReal(r);
+    if (est === 'PAGADO') pagado += frTotalVal(r);
+    else if (est === 'SIN-EXTRACTO') sinExtracto += frTotalVal(r);
+    else pendiente += frTotalVal(r);
+  });
+  var pctPag = total ? Math.round(pagado/total*100) : 0;
+
+  // Agrupar por categoría
+  var cats = {};
+  datos.forEach(function(r){
+    var cat = r['Categoria']||'Sin categoría';
+    if (!cats[cat]) cats[cat] = {items:[], total:0, pagado:0};
+    cats[cat].items.push(r);
+    cats[cat].total += frTotalVal(r);
+    if (frEstadoReal(r) === 'PAGADO') cats[cat].pagado += frTotalVal(r);
+  });
+
+  // Construir filas por categoría
+  var filasGrupos = '';
+  var catKeys = Object.keys(cats).sort();
+  for (var ci=0; ci<catKeys.length; ci++) {
+    var cat = catKeys[ci];
+    var gd  = cats[cat];
+    filasGrupos += '<tr style="background:#f0ede8;font-weight:700;">'
+      +'<td colspan="6">'+esc(cat)+'</td>'
+      +'<td style="text-align:right">'+Cf(gd.total)+'</td>'
+      +'<td style="text-align:center">'+Math.round(gd.pagado/gd.total*100||0)+'% pagado</td>'
+      +'</tr>';
+    for (var ri=0; ri<gd.items.length; ri++) {
+      var r = gd.items[ri];
+      var est = frEstadoReal(r);
+      var fuente = frFuentePago(r);
+      var fLabel = fuente ? fuente.label : '';
+      var estColor = est==='PAGADO' ? '#166534' : est==='SIN-EXTRACTO' ? '#64748B' : '#991B1B';
+      var estBg    = est==='PAGADO' ? '#DCFCE7' : est==='SIN-EXTRACTO' ? '#F1F5F9' : '#FEE2E2';
+      var estText  = est==='PAGADO' ? 'PAGADO' : est==='SIN-EXTRACTO' ? '⏳ Sin extracto' : 'PENDIENTE';
+      filasGrupos += '<tr style="border-bottom:1px solid #f5f4f0">'
+        +'<td style="color:#777;font-size:10px">'+esc(r['Fecha']||'')+'</td>'
+        +'<td style="font-weight:600;max-width:160px">'+esc(r['Proveedor / Beneficiario']||'')+'</td>'
+        +'<td style="max-width:200px;font-size:10px;color:#555">'+esc((r['Concepto']||'').substring(0,60))+'</td>'
+        +'<td style="color:#777;font-size:10px">'+esc(r['N Comprobante']||r['N_Comprobante']||'')+'</td>'
+        +'<td style="color:#777;font-size:10px">'+esc(r['Mes']||'')+'</td>'
+        +'<td style="text-align:right;font-weight:700">'+Cf(frTotalVal(r))+'</td>'
+        +'<td style="text-align:right;font-size:10px;color:#555">'+Cf(frTotalVal(r))+'</td>'
+        +'<td style="text-align:center">'
+          +'<span style="background:'+estBg+';color:'+estColor+';padding:2px 7px;border-radius:10px;font-weight:700;font-size:9px">'+estText+'</span>'
+          +(fLabel ? ' <span style="background:#1a1a1a;color:#fff;padding:1px 5px;border-radius:4px;font-size:8px;font-weight:700">'+esc(fLabel)+'</span>' : '')
+        +'</td>'
+        +'</tr>';
+    }
+  }
+
+  var periodoLabel = (filAnio || 'Todos los años') + (filMes ? ' · '+filMes : '');
+
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8">'
+    +'<title>Facturas Radicadas ALZAK — '+periodoLabel+'</title>'
+    +'<style>'
+    +'*{font-family:Montserrat,Helvetica,Arial,sans-serif;font-size:11px;margin:0;padding:0;box-sizing:border-box}'
+    +'body{background:#fff;color:#54504F;padding:24px 30px}'
+    +'h2{font-size:12px;font-weight:700;color:#A32D2D;margin:18px 0 7px;padding-bottom:3px;border-bottom:2px solid #A32D2D}'
+    +'table{width:100%;border-collapse:collapse;margin-bottom:6px;font-size:10.5px}'
+    +'th{background:#54504F;color:#fff;padding:6px 7px;text-align:left;font-size:10px;font-weight:700}'
+    +'td{padding:5px 7px;vertical-align:middle}'
+    +'tr:nth-child(even){background:#fafaf8}'
+    +'.kpi{display:inline-block;background:#f5f4f0;border-radius:7px;padding:10px 16px;margin:0 5px 6px 0;min-width:120px}'
+    +'.kl{font-size:9px;color:#888;font-weight:700;text-transform:uppercase;margin-bottom:3px}'
+    +'.kv{font-size:17px;font-weight:700}'
+    +'@media print{'
+    +'  body{padding:14px 18px}'
+    +'  h2{page-break-after:avoid}'
+    +'  tr{page-break-inside:avoid}'
+    +'  .no-print{display:none}'
+    +'}'
+    +'</style></head><body>'
+    // Encabezado
+    +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;padding-bottom:14px;border-bottom:2px solid #1a1a1a">'
+    +'<div>'
+    +'<div style="font-size:21px;font-weight:700;color:#54504F">ALZAK GROUP SAS</div>'
+    +'<div style="font-size:11px;color:#888;margin-top:1px">NIT 900.898.741-8 · Cartagena, Colombia</div>'
+    +'</div>'
+    +'<div style="text-align:right">'
+    +'<div style="font-size:15px;font-weight:700;color:#A32D2D">FACTURAS RADICADAS</div>'
+    +'<div style="font-size:10px;color:#888;margin-top:3px">Lo que nos cobran · Obligaciones adquiridas</div>'
+    +'<div style="font-size:10px;color:#888">Período: '+periodoLabel+'</div>'
+    +'<div style="font-size:10px;color:#888">Generado: '+fecha+'</div>'
+    +'</div>'
+    +'</div>'
+    // KPIs
+    +'<h2>📊 Resumen</h2>'
+    +'<div style="margin-bottom:14px">'
+    +'<div class="kpi"><div class="kl">Total Obligaciones</div><div class="kv" style="color:#54504F">'+Cf(total)+'</div><div style="font-size:9px;color:#aaa">'+datos.length+' registros</div></div>'
+    +'<div class="kpi" style="background:#DCFCE7"><div class="kl">Pagado confirmado</div><div class="kv" style="color:#166534">'+Cf(pagado)+'</div><div style="font-size:9px;color:#166534">'+pctPag+'% del total</div></div>'
+    +'<div class="kpi" style="background:#FEE2E2"><div class="kl">Lo que debes hoy</div><div class="kv" style="color:#991B1B">'+Cf(pendiente)+'</div><div style="font-size:9px;color:#991B1B">Extracto cargado, sin pago</div></div>'
+    +'<div class="kpi" style="background:#F1F5F9"><div class="kl">Sin extracto</div><div class="kv" style="color:#64748B">'+Cf(sinExtracto)+'</div><div style="font-size:9px;color:#64748B">Cargar extracto del período</div></div>'
+    +'</div>'
+    // Tabla
+    +'<h2>📋 Detalle por Categoría</h2>'
+    +'<table><thead><tr>'
+    +'<th>Fecha</th><th>Proveedor / Contratista</th><th>Concepto</th>'
+    +'<th>N° Comp.</th><th>Mes</th><th style="text-align:right">Total</th>'
+    +'<th style="text-align:right">Saldo</th><th style="text-align:center">Estado / Fuente</th>'
+    +'</tr></thead><tbody>'+filasGrupos+'</tbody>'
+    +'<tfoot><tr style="background:#EBF3FB;font-weight:700">'
+    +'<td colspan="5">TOTAL GENERAL ('+datos.length+' registros)</td>'
+    +'<td style="text-align:right">'+Cf(total)+'</td>'
+    +'<td style="text-align:right">'+Cf(total)+'</td>'
+    +'<td style="text-align:center">'+pctPag+'% pagado</td>'
+    +'</tr></tfoot></table>'
+    // Pie
+    +'<div style="margin-top:20px;padding-top:10px;border-top:1px solid #e0ddd8;display:flex;justify-content:space-between;color:#aaa;font-size:9px">'
+    +'<div>ALZAK GROUP SAS · NIT 900.898.741-8 · Tablero Contabilidad Integrado</div>'
+    +'<div>Generado el '+fecha+'</div>'
+    +'</div>'
+    +'</body></html>';
+
+  var blob = new Blob([html], {type:'text/html;charset=utf-8'});
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'Facturas_Radicadas_ALZAK_'+new Date().toISOString().slice(0,10)+'.html';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+  mostrarToast('✅ Reporte descargado — ábrelo en Chrome y usa Ctrl+P → Guardar como PDF');
+}
+
+function alzakSincronizarSheets() {
+  var btn = document.getElementById('tab-sync-btn');
+  if (btn) { btn.textContent = '⏳ Sincronizando...'; btn.style.color = '#FCD34D'; }
+  alzakCargarDatosSheets(function() {
+    if (btn) {
+      btn.textContent = '✅ Sincronizado';
+      btn.style.color = '#4ADE80';
+      setTimeout(function() {
+        btn.textContent = '🔄 Sincronizar';
+        btn.style.color = '#5DC3DA';
+      }, 3000);
+    }
+  });
+}
+
+// init on demand
+function balToggleDetalle(src) {
+  var uid = typeof src === 'string' ? src : (src && src.dataset ? src.dataset.uid : '');
+  var el  = document.getElementById(uid);
+  var btn = document.getElementById(uid + '-btn');
+  if (!el) return;
+  var oculto = el.style.display === 'none';
+  el.style.display  = oculto ? 'block' : 'none';
+  if (btn) btn.innerHTML = oculto ? '&#9660; ocultar' : '&#9658; ver detalle';
+}
+
+function balToggleCierre2025() {
+  var panel = document.getElementById('bal-cierre-2025');
+  var btn   = document.getElementById('btn-cierre-2025');
+  var pills = document.getElementById('bal-pills');
+  var kpis  = document.getElementById('bal-kpis');
+  var tabla = document.getElementById('bal-tabla');
+  if (!panel) return;
+  var visible = panel.style.display !== 'none';
+  panel.style.display = visible ? 'none' : 'block';
+  if (pills) pills.style.display = visible ? '' : 'none';
+  if (kpis)  kpis.style.display  = visible ? '' : 'none';
+  if (tabla) tabla.style.display  = visible ? '' : 'none';
+  if (btn) {
+    btn.style.background  = visible ? '#54504F' : '#5DC3DA';
+    btn.style.borderColor = visible ? '#54504F' : '#5DC3DA';
+    btn.textContent       = visible ? '📋 Cierre 2025' : '✕ Cerrar 2025';
+  }
+}
+
+// init on demand
+</script>
+     MÓDULO: Balance General / Estado de Situación Financiera
+     ═══════════════════════════════════════════════════════ -->
+
+
+<script>
+// ── Exposición global final — corre después de todos los scripts ──
+// Garantiza que tabPres() encuentre todas las funciones del Presupuesto
+document.addEventListener('DOMContentLoaded', function() {
+  // Buscar pfRender en todos los posibles scopes
+  if (typeof pfRender === 'function' && typeof window.pfRender !== 'function') {
+    window.pfRender = pfRender;
+  }
+  if (typeof fcRender === 'function' && typeof window.fcRender !== 'function') {
+    window.fcRender = fcRender;
+  }
+  if (typeof renderEquipoBase === 'function' && typeof window.renderEquipoBase !== 'function') {
+    window.renderEquipoBase = renderEquipoBase;
+  }
+  if (typeof renderMSD === 'function' && typeof window.renderMSD !== 'function') {
+    window.renderMSD = renderMSD;
+  }
+});
+</script>
+
+<script>
+// PATCH DEFINITIVO: Limpia f.vence en cualquier array de facturas
+function patchVencimientos(arr) {
+  if (!arr || !arr.length) return false;
+  var changed = false;
+  arr.forEach(function(f) {
+    var v = String(f.vence || '');
+    if (v.indexOf('T') >= 0) {
+      // ISO timestamp: extraer yyyy-MM-dd SIN conversión UTC
+      f.vence = v.substring(0, 10);
+      var p = f.vence.split('-');
+      f.venceDisplay = p[2]+'/'+p[1]+'/'+p[0];
+      changed = true;
+    } else if (/^\d{2}\/\d{2}\/\d{4}$/.test(v)) {
+      // dd/MM/yyyy → yyyy-MM-dd
+      var p2 = v.split('/');
+      f.vence = p2[2]+'-'+p2[1]+'-'+p2[0];
+      f.venceDisplay = v;
+      changed = true;
+    }
+  });
+  return changed;
+}
+
 </script>
 
 </body>

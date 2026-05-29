@@ -146,6 +146,19 @@ select,input{padding:6px 10px;border:1px solid #d0cec8;border-radius:7px;font-si
 
 #login-hint{font-size:11px;color:#bbb;text-align:center;margin-top:16px}
 
+
+/* ── Ocultar saldos (botón 👁) ─────────────────────── */
+body.saldos-ocultos .ind-v,
+body.saldos-ocultos .met-v,
+body.saldos-ocultos .kpi-val,
+body.saldos-ocultos .tb,
+body.saldos-ocultos .tg,
+body.saldos-ocultos .tr,
+body.saldos-ocultos .tw {
+  color: transparent !important;
+  text-shadow: 0 0 8px rgba(0,0,0,0.35) !important;
+  user-select: none !important;
+}
 </style>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -680,11 +693,11 @@ tbody tr:hover td{background:var(--cyan-light);}
 
     <span>📋 Ver detalle de gastos por categoría</span>
 
-    <span id="ico-detalle-gastos" style="font-size:14px;transition:transform .2s;transform:rotate(180deg)">▼</span>
+    <span id="ico-detalle-gastos" style="font-size:14px;transition:transform .2s;transform:rotate(0deg)">▼</span>
 
   </button>
 
-  <div id="gd-grupos" style="display:block;margin-top:12px"></div>
+  <div id="gd-grupos" style="display:none;margin-top:12px"></div>
 
 </div>
 
@@ -16929,21 +16942,23 @@ function fcActualizar() {
 
       ingReal[m] += (f.total||0);
 
-      // Determinar mes de cobro según días de pago
-      var diasP = diasPagoCliente(f.cliente||'');
-      var fechaMs = new Date(fAnio, m, parseInt(dp[0])||1).getTime();
-      var cobroMs = fechaMs + diasP * 86400000;
-      var cobroMes = new Date(cobroMs).getMonth();
-      var cobroAnio = new Date(cobroMs).getFullYear();
-      if (cobroAnio === anio && cobroMes >= 0 && cobroMes < 12)
-        ingCobro[cobroMes] += (f.total||0);
-
       // Vencida y no pagada
       var hoyMs = new Date().getTime();
       var vencida = !f.pagada && f.vence && (new Date(f.vence).getTime() < hoyMs);
 
-      if (f.pagada) ingPag[m] += (f.total||0);
-      else if (vencida) ingVenc[m] += (f.total||0);
+      if (f.pagada) {
+        ingPag[m] += (f.total||0);
+      } else {
+        // Solo facturas NO pagadas van a proyección de cobro
+        var diasP = diasPagoCliente(f.cliente||'');
+        var fechaMs = new Date(fAnio, m, parseInt(dp[0])||1).getTime();
+        var cobroMs = fechaMs + diasP * 86400000;
+        var cobroMes = new Date(cobroMs).getMonth();
+        var cobroAnio = new Date(cobroMs).getFullYear();
+        if (cobroAnio === anio && cobroMes >= 0 && cobroMes < 12)
+          ingCobro[cobroMes] += (f.total||0);
+        if (vencida) ingVenc[m] += (f.total||0);
+      }
 
       detMes[m].push({
         num: f.num||'—', cliente: f.cliente||'—',
@@ -16978,7 +16993,10 @@ function fcActualizar() {
   if (typeof GASTOS_DATA !== 'undefined') {
     GASTOS_DATA.forEach(function(r) {
       var cat = (r['Categoria']||r['Categoría']||'').toLowerCase();
-      if (cat.indexOf('traslado')>=0 || cat.indexOf('inversión')>=0 || cat.indexOf('inversion')>=0) return;
+      // Excluir solo movimientos que no son salidas reales de caja
+      if (cat.indexOf('traslado')>=0) return;
+      if (cat.indexOf('inversión')>=0 || cat.indexOf('inversion')>=0) return;
+      if ((r['Tipo_Movimiento']||'').toLowerCase() === 'traslado') return;
       var dp = (r['Fecha']||'').split('/');
       if (dp.length < 3 || parseInt(dp[2]) !== anio) return;
       var m = parseInt(dp[1]) - 1;

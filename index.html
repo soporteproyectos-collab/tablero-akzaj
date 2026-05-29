@@ -1207,6 +1207,28 @@ tbody tr:hover td{background:var(--cyan-light);}
 
 </div>
 
+
+<script>
+// Función de display de fechas — requerida por renderFacturas
+function alzakFechaDisplay(val) {
+  if (!val) return '—';
+  var s = String(val).trim();
+  // dd/MM/yyyy → texto
+  var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m) {
+    var MN = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    return m[1] + ' ' + (MN[parseInt(m[2])-1]||m[2]) + ' ' + m[3];
+  }
+  // yyyy-MM-dd
+  var m2 = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m2) {
+    var MN2 = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    return m2[3] + ' ' + (MN2[parseInt(m2[2])-1]||m2[2]) + ' ' + m2[1];
+  }
+  return s;
+}
+</script>
+
 <script>
 
 var CLIENTES_ALZAK = [

@@ -868,9 +868,7 @@ tbody tr:hover td{background:var(--cyan-light);}
         </div>
         <button onclick="fpAgregarNuevo()" style="background:#7C3AED;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif">+ Agregar</button>
       </div>
-      <div id="fp-lista">
-        <div style="color:#aaa;font-size:11px;padding:4px">Sin facturas programadas aún.</div>
-      </div>
+      <div id="fp-lista" style="margin-top:4px"></div>
     </div>
 
   </div>
@@ -2047,6 +2045,7 @@ function alzakCargarDatosSheets(callback) {
 // Auto-sync al cargar
 setTimeout(function(){
   try { alzakCargarDatosSheets(); } catch(e) { console.warn('Auto-sync:', e); }
+  setTimeout(function(){ if(typeof fpRenderLista==='function') fpRenderLista(); }, 800);
 }, 1500);
 
 // ── Cálculo automático IVA en modal factura ──────────────────
@@ -17102,31 +17101,148 @@ function fpRenderLista() {
   if (!el) return;
   var data = [];
   try { data = JSON.parse(localStorage.getItem('alzak_fp_2026')||'[]'); } catch(e) {}
-  if (!data.length) { el.innerHTML = '<div style="color:#aaa;font-size:11px;padding:8px 0">Sin facturas programadas. Usa + Agregar para planificar.</div>'; return; }
-  var MN = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  var html = '<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:8px">';
-  html += '<tr style="background:#f0ede8"><th style="padding:6px 10px;text-align:left">Cliente</th><th style="padding:6px 10px;text-align:left">Proyecto</th><th style="padding:6px 10px;text-align:right">Monto</th><th style="padding:6px 10px;text-align:center">Mes</th><th style="padding:6px 10px;text-align:center">Días cobro</th><th style="padding:6px 10px;text-align:center">Cobro est.</th><th style="padding:6px 10px;text-align:center"></th></tr>';
+
+  if (!data.length) {
+    el.innerHTML = '<div style="color:#aaa;font-size:11px;padding:10px 0;text-align:center">Sin facturas programadas aún — usa <strong>+ Agregar</strong> para planificar tus próximas facturas.</div>';
+    return;
+  }
+
   var DIAS_PAGO = {'SANOFI':60,'BAYER':45,'MSD':90,'MERCK':90,'ADIUM':45,'VAXTHERA':60,'JANSSEN':60,'AMGEN':45,'ROCHE':60,'PFIZER':45,'ABBVIE':45,'NOVARTIS':60,'ASTRAZENECA':45,'GILEAD':60,'BIOGEN':60};
-  function diasPagoCliente(c) { var cu=(c||'').toUpperCase(); for(var k in DIAS_PAGO){if(cu.indexOf(k)>=0)return DIAS_PAGO[k];} return 45; }
+  function diasP(c) { var cu=(c||'').toUpperCase(); for(var k in DIAS_PAGO){if(cu.indexOf(k)>=0)return DIAS_PAGO[k];} return 45; }
+  var MNL = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  var MNF = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+  var totalProg = data.reduce(function(a,r){return a+(parseFloat(r.monto)||0);},0);
+
+  var html = '<div style="overflow-x:auto">';
+  html += '<table style="width:100%;border-collapse:collapse;font-size:11px">';
+  html += '<thead><tr style="background:#EDE9FE;color:#553C9A">';
+  html += '<th style="padding:7px 10px;text-align:left;font-weight:700">Cliente</th>';
+  html += '<th style="padding:7px 10px;text-align:left;font-weight:700">Proyecto</th>';
+  html += '<th style="padding:7px 10px;text-align:right;font-weight:700">Monto</th>';
+  html += '<th style="padding:7px 8px;text-align:center;font-weight:700">Mes fact.</th>';
+  html += '<th style="padding:7px 8px;text-align:center;font-weight:700">Días cobro</th>';
+  html += '<th style="padding:7px 8px;text-align:center;font-weight:700">Cobro est.</th>';
+  html += '<th style="padding:7px 8px;text-align:center;font-weight:700">Acciones</th>';
+  html += '</tr></thead><tbody>';
+
   data.forEach(function(r, idx) {
-    var mesIdx = parseInt((r.fecha||'2026-01-01').split('-')[1]||1) - 1;
-    var dp = diasPagoCliente(r.cliente||'');
-    var fechaMs = new Date(2026, mesIdx, 1).getTime();
-    var cobroD  = new Date(fechaMs + dp*86400000);
-    var cobroStr = MN[cobroD.getMonth()] + ' ' + cobroD.getFullYear();
-    html += '<tr style="border-bottom:1px solid #f0ede8">';
-    html += '<td style="padding:6px 10px;font-weight:600">'+r.cliente+'</td>';
-    html += '<td style="padding:6px 10px;color:#666">'+r.proyecto+'</td>';
-    html += '<td style="padding:6px 10px;text-align:right;font-weight:700;color:#0C447C">$'+Math.round(r.monto||0).toLocaleString('es-CO')+'</td>';
-    html += '<td style="padding:6px 10px;text-align:center">'+MN[mesIdx]+'</td>';
-    html += '<td style="padding:6px 10px;text-align:center;color:#888">'+dp+' días</td>';
-    html += '<td style="padding:6px 10px;text-align:center;color:#276749;font-weight:600">'+cobroStr+'</td>';
-    html += '<td style="padding:6px 10px;text-align:center"><button onclick="fpEliminar('+idx+')" style="background:none;border:none;color:#E53E3E;cursor:pointer;font-size:13px">✕</button></td>';
-    html += '</tr>';
+    var mesIdx = parseInt(((r.fecha||'2026-01-01').split('-')[1]||'1')) - 1;
+    if (mesIdx < 0 || mesIdx > 11) mesIdx = 0;
+    var dp = diasP(r.cliente||'');
+    var fechaBase = new Date(2026, mesIdx, 15); // usar día 15 del mes
+    var cobro = new Date(fechaBase.getTime() + dp*86400000);
+    var cobroStr = cobro.getDate()+' '+MNL[cobro.getMonth()]+' '+cobro.getFullYear();
+    var bg = idx % 2 === 0 ? '#FDFCFF' : '#F8F5FF';
+    html += '<tr style="background:'+bg+';border-bottom:1px solid #EDE9FE">';
+    html += '<td style="padding:7px 10px;font-weight:600;color:#553C9A">'+fpEsc(r.cliente||'')+'</td>';
+    html += '<td style="padding:7px 10px;color:#666;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+fpEsc(r.proyecto||'')+'">'+fpEsc((r.proyecto||'').substring(0,40))+'</td>';
+    html += '<td style="padding:7px 10px;text-align:right;font-weight:700;color:#0C447C">$'+Math.round(parseFloat(r.monto)||0).toLocaleString('es-CO')+'</td>';
+    html += '<td style="padding:7px 8px;text-align:center;color:#374151">'+MNL[mesIdx]+'</td>';
+    html += '<td style="padding:7px 8px;text-align:center;color:#888">'+dp+' días</td>';
+    html += '<td style="padding:7px 8px;text-align:center;font-weight:600;color:#276749">'+cobroStr+'</td>';
+    html += '<td style="padding:7px 8px;text-align:center;white-space:nowrap">';
+    html += '<button onclick="fpEditar('+idx+')" title="Editar" style="background:#EDE9FE;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px;color:#553C9A;margin-right:4px">✏️</button>';
+    html += '<button onclick="fpEliminar('+idx+')" title="Eliminar" style="background:#FEE2E2;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px;color:#C53030">🗑️</button>';
+    html += '</td></tr>';
   });
-  html += '</table>';
+
+  // Fila total
+  html += '<tr style="background:#EDE9FE;font-weight:700">';
+  html += '<td style="padding:7px 10px;color:#553C9A">Total programado</td>';
+  html += '<td colspan="1"></td>';
+  html += '<td style="padding:7px 10px;text-align:right;color:#553C9A">$'+Math.round(totalProg).toLocaleString('es-CO')+'</td>';
+  html += '<td colspan="4"></td></tr>';
+
+  html += '</tbody></table></div>';
   el.innerHTML = html;
 }
+
+function fpEditar(idx) {
+  var data = [];
+  try { data = JSON.parse(localStorage.getItem('alzak_fp_2026')||'[]'); } catch(e) {}
+  var r = data[idx];
+  if (!r) return;
+
+  var CLIENTES = ['Bayer S.A.','Sanofi Aventis de Colombia SA','Janssen Cilag S.A','AMGEN Biotecnologica S.A.S','Vaxthera S.A.S','MSD Colombia','Adium Pharma','Roche Colombia','Pfizer Colombia','AbbVie Colombia','Novartis Colombia','AstraZeneca Colombia','Gilead Sciences','Biogen Colombia','Abbott Laboratorios'];
+  var optsClientes = CLIENTES.map(function(c){
+    return '<option value="'+c+'"'+(c===r.cliente?' selected':'')+'>'+c+'</option>';
+  }).join('');
+  var clienteEsOtro = CLIENTES.indexOf(r.cliente) < 0;
+
+  var modal = document.createElement('div');
+  modal.id = 'fp-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center';
+  modal.innerHTML = '<div style="background:#fff;border-radius:14px;padding:28px 32px;width:460px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,0.2)">' +
+    '<div style="font-size:15px;font-weight:700;color:#7C3AED;margin-bottom:20px">✏️ Editar Factura Programada</div>' +
+    '<div style="margin-bottom:14px">' +
+      '<label style="font-size:11px;font-weight:700;color:#54504F;display:block;margin-bottom:5px">CLIENTE *</label>' +
+      '<select id="fp-inp-cliente" style="width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:12px;box-sizing:border-box;font-family:Montserrat,sans-serif">' +
+        '<option value="">— Selecciona cliente —</option>' + optsClientes +
+        '<option value="__otro__"'+(clienteEsOtro?' selected':'')+'>Otro (escribir)...</option>' +
+      '</select>' +
+      '<input id="fp-inp-cliente-otro" type="text" value="'+(clienteEsOtro?fpEsc(r.cliente||''):'')+'" placeholder="Nombre del cliente" style="'+(clienteEsOtro?'':'display:none;')+'width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:12px;box-sizing:border-box;font-family:Montserrat,sans-serif;margin-top:6px">' +
+    '</div>' +
+    '<div style="margin-bottom:14px">' +
+      '<label style="font-size:11px;font-weight:700;color:#54504F;display:block;margin-bottom:5px">PROYECTO / DESCRIPCIÓN</label>' +
+      '<input id="fp-inp-proyecto" type="text" value="'+fpEsc(r.proyecto||'')+'" style="width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:12px;box-sizing:border-box;font-family:Montserrat,sans-serif">' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">' +
+      '<div><label style="font-size:11px;font-weight:700;color:#54504F;display:block;margin-bottom:5px">MONTO ANTES IVA *</label>' +
+        '<input id="fp-inp-monto" type="number" value="'+( r.monto||0)+'" style="width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:12px;box-sizing:border-box;font-family:Montserrat,sans-serif"></div>' +
+      '<div><label style="font-size:11px;font-weight:700;color:#54504F;display:block;margin-bottom:5px">FECHA PROGRAMADA *</label>' +
+        '<input id="fp-inp-fecha" type="date" value="'+(r.fecha||'')+'" style="width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:12px;box-sizing:border-box;font-family:Montserrat,sans-serif"></div>' +
+    '</div>' +
+    '<div id="fp-cobro-preview" style="background:#F0FFF4;border-radius:8px;padding:10px 14px;font-size:11px;color:#276749;margin-bottom:14px">⏱ Cobro estimado: <strong id="fp-cobro-fecha"></strong></div>' +
+    '<div style="margin-bottom:20px">' +
+      '<label style="font-size:11px;font-weight:700;color:#54504F;display:block;margin-bottom:5px">OBSERVACIONES</label>' +
+      '<input id="fp-inp-obs" type="text" value="'+fpEsc(r.obs||'')+'" style="width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:12px;box-sizing:border-box;font-family:Montserrat,sans-serif">' +
+    '</div>' +
+    '<div style="display:flex;gap:10px;justify-content:flex-end">' +
+      '<button onclick="fpCerrarModal()" style="background:#f5f4f0;border:none;border-radius:8px;padding:9px 20px;font-size:12px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;color:#54504F">Cancelar</button>' +
+      '<button onclick="fpGuardarEdicion('+idx+')" style="background:#7C3AED;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:12px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif">Guardar cambios</button>' +
+    '</div>' +
+  '</div>';
+  document.body.appendChild(modal);
+
+  var selCli = document.getElementById('fp-inp-cliente');
+  var inpOtro = document.getElementById('fp-inp-cliente-otro');
+  selCli.onchange = function() {
+    inpOtro.style.display = selCli.value === '__otro__' ? 'block' : 'none';
+    fpActualizarCobroPreview();
+  };
+  document.getElementById('fp-inp-fecha').onchange = fpActualizarCobroPreview;
+  fpActualizarCobroPreview();
+}
+
+function fpGuardarEdicion(idx) {
+  var sel = document.getElementById('fp-inp-cliente');
+  var cliente = sel && sel.value === '__otro__'
+    ? ((document.getElementById('fp-inp-cliente-otro')||{}).value||'').trim()
+    : (sel ? sel.value : '');
+  var proyecto = (document.getElementById('fp-inp-proyecto')||{}).value || '';
+  var monto = parseFloat((document.getElementById('fp-inp-monto')||{}).value||0) || 0;
+  var fecha = (document.getElementById('fp-inp-fecha')||{}).value || '';
+  var obs   = (document.getElementById('fp-inp-obs')||{}).value || '';
+  if (!cliente) { alert('Selecciona o escribe el cliente.'); return; }
+  if (!monto)   { alert('Ingresa el monto.');                return; }
+  if (!fecha)   { alert('Selecciona la fecha.');             return; }
+  var data = [];
+  try { data = JSON.parse(localStorage.getItem('alzak_fp_2026')||'[]'); } catch(e) {}
+  var entry = { cliente:cliente, proyecto:proyecto.trim(), monto:monto, fecha:fecha, obs:obs };
+  for (var m=0; m<12; m++) entry['m'+(m+1)] = 0;
+  var mes = parseInt((fecha.split('-')[1]||'1')) - 1;
+  if (mes >= 0 && mes < 12) entry['m'+(mes+1)] = monto;
+  data[idx] = entry;
+  localStorage.setItem('alzak_fp_2026', JSON.stringify(data));
+  fpCerrarModal();
+  fpRenderLista(); fcActualizar();
+  if (typeof mostrarToast === 'function') mostrarToast('✅ Factura programada actualizada', '#1D9E75', 2000);
+}
+
+function fpEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+
+
 
 function fpAgregarNuevo() {
   var CLIENTES = [

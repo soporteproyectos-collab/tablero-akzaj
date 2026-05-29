@@ -1890,14 +1890,21 @@ function alzakCargarDatosSheets(callback) {
           // Asegurar que N Comprobante es string
           if (r['N Comprobante'] !== undefined) r['N Comprobante'] = String(r['N Comprobante']).trim();
           return r;
-        }).filter(function(r) { return r['Fecha'] && r['Categoria']; });
+        }).filter(function(r) { return r['Fecha'] && (r['Categoria'] || r['Categoría']); });
         cargados.push('Radicadas: ' + FR_DATA.length);
       }
 
       // ── Egresos → GASTOS_DATA ────────────────────────────
       if (data.egresos && data.egresos.length) {
         GASTOS_DATA = data.egresos.map(function(r) {
+          // Normalizar N_Comprobante
           if (r['N_Comprobante'] !== undefined) r['N_Comprobante'] = String(r['N_Comprobante']).trim();
+          // Normalizar Total_COP desde "Total ($)" que es el nombre real del campo en el Sheet
+          if (!r['Total_COP'] && r['Total ($)'] !== undefined) r['Total_COP'] = parseFloat(r['Total ($)']) || 0;
+          // Normalizar Categoria sin tilde
+          if (!r['Categoria'] && r['Categoría']) r['Categoria'] = r['Categoría'];
+          // Normalizar Beneficiario
+          if (!r['Proveedor / Beneficiario'] && r['Beneficiario']) r['Proveedor / Beneficiario'] = r['Beneficiario'];
           return r;
         });
         cargados.push('Egresos: ' + GASTOS_DATA.length);
@@ -1909,7 +1916,7 @@ function alzakCargarDatosSheets(callback) {
           Object.keys(r).forEach(function(k){ obj[k] = r[k]; });
           // Normalizar campos que el tablero espera
           obj['Proveedor / Beneficiario'] = r['Proveedor / Beneficiario'] || r['Proveedor'] || r['Beneficiario'] || '';
-          obj['Valor']      = parseFloat(r['Total_COP'] || r['Total (COP)'] || r['Valor'] || 0);
+          obj['Valor']      = parseFloat(r['Total_COP'] || r['Total ($)'] || r['Total (COP)'] || r['Valor'] || 0);
           obj['Fecha_Pago'] = r['Fecha'] || r['Fecha_Pago'] || '';
           obj['Categoria']  = r['Categoria'] || r['Categoría'] || '';
           obj['N_Comprobante'] = String(r['N_Comprobante'] || r['N Comprobante'] || '').trim();

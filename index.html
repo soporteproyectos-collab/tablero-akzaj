@@ -8993,7 +8993,7 @@ function borrarBloque(bloque) {
 
     for (var i=0; i<FACTURAS.length; i++) {
 
-      var dp = fFechaPartes(FACTURAS[i].fecha);
+      var dp = fFechaPartes(FACTURAS[i].fecha_raw || FACTURAS[i].fecha);
 
       if (dp.length===3) { var k=MN[parseInt(dp[1])-1]+' '+dp[0]; periodos[k]=(periodos[k]||0)+1; }
 
@@ -9165,7 +9165,7 @@ function confirmarBorrarPeriodo(bloque) {
 
     FACTURAS = FACTURAS.filter(function(f){
 
-      var dp = fFechaPartes(f.fecha);
+      var dp = fFechaPartes(f.fecha_raw || f.fecha);
 
       if (dp.length!==3) return true;
 
@@ -9260,7 +9260,7 @@ function renderResumenTablero() {
 
   // Ingresos también filtrados a 2026
   var totalFact2026 = FACTURAS.filter(function(f){
-    var dp = fFechaPartes(f.fecha);
+    var dp = fFechaPartes(f.fecha_raw || f.fecha);
     return dp.length === 3 && dp[0] === '2026';
   }).reduce(function(a,f){ return a+(f.bruto||0); }, 0);
 
@@ -9881,7 +9881,7 @@ function calcBalMes(mes) {
 
   // Facturas 2026 emitidas hasta el corte
   var factFil = FACTURAS.filter(function(f){
-    var dp = fFechaPartes(f.fecha);
+    var dp = fFechaPartes(f.fecha_raw || f.fecha);
     if (dp.length < 3) return false;
     if (!mes) return true;
     var fAnio = parseInt(dp[0]), fMes = parseInt(dp[1]);
@@ -9913,7 +9913,7 @@ function calcBalMes(mes) {
     // Cobros de cartera 2025 recibidos hasta el corte del mes
     var totalCobrado2025calc = 0;
     FACTURAS.forEach(function(f) {
-      var dp0 = fFechaPartes(f.fecha||'');
+      var dp0 = fFechaPartes(f.fecha_raw || f.fecha || '');
       if (dp0.length < 3) return;
       if (parseInt(dp0[0]) >= 2026) return; // solo facturas 2025
       if (!f.pagada) return;
@@ -10207,7 +10207,7 @@ function renderBalance() {
 
   var disp = {};
 
-  for (var i=0;i<FACTURAS.length;i++) { var dp=fFechaPartes(FACTURAS[i].fecha); if(dp.length===3) disp[MN[parseInt(dp[1])-1]+' '+dp[0]]=1; }
+  for (var i=0;i<FACTURAS.length;i++) { var dp=fFechaPartes(FACTURAS[i].fecha_raw || FACTURAS[i].fecha); if(dp.length===3) disp[MN[parseInt(dp[1])-1]+' '+dp[0]]=1; }
 
   for (var i=0;i<GASTOS_DATA.length;i++) { if(GASTOS_DATA[i]['Mes']) disp[GASTOS_DATA[i]['Mes']]=1; }
 
@@ -10344,7 +10344,7 @@ function renderBalance() {
       // Cobros de cartera 2025 recibidos hasta el corte (facturas 2025 pagadas con fecha_pago en 2026)
       var _cierreTs = d.cxcCierreTs || Infinity;
       var cobrados2025 = FACTURAS.filter(function(f){
-        var dp0 = fFechaPartes(f.fecha||'');
+        var dp0 = fFechaPartes(f.fecha_raw || f.fecha || '');
         if (dp0.length<3) return false;
         if (parseInt(dp0[0]) >= 2026) return false;
         if (!f.pagada || !f.fecha_pago) return false;
@@ -10611,7 +10611,7 @@ function calcMesData(mes) {
   var MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
   var ff=FACTURAS.filter(function(f){
-    var dp = fFechaPartes(f.fecha);
+    var dp = fFechaPartes(f.fecha_raw || f.fecha);
     if(!dp[0] || !dp[1]) return false;
     return MN[parseInt(dp[1])-1]+' '+String(dp[0])===String(mes);
   });
@@ -10657,7 +10657,7 @@ function getMeses() {
   var disp={};
 
   for(var i=0;i<FACTURAS.length;i++){
-    var dp=fFechaPartes(FACTURAS[i].fecha);
+    var dp=fFechaPartes(FACTURAS[i].fecha_raw || FACTURAS[i].fecha);
     if(dp[0] && dp[1] && (!anioFil || String(dp[0])===String(anioFil))) disp[MN[parseInt(dp[1])-1]+' '+dp[0]]=1;
   }
   for(var i=0;i<GASTOS_DATA.length;i++){
@@ -10822,7 +10822,7 @@ function renderErDetalle() {
   var dataM=meses.map(calcMesData);
 
   var accIng=FACTURAS.filter(function(f){
-    var dp = fFechaPartes(f.fecha);
+    var dp = fFechaPartes(f.fecha_raw || f.fecha);
     return dp[0] && dp[1] && (!anioFil3||String(dp[0])===String(anioFil3));
   }).reduce(function(a,f){return a+(f.bruto||0);},0);
 
@@ -11156,7 +11156,7 @@ function exportarPDFEstadoResultados() {
 
       var desc=f.num+(f.descripcion?' · '+(f.descripcion||'').substring(0,35):'');
 
-      var fMes=''; var dp = fFechaPartes(f.fecha);
+      var fMes=''; var dp = fFechaPartes(f.fecha_raw || f.fecha);
 
       if(dp.length===3){var MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];fMes=MN[parseInt(dp[1])-1]+' '+dp[0];}
 
@@ -11404,7 +11404,9 @@ function renderEstadoResultados() {
       var mesesFil = getMeses(); // ya filtrados por año
 
       ingT = FACTURAS.filter(function(f){
-        var dp = fFechaPartes(f.fecha);
+        // Usar fecha_raw (dd/MM/yyyy) para parseo correcto
+        var rawF = f.fecha_raw || f.fecha || '';
+        var dp = fFechaPartes(rawF);
         return dp[0] && dp[1] && (!anioFil2 || String(dp[0])===String(anioFil2));
       }).reduce(function(a,f){return a+(f.bruto||0);},0);
 
@@ -16808,7 +16810,7 @@ function fcRender() {
   var ingCob  = new Array(12).fill(0);
   if (typeof FACTURAS !== 'undefined') {
     FACTURAS.forEach(function(f) {
-      var dp = typeof fFechaPartes==='function' ? fFechaPartes(f.fecha||'') : (f.fecha||'').split('/');
+      var dp = typeof fFechaPartes==='function' ? fFechaPartes(f.fecha_raw || f.fecha || '') : (f.fecha||'').split('/');
       if (dp.length < 3 || parseInt(dp[2]) !== anio) return;
       var m = parseInt(dp[1]) - 1;
       if (m >= 0 && m < 12) {
@@ -16930,18 +16932,21 @@ function fcActualizar() {
   }
 
   // ── Arrays por mes ───────────────────────────────────
-  var ingReal  = new Array(12).fill(0); // facturado
-  var ingPag   = new Array(12).fill(0); // pagado (cobrado efectivo)
-  var ingVenc  = new Array(12).fill(0); // vencidas sin cobrar
-  var ingCobro = new Array(12).fill(0); // cuando entrará la plata (según días pago)
-  var ingProg  = new Array(12).fill(0); // programado (localStorage)
-  var ingProgCobro = new Array(12).fill(0); // cuándo entraría lo programado
-  var detMes   = []; for (var i=0; i<12; i++) detMes.push([]);
+  var ingReal      = new Array(12).fill(0); // facturado (mes emisión)
+  var ingPag       = new Array(12).fill(0); // pagado confirmado (mes emisión)
+  var ingVenc      = new Array(12).fill(0); // vencido sin cobrar (mes de vencimiento)
+  var ingCobro     = new Array(12).fill(0); // proyección cobro pendientes (mes vencimiento)
+  var ingProg      = new Array(12).fill(0); // programado
+  var ingProgCobro = new Array(12).fill(0); // cobro estimado programadas
+  // Por mes: total esperado y total pagado (para saldo neto)
+  var mesEsperado  = new Array(12).fill(0); // total que debía entrar ese mes
+  var mesPagado    = new Array(12).fill(0); // lo que efectivamente entró
+  var detMes       = []; for (var i=0; i<12; i++) detMes.push([]);
+  var hoyMs = new Date().getTime();
 
   if (typeof FACTURAS !== 'undefined') {
     FACTURAS.forEach(function(f) {
       var rawFecha = f.fecha_raw || f.fecha || '';
-      // Buscar dd/MM/yyyy
       var dp = rawFecha.indexOf('/') >= 0 ? rawFecha.split('/') : null;
       if (!dp || dp.length < 3) return;
       var fAnio = parseInt(dp[2]);
@@ -16951,23 +16956,33 @@ function fcActualizar() {
 
       ingReal[m] += (f.total||0);
 
-      // Vencida y no pagada
-      var hoyMs = new Date().getTime();
-      var vencida = !f.pagada && f.vence && (new Date(f.vence).getTime() < hoyMs);
+      // Calcular mes de vencimiento real (según días de pago del cliente)
+      var diasP = diasPagoCliente(f.cliente||'');
+      var fechaMs = new Date(fAnio, m, parseInt(dp[0])||1).getTime();
+      var venceMs = fechaMs + diasP * 86400000;
+      var venceMes = new Date(venceMs).getMonth();
+      var venceAnio = new Date(venceMs).getFullYear();
+
+      // Vencida = ya pasó la fecha de vencimiento y no está pagada
+      var vencida = !f.pagada && venceMs < hoyMs;
 
       if (f.pagada) {
+        // Pagada: cuenta en el mes de emisión
         ingPag[m] += (f.total||0);
+        // También suma al mes de vencimiento como "ya cobrado"
+        if (venceAnio === anio && venceMes >= 0 && venceMes < 12)
+          mesPagado[venceMes] += (f.total||0);
       } else {
-        // Solo facturas NO pagadas van a proyección de cobro
-        var diasP = diasPagoCliente(f.cliente||'');
-        var fechaMs = new Date(fAnio, m, parseInt(dp[0])||1).getTime();
-        var cobroMs = fechaMs + diasP * 86400000;
-        var cobroMes = new Date(cobroMs).getMonth();
-        var cobroAnio = new Date(cobroMs).getFullYear();
-        if (cobroAnio === anio && cobroMes >= 0 && cobroMes < 12)
-          ingCobro[cobroMes] += (f.total||0);
-        if (vencida) ingVenc[m] += (f.total||0);
+        // No pagada: proyección va en el mes de vencimiento
+        if (venceAnio === anio && venceMes >= 0 && venceMes < 12) {
+          ingCobro[venceMes] += (f.total||0);
+          if (vencida) ingVenc[venceMes] += (f.total||0);
+        }
       }
+
+      // Lo esperado va en el mes de vencimiento (pagado o no)
+      if (venceAnio === anio && venceMes >= 0 && venceMes < 12)
+        mesEsperado[venceMes] += (f.total||0);
 
       detMes[m].push({
         num: f.num||'—', cliente: f.cliente||'—',
@@ -16986,8 +17001,8 @@ function fcActualizar() {
         if (!v) continue;
         ingProg[m] += v;
         // Proyectar cobro
-        var dp2 = (r.fecha||'').split('-');
-        var fMs2 = new Date(parseInt(dp2[0]||2026), m, 1).getTime();
+        // Usar fecha exacta guardada (no día 1 del mes)
+        var fMs2 = r.fecha ? new Date(r.fecha).getTime() : new Date(2026, m, 1).getTime();
         var dias2 = diasPagoCliente(r.cliente||'');
         var cobMs2 = new Date(fMs2 + dias2*86400000).getMonth();
         var cobA2  = new Date(fMs2 + dias2*86400000).getFullYear();
@@ -17056,17 +17071,38 @@ function fcActualizar() {
     html += '<td style="padding:8px;text-align:right;font-weight:700">'+fmS(tot, f.col)+'</td></tr>';
   });
 
-  // Saldo neto
+  // ── Saldo neto — solo ingresos esperados por mes ────────
+  // Lógica: si hay facturas pendientes en el mes → suma solo pendientes
+  //         si todas pagadas → suma todo lo esperado
   html += '<tr style="background:#1E3A5F;color:#fff;font-weight:700">';
-  html += '<td style="padding:9px 12px">📊 Saldo neto mes</td>';
+  html += '<td style="padding:9px 12px">💰 Por cobrar / Cobrado</td>';
   var totAcum = 0;
   for (var m=0; m<12; m++) {
-    var neto = ingReal[m] + ingProg[m] - egr[m];
-    totAcum += neto;
-    var col = neto >= 0 ? '#68D391' : '#FC8181';
+    var esperado  = mesEsperado[m] + ingProg[m];   // total que debía entrar
+    var pagadoM   = mesPagado[m];                   // lo que ya entró
+    var pendiente = esperado - pagadoM;             // lo que falta
+
+    var neto, col, sub;
+    if (esperado === 0) {
+      neto = 0;
+    } else if (pendiente <= 0) {
+      // Todo cobrado — mostrar total en verde
+      neto = esperado;
+      col = '#68D391';
+    } else if (pagadoM > 0) {
+      // Parcialmente cobrado — mostrar pendiente en amarillo
+      neto = pendiente;
+      col = '#F6E05E';
+    } else {
+      // Nada cobrado — mostrar esperado en blanco
+      neto = esperado;
+      col = '#fff';
+    }
+    if (!col) col = neto >= 0 ? '#68D391' : '#FC8181';
+    totAcum += (pendiente > 0 ? pendiente : esperado);
     html += '<td style="padding:9px 6px;text-align:right;cursor:pointer;'+(m===hoy?'background:#2a5298':'')+';color:'+col+'" onclick="fcToggleDet('+m+')">'+(neto?(neto<0?'-':'')+'$'+Math.round(Math.abs(neto)).toLocaleString('es-CO'):'—')+'</td>';
   }
-  html += '<td style="padding:9px 8px;text-align:right;color:'+(totAcum>=0?'#68D391':'#FC8181')+'">'+(totAcum<0?'-':'')+'$'+Math.round(Math.abs(totAcum)).toLocaleString('es-CO')+'</td>';
+  html += '<td style="padding:9px 8px;text-align:right;color:#68D391">$'+Math.round(Math.abs(totAcum)).toLocaleString('es-CO')+'</td>';
   html += '</tr>';
 
   // Detalle por mes
@@ -17171,7 +17207,8 @@ function fpRenderLista() {
     var mesIdx = parseInt(((r.fecha||'2026-01-01').split('-')[1]||'1')) - 1;
     if (mesIdx < 0 || mesIdx > 11) mesIdx = 0;
     var dp = diasP(r.cliente||'');
-    var fechaBase = new Date(2026, mesIdx, 1); // usar día 1 del mes (igual que fcActualizar)
+    // Usar fecha exacta guardada para consistencia con el modal
+    var fechaBase = r.fecha ? new Date(r.fecha) : new Date(2026, mesIdx, 1);
     var cobro = new Date(fechaBase.getTime() + dp*86400000);
     var cobroStr = cobro.getDate()+' '+MNL[cobro.getMonth()]+' '+cobro.getFullYear();
     var bg = idx % 2 === 0 ? '#FDFCFF' : '#F8F5FF';

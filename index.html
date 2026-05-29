@@ -423,7 +423,7 @@ tbody tr:hover td{background:var(--cyan-light);}
 <div id="tab-nav" style="background:#333;padding:8px 28px;gap:8px;align-items:center;display:none;position:sticky;top:0;z-index:999;">
   <button id="tab-home-btn" onclick="tabHome()" style="padding:6px 18px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif;background:#5DC3DA;color:#fff;">&#127968; Tablero</button>
 
-  <button id="tab-sync-btn" onclick="alzakSincronizarSheets()" title="Sincronizar datos desde Google Sheets" style="padding:6px 14px;border-radius:20px;border:1px solid rgba(93,195,218,0.4);cursor:pointer;font-size:11px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif;background:rgba(93,195,218,0.15);color:#5DC3DA;">&#128260; Sincronizar</button>
+  <button id="tab-sync-btn" onclick="alzakCargarDatosSheets()" title="Sincronizar datos desde Google Sheets" style="padding:6px 14px;border-radius:20px;border:1px solid rgba(93,195,218,0.4);cursor:pointer;font-size:11px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif;background:rgba(93,195,218,0.15);color:#5DC3DA;">&#128260; Sincronizar</button>
   <button onclick="if(confirm('¿Limpiar caché y recargar todo desde Sheets?')) alzakLimpiarCache()" title="Limpiar caché" style="padding:6px 14px;border-radius:20px;border:1px solid rgba(255,100,100,0.3);cursor:pointer;font-size:11px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif;background:rgba(255,100,100,0.12);color:#ff9999;">&#128465; Limpiar</button>
   <button onclick="alzakGenerarInforme()" title="Generar informe ejecutivo PPT + PDF" style="padding:6px 14px;border-radius:20px;border:1px solid rgba(93,195,218,0.3);cursor:pointer;font-size:11px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif;background:rgba(93,195,218,0.12);color:#5DC3DA;">📊 Informe</button>
   <button id="btn-ocultar-saldos-nav" onclick="alzakToggleSaldos()" title="Ocultar/mostrar saldos" style="padding:6px 12px;border-radius:20px;border:1px solid rgba(255,255,255,0.15);cursor:pointer;font-size:13px;font-family:'Montserrat',Helvetica,Arial,sans-serif;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.6);">&#128065;</button>
@@ -835,11 +835,11 @@ tbody tr:hover td{background:var(--cyan-light);}
         <div style="font-size:11px;color:#888;margin-top:2px">Ingresos vs Egresos · Proyección mensual</div>
       </div>
     </div>
-    <span id="ico-fc" style="font-size:14px;color:#888">▼</span>
+    <span id="ico-fc" style="font-size:14px;color:#888">▲</span>
   </div>
 
   <!-- Cuerpo colapsable -->
-  <div id="fc-body" style="display:none;margin-top:16px">
+  <div id="fc-body" style="display:block;margin-top:16px">
 
     <!-- Tabla flujo de caja -->
     <div id="fc-tabla-main" style="margin-bottom:16px">
@@ -15339,6 +15339,18 @@ function tabPres() {
 document.addEventListener('DOMContentLoaded', function() {
   var nav = document.getElementById('tab-nav');
   if (nav) nav.style.display = 'flex';
+
+  // Mover pg-conc al split derecho desde el inicio
+  setTimeout(function() {
+    var right = document.getElementById('home-split-right');
+    var conc  = document.getElementById('pg-conc');
+    if (right && conc) {
+      if (conc.parentElement !== right) right.appendChild(conc);
+      conc.style.cssText = 'display:block; position:relative; height:auto; width:100%;';
+      conc.classList.add('on');
+      if (typeof renderConc === 'function') renderConc();
+    }
+  }, 600);
   var origIr = window.ir;
   if (origIr) {
     window.ir = function(id) {
@@ -16648,25 +16660,36 @@ function alzakToggleFC() {
 function fcActualizar() {
   var el = document.getElementById('fc-tabla-main');
   if (!el) return;
+
+  var MN  = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   var MNC = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   var anio = 2026;
 
-  // Ingresos reales
-  var ingReal = new Array(12).fill(0);
-  var ingCob  = new Array(12).fill(0);
+  // ── Ingresos reales de FACTURAS ──────────────────────
+  var ingReal  = new Array(12).fill(0);
+  var ingCob   = new Array(12).fill(0);
+  var detMes   = []; // detalle facturas por mes
+  for (var i=0; i<12; i++) detMes.push([]);
+
   if (typeof FACTURAS !== 'undefined') {
     FACTURAS.forEach(function(f) {
       var dp = (f.fecha||'').split('/');
       if (dp.length < 3 || parseInt(dp[2]) !== anio) return;
       var m = parseInt(dp[1]) - 1;
-      if (m >= 0 && m < 12) {
-        ingReal[m] += (f.total||0);
-        if (f.pagada) ingCob[m] += (f.total||0);
-      }
+      if (m < 0 || m > 11) return;
+      ingReal[m] += (f.total||0);
+      if (f.pagada) ingCob[m] += (f.total||0);
+      detMes[m].push({
+        num:    f.num || f.N_Factura || '—',
+        cliente: f.cliente || f.Cliente || '—',
+        total:  f.total || 0,
+        pagada: !!f.pagada,
+        vence:  f.vence || f.Vencimiento || ''
+      });
     });
   }
 
-  // Ingresos programados
+  // ── Ingresos programados ──────────────────────────────
   var ingProg = new Array(12).fill(0);
   try {
     JSON.parse(localStorage.getItem('alzak_fp_2026')||'[]').forEach(function(r) {
@@ -16674,7 +16697,7 @@ function fcActualizar() {
     });
   } catch(e) {}
 
-  // Egresos
+  // ── Egresos de FR_DATA ────────────────────────────────
   var egr = new Array(12).fill(0);
   if (typeof FR_DATA !== 'undefined') {
     FR_DATA.forEach(function(r) {
@@ -16682,37 +16705,42 @@ function fcActualizar() {
       if (dp.length < 3 || parseInt(dp[2]) !== anio) return;
       var m = parseInt(dp[1]) - 1;
       var c = (r['Concepto']||'').toLowerCase();
-      if (c.indexOf('abono factura') >= 0 || c.indexOf('pago final factura') >= 0) return;
+      if (c.indexOf('abono factura')>=0 || c.indexOf('pago final factura')>=0) return;
       if (m >= 0 && m < 12) egr[m] += parseFloat(r['Total (COP)']||0);
     });
   }
 
   function fm(n) {
     if (!n) return '<span style="color:#ddd">—</span>';
-    return (n<0?'<span style="color:#E53E3E">':'<span style="color:#0C447C">') +
-      (n<0?'-':'') + '$' + Math.round(Math.abs(n)).toLocaleString('es-CO') + '</span>';
+    var col = n < 0 ? '#E53E3E' : '#0C447C';
+    return '<span style="color:'+col+'">'+(n<0?'-':'')+'$'+Math.round(Math.abs(n)).toLocaleString('es-CO')+'</span>';
   }
+  function fmV(n) { return '$'+Math.round(n).toLocaleString('es-CO'); }
 
   var hoy = new Date().getMonth();
+
+  // ── Tabla resumen ─────────────────────────────────────
   var html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:820px">';
   html += '<thead><tr style="background:#1E3A5F;color:#fff">';
   html += '<th style="padding:9px 12px;text-align:left;min-width:170px">Concepto</th>';
-  MNC.forEach(function(m,i){ html += '<th style="padding:9px 6px;text-align:right;'+(i===hoy?'background:#2a5298':'')+'">'+m+'</th>'; });
+  MNC.forEach(function(m,i){
+    html += '<th style="padding:9px 6px;text-align:right;cursor:pointer;'+(i===hoy?'background:#2a5298':'')+'" onclick="fcToggleDet('+i+')" title="Ver detalle '+MN[i]+'">'+m+'</th>';
+  });
   html += '<th style="padding:9px 8px;text-align:right">Total</th></tr></thead><tbody>';
 
   var filas = [
-    {lbl:'🟢 Facturado', vals:ingReal, bg:'#F0FFF4'},
-    {lbl:'✅ Cobrado',   vals:ingCob,  bg:'#EBF8FF'},
-    {lbl:'🗓️ Programado', vals:ingProg, bg:'#FAF5FF'},
-    {lbl:'🔴 Egresos',  vals:egr.map(function(v){return -v;}), bg:'#FFF5F5'},
+    {lbl:'🟢 Facturado',    vals:ingReal,                         bg:'#F0FFF4'},
+    {lbl:'✅ Cobrado',       vals:ingCob,                          bg:'#EBF8FF'},
+    {lbl:'🗓️ Programado',   vals:ingProg,                         bg:'#FAF5FF'},
+    {lbl:'🔴 Egresos',      vals:egr.map(function(v){return -v;}), bg:'#FFF5F5'},
   ];
 
   filas.forEach(function(f) {
     var tot = f.vals.reduce(function(a,b){return a+b;},0);
     html += '<tr style="background:'+f.bg+';border-bottom:1px solid #f0ede8">';
-    html += '<td style="padding:8px 12px;font-weight:600;font-size:11px">'+f.lbl+'</td>';
+    html += '<td style="padding:8px 12px;font-weight:600">'+f.lbl+'</td>';
     f.vals.forEach(function(v,mi){
-      html += '<td style="padding:8px 6px;text-align:right;'+(mi===hoy?'background:#e8f0fe':'')+'">'+fm(v)+'</td>';
+      html += '<td style="padding:8px 6px;text-align:right;cursor:pointer;'+(mi===hoy?'background:#e8f0fe':'')+'" onclick="fcToggleDet('+mi+')">'+fm(v)+'</td>';
     });
     html += '<td style="padding:8px;text-align:right;font-weight:700">'+fm(tot)+'</td></tr>';
   });
@@ -16720,16 +16748,54 @@ function fcActualizar() {
   // Saldo neto
   html += '<tr style="background:#1E3A5F;color:#fff;font-weight:700">';
   html += '<td style="padding:9px 12px">📊 Saldo neto</td>';
+  var totAcum = 0;
   for (var m=0; m<12; m++) {
-    var n = ingReal[m] + ingProg[m] - egr[m];
-    var col = n >= 0 ? '#68D391' : '#FC8181';
-    html += '<td style="padding:9px 6px;text-align:right;'+(m===hoy?'background:#2a5298':'')+';color:'+col+'">'+(n?fm(n):'—')+'</td>';
+    var neto = ingReal[m] + ingProg[m] - egr[m];
+    totAcum += neto;
+    var col = neto >= 0 ? '#68D391' : '#FC8181';
+    html += '<td style="padding:9px 6px;text-align:right;cursor:pointer;'+(m===hoy?'background:#2a5298':'')+';color:'+col+'" onclick="fcToggleDet('+m+')">'+
+      (neto ? (neto<0?'-':'')+'$'+Math.round(Math.abs(neto)).toLocaleString('es-CO') : '—') + '</td>';
   }
-  var totNeto = ingReal.reduce(function(a,b){return a+b;},0) + ingProg.reduce(function(a,b){return a+b;},0) - egr.reduce(function(a,b){return a+b;},0);
-  html += '<td style="padding:9px 8px;text-align:right;color:'+(totNeto>=0?'#68D391':'#FC8181')+'">'+fm(totNeto)+'</td></tr>';
+  html += '<td style="padding:9px 8px;text-align:right;color:'+(totAcum>=0?'#68D391':'#FC8181')+'">'+
+    (totAcum<0?'-':'')+'$'+Math.round(Math.abs(totAcum)).toLocaleString('es-CO')+'</td>';
+  html += '</tr>';
+
+  // Filas de detalle (ocultas por defecto, se abren al click)
+  for (var m=0; m<12; m++) {
+    var facts = detMes[m];
+    html += '<tr id="fc-det-'+m+'" style="display:none"><td colspan="14" style="padding:0">';
+    html += '<div style="background:#f8faff;border-left:3px solid #1E3A5F;padding:10px 16px">';
+    html += '<div style="font-size:11px;font-weight:700;color:#1E3A5F;margin-bottom:8px">📋 Facturas '+MN[m]+' '+anio+'</div>';
+    if (!facts.length) {
+      html += '<div style="color:#aaa;font-size:11px">Sin facturas emitidas en este mes.</div>';
+    } else {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:11px">';
+      html += '<tr style="background:#e8f0fe"><th style="padding:6px 10px;text-align:left">N° Factura</th><th style="padding:6px 10px;text-align:left">Cliente</th><th style="padding:6px 10px;text-align:right">Total</th><th style="padding:6px 10px;text-align:center">Vencimiento</th><th style="padding:6px 10px;text-align:center">Estado</th></tr>';
+      facts.forEach(function(f) {
+        var estadoColor = f.pagada ? '#1D9E75' : '#E53E3E';
+        var estadoLbl   = f.pagada ? '✅ Pagada' : '⏳ Pendiente';
+        html += '<tr style="border-bottom:1px solid #e8f0fe">';
+        html += '<td style="padding:6px 10px;font-weight:600;color:#0C447C">'+f.num+'</td>';
+        html += '<td style="padding:6px 10px">'+f.cliente+'</td>';
+        html += '<td style="padding:6px 10px;text-align:right;font-weight:700">'+fmV(f.total)+'</td>';
+        html += '<td style="padding:6px 10px;text-align:center;color:#666">'+(f.vence||'—')+'</td>';
+        html += '<td style="padding:6px 10px;text-align:center;color:'+estadoColor+';font-weight:600">'+estadoLbl+'</td>';
+        html += '</tr>';
+      });
+      html += '</table>';
+    }
+    html += '</div></td></tr>';
+  }
+
   html += '</tbody></table></div>';
   el.innerHTML = html;
 }
+
+function fcToggleDet(m) {
+  var row = document.getElementById('fc-det-'+m);
+  if (row) row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+}
+
 
 // ══ FACTURACIÓN PROGRAMADA ════════════════════════════
 function fpRenderLista() {

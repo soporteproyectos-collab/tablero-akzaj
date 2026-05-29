@@ -1826,6 +1826,104 @@ document.addEventListener('keydown', function(e) {
 
 });
 
+// ══ SINCRONIZACIÓN COMPLETA — 3 SHEETS ══════════════════════
+var ALZAK_GS_URL = 'https://script.google.com/macros/s/AKfycbxdFspEmxI7srLsz09eP6ZDb8otgCGftv6jyyYG0IA8LwuChBjUhmrE0ojv79UTcsoJ/exec';
+
+function alzakCargarDatosSheets(callback) {
+  var url = ALZAK_GS_URL + '?tab=_datos_todos&_t=' + Date.now();
+  if (typeof mostrarToast === 'function') mostrarToast('🔄 Sincronizando con Sheets...', '#54504F', 3000);
+
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var cargados = [];
+
+      // ── Facturas Radicadas → FR_DATA ────────────────────
+      if (data.radicadas && data.radicadas.length) {
+        FR_DATA = data.radicadas.map(function(r) {
+          var rawFecha = r['Fecha'] || '';
+          var fecha = '';
+          if (rawFecha) {
+            var s = String(rawFecha).trim();
+            if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+              fecha = s;
+            } else if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+              var dp = s.substring(0,10).split('-');
+              fecha = dp[2]+'/'+dp[1]+'/'+dp[0];
+            } else if (s.indexOf('T') >= 0) {
+              var dp2 = s.substring(0,10).split('-');
+              if (dp2.length === 3) fecha = dp2[2]+'/'+dp2[1]+'/'+dp2[0];
+            } else if (/^\d{4,6}$/.test(s)) {
+              var serial = parseInt(s);
+              var d = new Date(Math.round((serial - 25569)*86400*1000));
+              fecha = ('0'+d.getUTCDate()).slice(-2)+'/'+ ('0'+(d.getUTCMonth()+1)).slice(-2)+'/'+d.getUTCFullYear();
+            } else { fecha = s; }
+          }
+          r['Fecha'] = fecha;
+          // Asegurar que N Comprobante es string
+          if (r['N Comprobante'] !== undefined) r['N Comprobante'] = String(r['N Comprobante']).trim();
+          return r;
+        }).filter(function(r) { return r['Fecha'] && r['Categoria']; });
+        cargados.push('Radicadas: ' + FR_DATA.length);
+      }
+
+      // ── Egresos → GASTOS_DATA ────────────────────────────
+      if (data.egresos && data.egresos.length) {
+        GASTOS_DATA = data.egresos.map(function(r) {
+          if (r['N_Comprobante'] !== undefined) r['N_Comprobante'] = String(r['N_Comprobante']).trim();
+          return r;
+        });
+        cargados.push('Egresos: ' + GASTOS_DATA.length);
+      }
+
+      // ── Facturación → FACTURAS ───────────────────────────
+      if (data.facturacion && data.facturacion.length) {
+        var objs = data.facturacion;
+        objs.forEach(function(f) {
+          var est = String(f.Estado || f.estado || f.pagada || '').toLowerCase().trim();
+          f.pagada = (est === 'pagada' || est === 'cobrada' || est === 'si' || est === 'sí' || est === 'true' || est === '1');
+          ['Subtotal_COP','IVA_COP','RetefuenteCOP','ReteIVA_COP','Total_COP'].forEach(function(c){
+            if (f[c] !== undefined) f[c] = parseFloat(String(f[c]).replace(/[^0-9.-]/g,'')) || 0;
+          });
+          f.total = f.Total_COP || f.total || 0;
+          f.fecha = f.Fecha || f.fecha || '';
+          f.num   = f.N_Factura || f.num || '';
+          f.cliente = f.Cliente || f.cliente || '';
+          f.vence = f.Vencimiento || f.vence || '';
+        });
+        FACTURAS = objs;
+        cargados.push('Facturación: ' + FACTURAS.length);
+      }
+
+      // ── Invalidar caché de cruce ─────────────────────────
+      if (typeof _FR_FUENTE_CACHE !== 'undefined') _FR_FUENTE_CACHE = {};
+      if (typeof _FR_MOVS_POOL   !== 'undefined') _FR_MOVS_POOL    = null;
+
+      // ── Re-renderizar todo ───────────────────────────────
+      if (typeof renderFacturas         === 'function') setTimeout(renderFacturas, 50);
+      if (typeof renderCarteraHome      === 'function') setTimeout(renderCarteraHome, 100);
+      if (typeof renderResumenTablero   === 'function') setTimeout(renderResumenTablero, 150);
+      if (typeof frRender               === 'function') setTimeout(function(){ _FR_FUENTE_CACHE={}; _FR_MOVS_POOL=null; frRender(); }, 200);
+      if (typeof renderEstadoResultados === 'function') setTimeout(renderEstadoResultados, 250);
+      if (typeof renderBalance          === 'function') setTimeout(renderBalance, 300);
+      if (typeof renderHomeBancosPanel  === 'function') setTimeout(renderHomeBancosPanel, 350);
+      if (typeof fcActualizar           === 'function') setTimeout(function(){ var b=document.getElementById('fc-body'); if(b&&b.style.display!=='none') fcActualizar(); }, 500);
+
+      if (typeof mostrarToast === 'function') mostrarToast('✅ Sincronizado — ' + cargados.join(' · '), '#1D9E75', 4000);
+      if (callback) callback();
+    })
+    .catch(function(err) {
+      console.error('Error sync Sheets:', err);
+      if (typeof mostrarToast === 'function') mostrarToast('⚠️ Error conectando con Sheets', '#f5a623', 4000);
+      if (callback) callback();
+    });
+}
+
+// Auto-sync al cargar
+setTimeout(function(){
+  try { alzakCargarDatosSheets(); } catch(e) { console.warn('Auto-sync:', e); }
+}, 1500);
+
 // ── Cálculo automático IVA en modal factura ──────────────────
 
 function calcIvaFactura() {
@@ -16807,44 +16905,116 @@ function fpRenderLista() {
     el.innerHTML = '<div style="color:#aaa;font-size:11px;padding:4px">Sin facturas programadas. Usa el botón &quot;+ Agregar&quot;.</div>';
     return;
   }
-  var MNC = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-  var html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px;min-width:700px">';
+  var html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">';
   html += '<thead><tr style="background:#7C3AED;color:#fff">';
-  html += '<th style="padding:7px 10px;text-align:left">Cliente</th><th style="padding:7px 10px;text-align:left">Proyecto</th>';
-  MNC.forEach(function(m){ html += '<th style="padding:7px 5px;text-align:right">'+m+'</th>'; });
-  html += '<th style="padding:7px 8px;text-align:right">Total</th><th></th></tr></thead><tbody>';
+  html += '<th style="padding:8px 10px;text-align:left">Cliente</th>';
+  html += '<th style="padding:8px 10px;text-align:left">Proyecto</th>';
+  html += '<th style="padding:8px 10px;text-align:right">Monto antes IVA</th>';
+  html += '<th style="padding:8px 10px;text-align:right">+IVA 19%</th>';
+  html += '<th style="padding:8px 10px;text-align:center">Fecha programada</th>';
+  html += '<th style="padding:8px 10px;text-align:left">Obs.</th>';
+  html += '<th></th></tr></thead><tbody>';
+
   data.forEach(function(r, i) {
-    var tot = 0;
-    html += '<tr style="background:'+(i%2?'#faf8ff':'#fff')+';border-bottom:1px solid #f0ede8">';
-    html += '<td style="padding:7px 10px;font-weight:600;color:#54504F">'+r.cliente+'</td>';
-    html += '<td style="padding:7px 10px;color:#777">'+r.proyecto+'</td>';
-    for (var m=0; m<12; m++) {
-      var v = parseFloat(r['m'+(m+1)]||0); tot += v;
-      html += '<td style="padding:7px 5px;text-align:right;color:'+(v?'#0C447C':'#ddd')+'">'+(v?'$'+Math.round(v).toLocaleString('es-CO'):'—')+'</td>';
+    var monto = parseFloat(r.monto || 0);
+    var iva   = Math.round(monto * 0.19);
+    var total = monto + iva;
+    // Formatear fecha
+    var fechaDisp = r.fecha || '—';
+    if (r.fecha && r.fecha.indexOf('-') > 0) {
+      var fp = r.fecha.split('-');
+      var MNF = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+      fechaDisp = fp[2] + ' ' + (MNF[parseInt(fp[1])-1]||'') + ' ' + fp[0];
     }
-    html += '<td style="padding:7px 8px;text-align:right;font-weight:700;color:#0C447C">$'+Math.round(tot).toLocaleString('es-CO')+'</td>';
-    html += '<td><button onclick="fpEliminar('+i+')" style="background:none;border:1px solid #fca5a5;color:#ef4444;border-radius:4px;padding:2px 6px;cursor:pointer;font-size:10px">✕</button></td></tr>';
+    // Días restantes
+    var diasR = '';
+    if (r.fecha) {
+      var diff = Math.ceil((new Date(r.fecha) - new Date()) / 86400000);
+      diasR = diff > 0 ? '<span style="color:#0C447C;font-size:10px"> ('+diff+'d)</span>' :
+              diff === 0 ? '<span style="color:#E53E3E;font-size:10px"> (hoy)</span>' :
+              '<span style="color:#E53E3E;font-size:10px"> ('+Math.abs(diff)+'d atrás)</span>';
+    }
+    html += '<tr style="background:'+(i%2?'#faf8ff':'#fff')+';border-bottom:1px solid #f0ede8">';
+    html += '<td style="padding:7px 10px;font-weight:600;color:#54504F">'+(r.cliente||'—')+'</td>';
+    html += '<td style="padding:7px 10px;color:#777">'+(r.proyecto||'—')+'</td>';
+    html += '<td style="padding:7px 10px;text-align:right;font-weight:700;color:#0C447C">$'+Math.round(monto).toLocaleString('es-CO')+'</td>';
+    html += '<td style="padding:7px 10px;text-align:right;color:#666">$'+iva.toLocaleString('es-CO')+'</td>';
+    html += '<td style="padding:7px 10px;text-align:center;color:#444">'+fechaDisp+diasR+'</td>';
+    html += '<td style="padding:7px 10px;color:#999;font-size:10px">'+(r.obs||'—')+'</td>';
+    html += '<td style="padding:4px"><button onclick="fpEliminar('+i+')" style="background:none;border:1px solid #fca5a5;color:#ef4444;border-radius:4px;padding:2px 6px;cursor:pointer;font-size:10px">✕</button></td>';
+    html += '</tr>';
   });
   html += '</tbody></table></div>';
   el.innerHTML = html;
 }
 
 function fpAgregarNuevo() {
-  var cliente = prompt('Cliente / Empresa:');
-  if (!cliente) return;
-  var proyecto = prompt('Proyecto / Descripción:');
-  if (proyecto === null) return;
-  var MN = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  var nuevo = { cliente: cliente, proyecto: proyecto };
-  for (var m=0; m<12; m++) {
-    var v = prompt('Valor ' + MN[m] + ' 2026 (Enter = 0):');
-    if (v === null) { nuevo['m'+(m+1)] = 0; continue; }
-    nuevo['m'+(m+1)] = parseFloat(v.replace(/[^0-9.]/g,''))||0;
-  }
+  // Crear modal
+  var modal = document.createElement('div');
+  modal.id = 'fp-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center';
+  modal.innerHTML = '<div style="background:#fff;border-radius:14px;padding:28px 32px;width:440px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,0.2)">' +
+    '<div style="font-size:15px;font-weight:700;color:#0C447C;margin-bottom:20px">🗓️ Nueva Factura Programada</div>' +
+    '<div style="margin-bottom:14px">' +
+      '<label style="font-size:11px;font-weight:700;color:#54504F;display:block;margin-bottom:5px">CLIENTE / EMPRESA *</label>' +
+      '<input id="fp-inp-cliente" type="text" placeholder="Ej: Bayer S.A." style="width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:12px;box-sizing:border-box;font-family:Montserrat,sans-serif">' +
+    '</div>' +
+    '<div style="margin-bottom:14px">' +
+      '<label style="font-size:11px;font-weight:700;color:#54504F;display:block;margin-bottom:5px">PROYECTO / DESCRIPCIÓN</label>' +
+      '<input id="fp-inp-proyecto" type="text" placeholder="Ej: Estimación costos - VSR Pediátrico" style="width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:12px;box-sizing:border-box;font-family:Montserrat,sans-serif">' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">' +
+      '<div>' +
+        '<label style="font-size:11px;font-weight:700;color:#54504F;display:block;margin-bottom:5px">MONTO ANTES DE IVA *</label>' +
+        '<input id="fp-inp-monto" type="number" placeholder="Ej: 15000000" style="width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:12px;box-sizing:border-box;font-family:Montserrat,sans-serif">' +
+      '</div>' +
+      '<div>' +
+        '<label style="font-size:11px;font-weight:700;color:#54504F;display:block;margin-bottom:5px">FECHA PROGRAMADA *</label>' +
+        '<input id="fp-inp-fecha" type="date" style="width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:12px;box-sizing:border-box;font-family:Montserrat,sans-serif">' +
+      '</div>' +
+    '</div>' +
+    '<div style="margin-bottom:20px">' +
+      '<label style="font-size:11px;font-weight:700;color:#54504F;display:block;margin-bottom:5px">OBSERVACIONES</label>' +
+      '<input id="fp-inp-obs" type="text" placeholder="Notas adicionales (opcional)" style="width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:8px;font-size:12px;box-sizing:border-box;font-family:Montserrat,sans-serif">' +
+    '</div>' +
+    '<div style="display:flex;gap:10px;justify-content:flex-end">' +
+      '<button onclick="fpCerrarModal()" style="background:#f5f4f0;border:none;border-radius:8px;padding:9px 20px;font-size:12px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;color:#54504F">Cancelar</button>' +
+      '<button onclick="fpGuardarNuevo()" style="background:#7C3AED;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:12px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif">Guardar</button>' +
+    '</div>' +
+  '</div>';
+  document.body.appendChild(modal);
+  setTimeout(function(){ document.getElementById('fp-inp-cliente').focus(); }, 100);
+}
+
+function fpCerrarModal() {
+  var m = document.getElementById('fp-modal');
+  if (m) m.remove();
+}
+
+function fpGuardarNuevo() {
+  var cliente = (document.getElementById('fp-inp-cliente')||{}).value || '';
+  var proyecto = (document.getElementById('fp-inp-proyecto')||{}).value || '';
+  var monto = parseFloat((document.getElementById('fp-inp-monto')||{}).value || 0) || 0;
+  var fecha = (document.getElementById('fp-inp-fecha')||{}).value || '';
+  var obs   = (document.getElementById('fp-inp-obs')||{}).value || '';
+
+  if (!cliente.trim()) { alert('El campo Cliente es obligatorio.'); return; }
+  if (!monto) { alert('Ingresa el monto antes de IVA.'); return; }
+  if (!fecha) { alert('Selecciona la fecha programada.'); return; }
+
+  // Distribuir en el mes correspondiente
+  var nuevo = { cliente: cliente.trim(), proyecto: proyecto.trim(), monto: monto, fecha: fecha, obs: obs };
+  for (var m=0; m<12; m++) nuevo['m'+(m+1)] = 0;
+  var mes = parseInt((fecha.split('-')[1]||'1')) - 1;
+  if (mes >= 0 && mes < 12) nuevo['m'+(mes+1)] = monto;
+
   var data = [];
   try { data = JSON.parse(localStorage.getItem('alzak_fp_2026')||'[]'); } catch(e) {}
   data.push(nuevo);
   localStorage.setItem('alzak_fp_2026', JSON.stringify(data));
+
+  var modal = document.getElementById('fp-modal');
+  if (modal) modal.remove();
   fpRenderLista(); fcActualizar();
   if (typeof mostrarToast === 'function') mostrarToast('✅ Factura programada agregada', '#1D9E75', 2000);
 }
@@ -16863,6 +17033,44 @@ document.addEventListener('alzakSyncDone', function() {
   var body = document.getElementById('fc-body');
   if (body && body.style.display !== 'none') { fcActualizar(); fpRenderLista(); }
 });
+</script>
+
+
+<script>
+// ── Divisor deslizable del split Home ─────────────────────
+function alzakSplitDrag(e) {
+  e.preventDefault();
+  var split   = document.getElementById('home-split');
+  var left    = document.getElementById('home-split-left');
+  var right   = document.getElementById('home-split-right');
+  var divider = document.getElementById('home-split-divider');
+  if (!split || !left || !right) return;
+
+  var startX  = e.clientX;
+  var startW  = left.getBoundingClientRect().width;
+  var totalW  = split.getBoundingClientRect().width - (divider ? divider.offsetWidth : 8);
+
+  if (divider) divider.style.background = '#5DC3DA';
+
+  function onMove(ev) {
+    var dx   = ev.clientX - startX;
+    var newW = Math.max(320, Math.min(totalW - 320, startW + dx));
+    left.style.flex  = 'none';
+    left.style.width = newW + 'px';
+    right.style.flex = 'none';
+    right.style.width = (totalW - newW) + 'px';
+  }
+
+  function onUp() {
+    if (divider) divider.style.background = '#e0ddd8';
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    if (typeof renderConc === 'function') setTimeout(renderConc, 100);
+  }
+
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+}
 </script>
 
 </body>

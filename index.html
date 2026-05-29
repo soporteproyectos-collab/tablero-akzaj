@@ -12791,8 +12791,9 @@ function renderGastosDashboard() {
   var kp=g('dash-gastos-kpis');
 
   var notaDIAN=totalDIAN>0?'<div style="background:#FFF3E0;border:1px solid #FFB74D;border-radius:8px;padding:8px 12px;font-size:11px;color:#E65100;margin-top:8px">⚠️ <b>Obligaciones Tributarias DIAN: '+F(totalDIAN)+'</b> — No computan como gasto operativo. Se registran por separado.</div>':'';
+  var notaConc='<div style="background:#EBF5FB;border:1px solid #90CAF9;border-radius:8px;padding:8px 12px;font-size:11px;color:#1565C0;margin-top:6px">ℹ️ <b>Nota conciliación:</b> El módulo de Egresos refleja todos los registros del Sheet ('+nOp+' pagos reales). La Conciliación Bancaria muestra solo los movimientos de los extractos cargados (Bancolombia, BCS, Bold). La diferencia corresponde a pagos desde Fiducuenta u otras cuentas sin extracto cargado.</div>';
 
-  if(kp)kp.innerHTML='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">'+kpi('Total egresos',F(totalAll),'tr',nOp+' registros')+kpi('Pagado',F(pagadoAll),'tg',pct+'% del total')+kpi('Pendiente',F(totalAll-pagadoAll),'tw',(100-pct)+'% restante')+kpi('Avance',pct+'%',pct>70?'tg':'tw','de pago')+'</div>'+notaDIAN;
+  if(kp)kp.innerHTML='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">'+kpi('Total egresos',F(totalAll),'tr',nOp+' registros')+kpi('Pagado',F(pagadoAll),'tg',pct+'% del total')+kpi('Pendiente',F(totalAll-pagadoAll),'tw',(100-pct)+'% restante')+kpi('Avance',pct+'%',pct>70?'tg':'tw','de pago')+'</div>'+notaDIAN+notaConc;
 
   // Barras mes a mes
 

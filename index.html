@@ -17187,7 +17187,196 @@ function alzakSplitDrag(e) {
 
 
 <script>
-// ══ FUNCIONES FACTURAS RADICADAS ══
+// ══════════════════════════════════════════════════════════════
+//  FACTURAS RADICADAS A ALZAK — Motor
+// ══════════════════════════════════════════════════════════════
+
+var FR_DATA = []; // loaded from CSV/Excel
+
+var FR_CATS_FACTURAS = [
+  'Nomina y Honorarios',
+  'Procesamiento Electronico de Datos',
+  'Capacitacion e Investigacion',
+  'Servicios Generales',
+  'Arrendamientos y Administracion',
+  'Gastos Legales y Notariales',
+  'Gastos de Personal y Dotaciones',
+  'Equipos de Oficina',
+  'Mobiliario y Enseres',
+  'Materiales y Construccion',
+  'Mantenimiento y Reparaciones',
+  'Compras de Oficina',
+  'Servicios Publicos',
+  'Seguros',
+  'Prestamos',
+  'Obligacion Tributaria DIAN',
+];
+
+function frFmt(n) { return '$' + Math.round(Math.abs(n||0)).toLocaleString('es-CO'); }
+function frEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+
+function frParseCSV(text) {
+  // Proper CSV parser handling quoted fields with commas
+  var rows = [];
+  var lines = text.replace(/\r/g, '').split('\n');
+  for (var i=0; i<lines.length; i++) {
+    var line = lines[i];
+    if (!line.trim()) continue;
+    var row = [];
+    var cur = '';
+    var inQ = false;
+    for (var c=0; c<line.length; c++) {
+      var ch = line[c];
+      if (ch === '"') {
+        if (inQ && line[c+1] === '"') { cur += '"'; c++; }
+        else inQ = !inQ;
+      } else if (ch === ',' && !inQ) {
+        row.push(cur.trim()); cur = '';
+      } else {
+        cur += ch;
+      }
+    }
+    row.push(cur.trim());
+    rows.push(row);
+  }
+  return rows;
+}
+
+function frCargarCSV(input) {
+  var file = input.files[0];
+  if (!file) return;
+  input.value = '';
+  var ext = file.name.split('.').pop().toLowerCase();
+
+  if (ext === 'csv') {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      FR_DATA = [];
+      var rows = frParseCSV(e.target.result);
+      if (rows.length < 2) { alert('CSV sin datos'); return; }
+      var headers = rows[0];
+      for (var i=1; i<rows.length; i++) {
+        if (!rows[i] || !rows[i].length) continue;
+        var obj = {};
+        headers.forEach(function(h,j){ obj[h] = (rows[i][j]||'').toString().trim(); });
+        if (obj['Fecha'] && obj['Categoria'] && obj['Categoria'] !== 'Categoria') FR_DATA.push(obj);
+      }
+      frPostLoad();
+    };
+    reader.readAsText(file, 'UTF-8');
+  } else {
+    // Excel — use SheetJS
+    var reader2 = new FileReader();
+    reader2.onload = function(e) {
+      try {
+        var data = new Uint8Array(e.target.result);
+        var wb = XLSX.read(data, {type:'array'});
+        // Find the Consolidado sheet
+        var shName = wb.SheetNames.find(function(n){ return n.toLowerCase().includes('consolidado'); }) || wb.SheetNames[0];
+        var ws = wb.Sheets[shName];
+        var rows = XLSX.utils.sheet_to_json(ws, {defval:'', header:1});
+        // Find header row
+        var headerIdx = rows.findIndex(function(r){ return r[0]==='Fecha' || r[1]==='Categoria'; });
+        if (headerIdx < 0) headerIdx = 1;
+        var headers = rows[headerIdx];
+        FR_DATA = [];
+        for (var i=headerIdx+1; i<rows.length; i++) {
+          var row = rows[i];
+          if (!row[0] || !row[1]) continue;
+          var fecha = String(row[0]);
+          if (fecha.includes('—') || fecha.includes('TOTAL') || fecha.includes('PUC')) continue;
+          var obj = {};
+          headers.forEach(function(h,j){ obj[h] = row[j] !== undefined ? String(row[j]) : ''; });
+          if (obj['Categoria'] && obj['Categoria'] !== 'Categoria') FR_DATA.push(obj);
+        }
+        frPostLoad();
+      } catch(err) {
+        alert('Error leyendo Excel: ' + err.message);
+      }
+    };
+    reader2.readAsArrayBuffer(file);
+  }
+}
+
+function frPostLoad() {
+  frActualizarFiltros();
+  frRender();
+  // Actualizar análisis financiero con los nuevos datos
+  if (typeof renderEstadoResultados === 'function') setTimeout(renderEstadoResultados, 100);
+  if (typeof renderResumenTablero   === 'function') setTimeout(renderResumenTablero,   150);
+  if (typeof renderBalance          === 'function') setTimeout(renderBalance,           200);
+  if (typeof mostrarToast === 'function') mostrarToast('✅ ' + FR_DATA.length + ' facturas radicadas cargadas');
+}
+
+function frLimpiar() {
+  FR_DATA = [];
+  try { localStorage.removeItem('alzak_fr_data'); } catch(e){}
+  var mes = document.getElementById('fr-fil-mes');
+  var bus = document.getElementById('fr-buscar');
+  var cnt = document.getElementById('fr-count');
+  if (mes) mes.innerHTML = '<option value="">Todos los meses</option>';
+  if (bus) bus.value = '';
+  if (cnt) cnt.textContent = '';
+  frRender();
+  if (typeof mostrarToast === 'function') mostrarToast('✅ Facturas radicadas eliminadas');
+}
+
+function frActualizarFiltros() {
+  setTimeout(frRenderIVA, 100);
+  var años  = [...new Set(FR_DATA.map(function(r){ return r['Fecha'] ? r['Fecha'].substring(6,10) : ''; }).filter(Boolean))].sort();
+  var meses = [...new Set(FR_DATA.map(function(r){ return r['Fecha'] ? r['Fecha'].substring(3,10) : ''; }).filter(Boolean))].sort(function(a,b){
+    var ya=parseInt(a.split('/')[1]||a.slice(-4)), yb=parseInt(b.split('/')[1]||b.slice(-4));
+    var MORD=['01','02','03','04','05','06','07','08','09','10','11','12'];
+    if(ya!==yb) return ya-yb;
+    return MORD.indexOf(a.substring(0,2)) - MORD.indexOf(b.substring(0,2));
+  });
+
+  var selAnio = document.getElementById('fr-fil-anio');
+  var selMes  = document.getElementById('fr-fil-mes');
+
+  if (selAnio) {
+    var anioActual = selAnio.value || '2026'; // preservar selección
+    selAnio.innerHTML = '<option value="">Todos los años</option>'
+      + años.map(function(a){ return '<option value="'+a+'"'+(a===anioActual?' selected':'')+'>'+a+'</option>'; }).join('');
+    if (anioActual) selAnio.value = anioActual; // restaurar
+  }
+  if (selMes) {
+    var mesActual = selMes.value || ''; // preservar selección
+    selMes.innerHTML = '<option value="">Todos los meses</option>'
+      + meses.map(function(m){ return '<option value="'+m+'"'+(m===mesActual?' selected':'')+'>'+m+'</option>'; }).join('');
+    if (mesActual) selMes.value = mesActual; // restaurar
+  }
+}
+
+// Categorias por grupo
+var FR_CATS_HONORARIOS = ['Nomina y Honorarios'];
+var FR_CATS_DIAN_OBLIG = ['Obligacion Tributaria DIAN'];
+// Todo lo demas = Facturas radicadas de proveedores
+
+function frEsHonorario(r) {
+  return FR_CATS_HONORARIOS.indexOf(r['Categoria']||'') >= 0;
+}
+function frEsDIAN(r) {
+  var cat = r['Categoria'] || '';
+  var prov = (r['Proveedor / Beneficiario'] || '').toLowerCase();
+  return FR_CATS_DIAN_OBLIG.indexOf(cat) >= 0 || prov.includes('dian');
+}
+
+function frPeriodoTieneExtracto(r) {
+  if (typeof P === 'undefined' || !P.length) return false;
+  var fecha = r['Fecha'] || '';
+  var parts = fecha.split('/');
+  if (parts.length < 3) return false;
+  var mes = parseInt(parts[1]), anio = parseInt(parts[2]);
+  var meses = {Enero:1,Febrero:2,Marzo:3,Abril:4,Mayo:5,Junio:6,
+               Julio:7,Agosto:8,Septiembre:9,Octubre:10,Noviembre:11,Diciembre:12};
+  for (var i = 0; i < P.length; i++) {
+    var lparts = (P[i].label||'').split(' ');
+    if (lparts.length >= 2 && (meses[lparts[0]]||0) === mes && parseInt(lparts[1]) === anio) return true;
+  }
+  return false;
+}
+
 function frEstadoReal(r) {
   var total = frTotalVal(r);
   if (total <= 0) return 'PAGADO';
@@ -17924,10 +18113,6 @@ function frToggleTabla(){
   var open=t.style.display!=='none';
   t.style.display=open?'none':'block';
   if(a)a.innerHTML=open?'&#9660;':'&#9650;';
-  // Re-renderizar si la tabla estaba vacía (sync corrió con tabla oculta)
-  if(!open && (!t.innerHTML || t.innerHTML.trim()==='' || t.innerHTML.indexOf('Carga las facturas')>=0)) {
-    if(typeof frRender==='function') frRender();
-  }
 }
 
 function frRenderIVA(){}
@@ -18112,16 +18297,6 @@ function alzakSincronizarSheets() {
 }
 
 // init on demand
-function balToggleDetalle(src) {
-  var uid = typeof src === 'string' ? src : (src && src.dataset ? src.dataset.uid : '');
-  var el  = document.getElementById(uid);
-  var btn = document.getElementById(uid + '-btn');
-  if (!el) return;
-  var oculto = el.style.display === 'none';
-  el.style.display  = oculto ? 'block' : 'none';
-  if (btn) btn.innerHTML = oculto ? '&#9660; ocultar' : '&#9658; ver detalle';
-}
-
 function balToggleCierre2025() {
   var panel = document.getElementById('bal-cierre-2025');
   var btn   = document.getElementById('btn-cierre-2025');
@@ -18193,4 +18368,1163 @@ function patchVencimientos(arr) {
 
 </script>
 
+<script>
+
+
+// ── Funciones auxiliares restauradas desde ref ─────────────
+function alzakFechaAISO(f) {
+  if (!f) return '';
+  var p = String(f).split('/');
+  if (p.length === 3) return p[2] + '-' + p[1] + '-' + p[0];
+  return f;
+}
+
+function alzakRegistrarAcceso(usuario) {
+  var ahora     = new Date();
+  var fechaStr  = ahora.toLocaleDateString('es-CO', {day:'2-digit',month:'long',year:'numeric'});
+  var horaStr   = ahora.toLocaleTimeString('es-CO', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  var userAgent = navigator.userAgent;
+  var plataforma = navigator.platform || 'Desconocido';
+
+  // 1. Obtener IP pública y datos de ubicación aproximada
+  fetch('https://ipapi.co/json/')
+    .then(function(r){ return r.json(); })
+    .then(function(geo){
+      var registro = {
+        fecha:     fechaStr,
+        hora:      horaStr,
+        usuario:   usuario.user,
+        nombre:    usuario.nombre,
+        rol:       usuario.rol,
+        ip:        geo.ip        || 'No disponible',
+        ciudad:    geo.city      || 'Desconocida',
+        region:    geo.region    || '',
+        pais:      geo.country_name || '',
+        org:       geo.org       || '',
+        lat:       geo.latitude  || '',
+        lon:       geo.longitude || '',
+        dispositivo: plataforma,
+        navegador: userAgent.substring(0, 80)
+      };
+
+      // 2. Guardar en Sheet (pestaña _accesos)
+      alzakGuardarAccesoSheet(registro);
+
+      // 3. Enviar correo solo si NO es el admin (o siempre si quieres)
+      if (usuario.rol !== 'admin') {
+        alzakNotificarAcceso(registro);
+      }
+
+      // 4. Guardar localmente como historial
+      try {
+        var hist = JSON.parse(localStorage.getItem('alzak_accesos') || '[]');
+        hist.unshift(registro);
+        if(hist.length > 50) hist = hist.slice(0, 50);
+        localStorage.setItem('alzak_accesos', JSON.stringify(hist));
+      } catch(e){}
+    })
+    .catch(function() {
+      // Sin geo — guardar igual con datos básicos
+      var registro = {
+        fecha: fechaStr, hora: horaStr,
+        usuario: usuario.user, nombre: usuario.nombre, rol: usuario.rol,
+        ip: 'No disponible', ciudad: 'No disponible',
+        region: '', pais: '', org: '', lat: '', lon: '',
+        dispositivo: plataforma, navegador: userAgent.substring(0, 80)
+      };
+      alzakGuardarAccesoSheet(registro);
+      if(usuario.rol !== 'admin') alzakNotificarAcceso(registro);
+    });
+}
+
+function concPdfLoad(input, accountId) {
+  var file = input.files[0];
+  if (!file) return;
+  input.value = '';
+
+  _concPdfAccount = accountId;
+  var cfg = CONC_ACCOUNT_CONFIG[accountId];
+  if (!cfg) return;
+
+  // Check for duplicate: warn if period already has data for this account
+  // (we check after IA reads the PDF, so just show a heads-up now)
+  _concPdfDupWarned = false;
+
+  // Show loading modal
+  concPdfShowModal('loading', cfg, null);
+
+  // Read PDF as base64
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var base64 = e.target.result.split(',')[1];
+    concPdfAnalizar(base64, cfg);
+  };
+  reader.readAsDataURL(file);
+}
+
+function editarFechaVencimiento(numFactura, fechaActual) {
+  // Convertir fecha actual a yyyy-MM-dd para el input[type=date]
+  var fechaISO = alzakFechaParaDias(fechaActual) || '';
+  // Si sigue siendo timestamp, extraer solo la fecha
+  if (fechaISO.indexOf('T') >= 0) fechaISO = fechaISO.substring(0,10);
+
+  // Crear modal con date picker nativo
+  var overlay = document.createElement('div');
+  overlay.id = 'modal-vence-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.45);display:flex;align-items:center;justify-content:center;';
+
+  overlay.innerHTML = '<div style="background:#fff;border-radius:14px;padding:28px 32px;width:320px;box-shadow:0 20px 60px rgba(0,0,0,.3);font-family:Montserrat,Helvetica,Arial,sans-serif;">' +
+    '<div style="font-size:13px;font-weight:700;color:#54504F;margin-bottom:4px;">Cambiar fecha de vencimiento</div>' +
+    '<div style="font-size:12px;color:#888;margin-bottom:18px;">Factura <strong>' + numFactura + '</strong></div>' +
+    '<input type="date" id="input-nueva-vence" value="' + fechaISO + '" ' +
+    'style="width:100%;padding:10px 12px;border:1.5px solid #e0ddd8;border-radius:8px;font-size:14px;box-sizing:border-box;color:#333;outline:none;">' +
+    '<div style="display:flex;gap:10px;margin-top:20px;">' +
+    '<button onclick="cerrarModalVence()" style="flex:1;padding:10px;background:#f5f4f0;border:none;border-radius:8px;font-size:13px;cursor:pointer;color:#54504F;">Cancelar</button>' +
+    '<button onclick="confirmarVence(\'' + numFactura + '\')" ' +
+    'style="flex:1;padding:10px;background:#0C447C;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;color:#fff;">Guardar</button>' +
+    '</div></div>';
+
+  document.body.appendChild(overlay);
+  // Auto-focus el input de fecha
+  setTimeout(function(){ var inp = document.getElementById('input-nueva-vence'); if(inp) inp.focus(); }, 100);
+}
+
+function factPdfUploadOpen() {
+  fpdfReset();
+  document.getElementById('fact-pdf-modal').style.display='flex';
+}
+
+function fpRender() {
+  var data  = fpLoad();
+  var tbody = document.getElementById('fp-tbody');
+  var tfoot = document.getElementById('fp-tfoot');
+  var total = document.getElementById('fp-total');
+  if(!tbody) return;
+
+  tbody.innerHTML = '';
+  var clienteOpts = (typeof PF_CLIENTES !== 'undefined' ? PF_CLIENTES : [
+    'ABBVIE','ALZAK FOUNDATION','BAYER','BIIB','SURA','JANSSEN','MERCK',
+    'MSD','MSD VSR','VAXTHERA','NOVARTIS','NOVO NORDISK','PFIZER','SANOFI',
+    'SERVIER','AMGEN','ADIUM','GRUNENTHAL','ROCHE','ASTRAZENECA'
+  ]);
+
+  data.forEach(function(row, i) {
+    var tr  = document.createElement('tr');
+    tr.style.borderBottom = '1px solid #f0eeec';
+    tr.style.background   = i%2===0?'#fff':'#FDFAFF';
+    var eCol = FP_COLORES[row.estado] || '#888';
+
+    // N° programada
+    var td1 = document.createElement('td'); td1.style.padding='5px 8px';
+    td1.innerHTML = '<input value="'+fpEsc(row.num||'')+'" placeholder="FEE-PROG-001"'
+      +' onblur="fpEdit('+i+',\'num\',this.value)"'
+      +' style="border:1px solid #ddd;border-radius:5px;padding:3px 7px;font-size:11px;width:110px;">';
+    tr.appendChild(td1);
+
+    // Cliente
+    var td2 = document.createElement('td'); td2.style.padding='5px 8px';
+    var cliOpts = clienteOpts.map(function(c){
+      return '<option value="'+fpEsc(c)+'"'+(c===row.cliente?' selected':'')+'>'+c+'</option>';
+    }).join('');
+    var isOtro = clienteOpts.indexOf(row.cliente) < 0 && row.cliente;
+    cliOpts += '<option value="__otro__"'+(isOtro?' selected':'')+'>✏️ Otro...</option>';
+    td2.innerHTML = '<div style="display:flex;gap:3px;">'
+      +'<select id="fpsel-'+i+'" onchange="fpSelCli('+i+',this)"'
+      +' style="border:1px solid #ddd;border-radius:5px;padding:3px 5px;font-size:11px;max-width:130px;">'+cliOpts+'</select>'
+      +'<input id="fpinp-'+i+'" value="'+(isOtro?fpEsc(row.cliente):'')+'" placeholder="Otro cliente"'
+      +' onblur="fpEdit('+i+',\'cliente\',this.value)"'
+      +' style="display:'+(isOtro?'inline-block':'none')+';border:1px solid #7C3AED;border-radius:5px;padding:3px 5px;font-size:11px;width:90px;">'
+      +'</div>';
+    tr.appendChild(td2);
+
+    // Concepto
+    var td3 = document.createElement('td'); td3.style.padding='5px 8px';
+    td3.innerHTML = '<input value="'+fpEsc(row.concepto||'')+'" placeholder="Descripción del servicio"'
+      +' onblur="fpEdit('+i+',\'concepto\',this.value)"'
+      +' style="border:1px solid #ddd;border-radius:5px;padding:3px 7px;font-size:11px;width:190px;">';
+    tr.appendChild(td3);
+
+    // Valor
+    var td4 = document.createElement('td'); td4.style.cssText='padding:5px 8px;text-align:right;';
+    td4.innerHTML = '<input type="number" value="'+(row.valor||0)+'"'
+      +' onblur="fpEdit('+i+',\'valor\',+this.value)"'
+      +' style="border:1px solid #ddd;border-radius:5px;padding:3px 7px;font-size:11px;width:110px;text-align:right;">';
+    tr.appendChild(td4);
+
+
+
+    // Fecha facturación
+    var td5b = document.createElement('td'); td5b.style.cssText='padding:5px 8px;text-align:center;';
+    td5b.innerHTML = '<input type="date" value="'+(row.fechaFact||'')+'"'
+      +' onchange="fpEdit('+i+',\'fechaFact\',this.value)"'
+      +' style="border:1px solid #ddd;border-radius:5px;padding:3px 5px;font-size:11px;width:120px;">';
+    tr.appendChild(td5b);
+
+    // Días de pago del cliente
+    var td5c = document.createElement('td'); td5c.style.cssText='padding:5px 8px;text-align:center;';
+    td5c.innerHTML = '<select onchange="fpEdit('+i+',\'diasPago\',+this.value)"'
+      +' style="border:1px solid #ddd;border-radius:5px;padding:3px 5px;font-size:11px;">'
+      +'<option value="0"'+((!row.diasPago||row.diasPago===0)?' selected':'')+'>Al facturar</option>'
+      +'<option value="15"'+(row.diasPago===15?' selected':'')+'>15 días</option>'
+      +'<option value="30"'+(row.diasPago===30?' selected':'')+'>30 días</option>'
+      +'<option value="45"'+(row.diasPago===45?' selected':'')+'>45 días</option>'
+      +'<option value="60"'+(row.diasPago===60?' selected':'')+'>60 días</option>'
+      +'<option value="90"'+(row.diasPago===90?' selected':'')+'>90 días</option>'
+      +'</select>';
+    tr.appendChild(td5c);
+
+    // Fecha estimada de cobro (calculada)
+    var td5d = document.createElement('td'); td5d.style.cssText='padding:5px 8px;text-align:center;';
+    var fechaCobro = '';
+    var fechaCobroStr = '—';
+    if (row.fechaFact) {
+      var d = new Date(row.fechaFact);
+      d.setDate(d.getDate() + (row.diasPago || 0));
+      fechaCobro = d;
+      var meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+      fechaCobroStr = d.getDate() + ' ' + meses[d.getMonth()] + ' ' + d.getFullYear();
+    }
+    var diasRestantes = fechaCobro ? Math.round((fechaCobro - new Date()) / (1000*60*60*24)) : null;
+    var cobroColor = diasRestantes === null ? '#888' : diasRestantes < 0 ? '#A32D2D' : diasRestantes <= 15 ? '#B45309' : '#2E7D32';
+    td5d.innerHTML = '<span style="font-size:11px;font-weight:700;color:'+cobroColor+';">'+fechaCobroStr+'</span>'
+      +(diasRestantes !== null ? '<br><span style="font-size:9px;color:'+cobroColor+';">'+(diasRestantes < 0 ? 'Vencido '+Math.abs(diasRestantes)+'d' : 'En '+diasRestantes+'d')+'</span>' : '');
+    tr.appendChild(td5d);
+
+    // Estado
+    var td6 = document.createElement('td'); td6.style.cssText='padding:5px 8px;text-align:center;';
+    td6.innerHTML = '<select onchange="fpEdit('+i+',\'estado\',this.value)"'
+      +' style="border:1px solid #ddd;border-radius:5px;padding:3px 5px;font-size:10px;font-weight:700;color:'+eCol+';">'
+      +FP_ESTADOS.map(function(e){
+        return '<option value="'+e+'"'+(row.estado===e?' selected':'')+'>'+e+'</option>';
+      }).join('')+'</select>';
+    tr.appendChild(td6);
+
+    // Delete
+    var td7 = document.createElement('td'); td7.style.cssText='padding:5px 4px;text-align:center;';
+    td7.innerHTML='<button onclick="fpDel('+i+')" style="background:#fee;border:none;border-radius:5px;'
+      +'color:#A32D2D;font-size:12px;cursor:pointer;padding:2px 6px;">✕</button>';
+    tr.appendChild(td7);
+    tbody.appendChild(tr);
+  });
+
+  // Totals footer
+  var sumValor = data.reduce(function(a,r){return a+(r.valor||0);},0);
+  tfoot.innerHTML = sumValor ? '<tr style="background:#F5F3FF;font-weight:700;">'
+    +'<td colspan="3" style="padding:7px 10px;color:#7C3AED;">TOTAL PROGRAMADO</td>'
+    +'<td style="padding:7px 10px;text-align:right;color:#7C3AED;font-size:13px;">'+fpFmt(sumValor)+'</td>'
+    +'<td colspan="3"></td></tr>' : '';
+
+  // Summary by month
+  var byMes = {};
+  data.forEach(function(r){
+    var mesKey = r.mes; // fallback
+    if (r.fechaFact) {
+      var d = new Date(r.fechaFact);
+      d.setDate(d.getDate() + (r.diasPago || 0));
+      mesKey = d.getMonth() + 1;
+    }
+    byMes[mesKey] = (byMes[mesKey]||0) + (r.valor||0);
+  });
+  var totalEl = document.getElementById('fp-total');
+  if(totalEl && sumValor) {
+    var html = '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">'
+      +'<span style="color:#888;font-weight:700;">Proyección mensual:</span>';
+    for(var m=1;m<=12;m++){
+      if(!byMes[m]) continue;
+      html+='<span style="background:#7C3AED18;color:#7C3AED;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700;">'
+        +FP_MESES_FULL[m-1]+': '+fpFmt(byMes[m])+'</span>';
+    }
+    html+='</div>';
+    totalEl.innerHTML = html;
+  } else if(totalEl) {
+    totalEl.innerHTML = '<span style="color:#aaa;font-size:11px;">Sin facturas programadas aún. Usa "+ Agregar" para proyectar ingresos futuros.</span>';
+  }
+
+  // Also refresh the flujo de caja to include programmed invoices
+  if(typeof fcRender==='function') setTimeout(fcRender, 50);
+}
+
+function pdfUploadOpen() {
+  pdfReset();
+  var modal = document.getElementById('pdf-modal');
+  modal.style.display = 'flex';
+  // Pre-seleccionar mes actual
+  var m = new Date().getMonth() + 1;
+  var sel = document.getElementById('pdf-mes');
+  if (sel) sel.value = m;
+}
+
+function renderTC() {
+  var el = document.getElementById('body-tc');
+  var perEl = document.getElementById('tc-per');
+  if (!el) return;
+
+  // Get current period from selector
+  var sel = document.getElementById('sel-periodo');
+  var idx = sel ? parseInt(sel.value) : (typeof P !== 'undefined' ? P.length-1 : 0);
+  var p = P && P[idx] ? P[idx] : null;
+  var label = p ? p.label : '';
+
+  // Find matching TC data
+  var tc = null;
+  if (typeof TC_DATA !== 'undefined') {
+    tc = TC_DATA.find(function(t){ return t.label === label; });
+    if (!tc) tc = TC_DATA[TC_DATA.length-1]; // fallback to latest
+  }
+
+  if (!tc) {
+    el.innerHTML = '<div style="color:#aaa;font-size:12px;padding:10px;">Sin datos de tarjeta para este periodo.</div>';
+    return;
+  }
+
+  if (perEl) perEl.textContent = tc.desde + ' al ' + tc.hasta;
+
+  var fc2 = function(n){ return '$' + Math.abs(Math.round(n||0)).toLocaleString('es-CO'); };
+  var cupoUsado = tc.cupo - (tc.cupo - tc.saldoCierre - (tc.diferidos||0));
+  var pctCupo = Math.round((tc.saldoCierre / tc.cupo) * 100);
+  var pctDif  = Math.round((tc.diferidos / tc.cupo) * 100);
+
+  el.innerHTML =
+    // Alert header
+    '<div class="alert" style="background:#FEF2F2;border-left:3px solid #DC2626;color:#7F1D1D;">' +
+      '<strong>Saldo adeudado al ' + tc.hasta + ':</strong> ' + fc2(tc.saldoCierre) +
+      ' &nbsp;|&nbsp; Diferidos pendientes: ' + fc2(tc.diferidos) +
+      ' &nbsp;|&nbsp; Cupo disponible: ' + fc2(tc.cupo - tc.saldoCierre) +
+    '</div>' +
+
+    // KPI row
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0;">' +
+      '<div class="met" style="border-left:3px solid #DC2626;">' +
+        '<div class="met-l">SALDO ANTERIOR</div>' +
+        '<div class="met-v" style="color:#DC2626;">' + fc2(tc.saldoAnterior) + '</div>' +
+      '</div>' +
+      '<div class="met" style="border-left:3px solid #DC2626;">' +
+        '<div class="met-l">COMPRAS DEL MES</div>' +
+        '<div class="met-v" style="color:#DC2626;">+' + fc2(tc.compras) + '</div>' +
+      '</div>' +
+      '<div class="met" style="border-left:3px solid #2E7D32;">' +
+        '<div class="met-l">PAGOS Y ABONOS</div>' +
+        '<div class="met-v" style="color:#2E7D32;">-' + fc2(tc.pagos) + '</div>' +
+      '</div>' +
+      '<div class="met" style="border-left:3px solid #DC2626;">' +
+        '<div class="met-l">SALDO CIERRE</div>' +
+        '<div class="met-v" style="color:#DC2626;">' + fc2(tc.saldoCierre) + '</div>' +
+      '</div>' +
+    '</div>' +
+
+    // Cupo bar
+    '<div style="margin:8px 0 4px;font-size:11px;color:#666;font-weight:700;">USO DEL CUPO</div>' +
+    '<div style="background:#f5f5f5;border-radius:6px;height:12px;overflow:hidden;margin-bottom:6px;">' +
+      '<div style="background:#DC2626;height:100%;width:' + Math.min(pctCupo,100) + '%;border-radius:6px;transition:width .3s;"></div>' +
+    '</div>' +
+    '<div style="display:flex;justify-content:space-between;font-size:10px;color:#888;margin-bottom:12px;">' +
+      '<span>Saldo: ' + fc2(tc.saldoCierre) + ' (' + pctCupo + '%)</span>' +
+      '<span>Cupo total: ' + fc2(tc.cupo) + '</span>' +
+    '</div>' +
+
+    // Diferidos info
+    '<div style="background:#FFF7ED;border:1px solid #FED7AA;border-radius:8px;padding:10px 14px;font-size:12px;color:#7C2D12;">' +
+      '<strong>Diferidos pendientes (cuotas futuras):</strong> ' + fc2(tc.diferidos) + '<br>' +
+      '<span style="font-size:11px;color:#9a3412;">Estas cuotas saldrán de la cuenta corriente BCS en los próximos meses.</span>' +
+    '</div>';
+
+  // Movement table
+  var tcMovs = tc.movimientos || [];
+  if (tcMovs.length) {
+    var movHtml = tcMovs.map(function(m){
+      var isAbono = m.v > 0;
+      var col = isAbono ? '#2E7D32' : '#DC2626';
+      var bg  = isAbono ? '#DCFCE7' : '#FEE2E2';
+      var tipo = isAbono ? 'Pago/Abono' : (m.t==='impto'?'GMF 4x1000':'Compra');
+      return '<tr style="border-bottom:1px solid #fde8e8;">'
+        + '<td style="padding:5px 8px;color:#888;font-size:11px;white-space:nowrap;">' + (m.f||'') + '</td>'
+        + '<td style="padding:5px 8px;font-size:11px;">' + (m.d||'') + '</td>'
+        + '<td style="padding:5px 8px;"><span style="background:' + bg + ';color:' + col + ';border-radius:4px;padding:2px 6px;font-size:10px;font-weight:700;">' + tipo + '</span></td>'
+        + '<td style="text-align:right;padding:5px 8px;font-weight:700;color:' + col + ';font-size:12px;">' + (m.v>=0?'+':'') + fc2(m.v) + '</td>'
+        + '</tr>';
+    }).join('');
+
+    el.innerHTML += '<div style="margin-top:10px;">'
+      + '<button onclick="alzakToggleTC()" '
+      + 'style="width:100%;display:flex;align-items:center;justify-content:space-between;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:10px 14px;cursor:pointer;font-family:inherit;">'
+      + '<span style="font-size:12px;font-weight:700;color:#991B1B;">&#9679; Movimientos TC BCS &nbsp;<span style="background:#DC2626;color:#fff;border-radius:10px;padding:1px 8px;font-size:10px;">' + tcMovs.length + ' mov.</span></span>'
+      + '<span id="tc-arrow" style="color:#DC2626;font-size:12px;">&#9660;</span>'
+      + '</button>'
+      + '<div id="tc-movs-panel" style="display:none;border:1px solid #FECACA;border-radius:0 0 8px 8px;overflow:hidden;">'
+      + '<div style="overflow-x:auto;">'
+      + '<table style="width:100%;border-collapse:collapse;">'
+      + '<thead><tr style="background:#FEF2F2;">'
+      + '<th style="padding:6px 8px;text-align:left;font-size:10px;color:#991B1B;">Fecha</th>'
+      + '<th style="padding:6px 8px;text-align:left;font-size:10px;color:#991B1B;">Descripcion</th>'
+      + '<th style="padding:6px 8px;text-align:left;font-size:10px;color:#991B1B;">Tipo</th>'
+      + '<th style="padding:6px 8px;text-align:right;font-size:10px;color:#991B1B;">Valor</th>'
+      + '</tr></thead>'
+      + '<tbody>' + movHtml + '</tbody>'
+      + '</table></div></div></div>';
+  }
+
+  // Update balance with TC as liability
+  if (typeof renderBalance === 'function') setTimeout(renderBalance, 100);
+}
+
+function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function escH(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  }
+
+function cerrarModalVence() { var o=document.getElementById("modal-vence-overlay"); if(o) o.remove(); }
+
+function confirmarVence(numFactura) {
+  var inp = document.getElementById('input-nueva-vence');
+  if (!inp || !inp.value) return;
+
+  var isoVal = inp.value; // yyyy-MM-dd
+  var p = isoVal.split('-');
+  var displayVal = p[2] + '/' + p[1] + '/' + p[0]; // dd/MM/yyyy
+
+  // Cerrar modal
+  var overlay = document.getElementById('modal-vence-overlay');
+  if (overlay) overlay.remove();
+
+  mostrarToast('💾 Guardando en Google Sheets...', '#0C447C', 3000);
+
+  fetch(ALZAK_GS_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      tab: '_update_cell',
+      sheet: 'facturacion',
+      colBuscar: 'N_Factura',
+      valBuscar: numFactura,
+      colActualizar: 'Vencimiento',
+      nuevoValor: displayVal
+    })
+  }).then(function() {
+    // Actualizar en memoria
+    if (typeof FACTURAS !== 'undefined' && FACTURAS) {
+      for (var i=0; i<FACTURAS.length; i++) {
+        if (FACTURAS[i].num === numFactura) {
+          FACTURAS[i].vence = isoVal;
+          FACTURAS[i].venceDisplay = displayVal;
+          break;
+        }
+      }
+    }
+    // Actualizar cache
+    try { localStorage.setItem('alzak_facturas_gs', JSON.stringify(FACTURAS)); } catch(e){}
+    if (typeof renderFacturas === 'function') renderFacturas();
+    mostrarToast('✅ ' + numFactura + ' → vence ' + displayVal, '#2E7D32', 4000);
+  }).catch(function() {
+    mostrarToast('⚠️ Error al guardar en Sheets', '#993C1D');
+  });
+}
+
+function autoSync() {
+    if(!window.GS_SYNC_ACTIVO) return;
+    if(typeof alzakSyncDesdeSheet === 'function') {
+      alzakSyncDesdeSheet();
+      lastSync = Date.now();
+    }
+  }
+
+function alzakFechaParaDias(val) {
+  if (!val) return '';
+  var s = String(val).trim();
+  // yyyy-MM-dd ya correcto
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // dd/MM/yyyy → yyyy-MM-dd
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+    var p = s.split('/'); return p[2]+'-'+p[1]+'-'+p[0];
+  }
+  // ISO timestamp: tomar solo fecha
+  if (s.indexOf('T') >= 0) {
+    var datePart = s.substring(0,10);
+    // Verificar si es realmente yyyy-MM-dd
+    if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return datePart;
+  }
+  return s;
+}
+
+function alzakToggleTC() {
+  var p = document.getElementById('tc-movs-panel');
+  var a = document.getElementById('tc-arrow');
+  if (!p) return;
+  if (p.style.display === 'none') {
+    p.style.display = 'block';
+    if(a) a.innerHTML = '&#9650;';
+  } else {
+    p.style.display = 'none';
+    if(a) a.innerHTML = '&#9660;';
+  }
+}
+
+function alzakCerrarConcModal() {
+  var m = document.getElementById('conc-pdf-modal');
+  if(m) m.remove();
+}
+
+
+</script>
+<script>
+
+
+// ── Funciones auxiliares batch 2 ─────────────────────────
+function alzakGuardarAccesoSheet(r) {
+  if(!window.GS_SYNC_ACTIVO || typeof gsPost !== 'function') return;
+  var fila = [[
+    r.fecha, r.hora, r.usuario, r.nombre, r.rol,
+    r.ip, r.ciudad, r.region, r.pais,
+    r.lat, r.lon, r.org, r.dispositivo, r.navegador
+  ]];
+  gsPost('_accesos', 'append', fila);
+}
+
+function alzakNotificarAcceso(r) {
+  // Envía al Apps Script para que mande el correo
+  if(!window.GS_API_URL) return;
+  var mapUrl = (r.lat && r.lon)
+    ? 'https://maps.google.com/?q=' + r.lat + ',' + r.lon
+    : 'No disponible';
+
+  fetch(GS_API_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    body: JSON.stringify({
+      tab: '_notificar_acceso',
+      usuario:   r.usuario,
+      nombre:    r.nombre,
+      fecha:     r.fecha,
+      hora:      r.hora,
+      ip:        r.ip,
+      ciudad:    r.ciudad + (r.region ? ', ' + r.region : '') + (r.pais ? ' · ' + r.pais : ''),
+      org:       r.org,
+      mapa:      mapUrl,
+      navegador: r.navegador
+    }),
+    headers: {'Content-Type': 'text/plain'}
+  }).catch(function(){});
+}
+
+function alzakSyncDesdeSheet() {
+  if(!window.GS_SYNC_ACTIVO) return;
+  var ind = document.getElementById('sync-indicator');
+  if(ind){ ind.style.display='flex'; ind.textContent='⟳ Cargando datos compartidos...'; }
+
+  // Fetch facturas desde Sheet
+  if(typeof gsGet === 'function') {
+    gsGet('facturas', function(rows){
+      if(rows && rows.length > 1) {
+        var objs = typeof rowsToObjs==='function' ? rowsToObjs(rows) : [];
+        if(objs.length) {
+          // Merge: keep all unique by num
+          var sheetNums = objs.map(function(f){ return (f.num||f.N_Factura||'').toUpperCase(); });
+          // Add local-only invoices not in Sheet
+          var localOnly = FACTURAS.filter(function(f){
+            var n = (f.num||'').toUpperCase();
+            return n && sheetNums.indexOf(n) < 0;
+          });
+          FACTURAS = objs.map(function(f){
+            f.estado = typeof estadoFact==='function' ? estadoFact(f) : f.estado;
+            return f;
+          }).concat(localOnly);
+          try{ localStorage.setItem('alzak_facturas', JSON.stringify(FACTURAS)); }catch(e){}
+          if(typeof renderFacturas==='function') renderFacturas();
+          if(typeof renderCarteraHome==='function') renderCarteraHome();
+          if(typeof fcRender==='function') setTimeout(fcRender, 100);
+        }
+      }
+      if(ind){ ind.textContent='✓ Datos sincronizados'; setTimeout(function(){ ind.style.display='none'; }, 2000); }
+    });
+
+    // gastos — NO se sincronizan automáticamente (carga manual)
+
+    // Fetch presupuesto (matriz proyección)
+    gsGet('pf2026', function(rows){
+      if(rows && rows.length > 1) {
+        try{
+          var json = rows[1] && rows[1][0];
+          if(json) {
+            localStorage.setItem('pf2026v2', json);
+            if(typeof pfRender==='function') pfRender();
+          }
+        }catch(e){}
+      }
+    });
+
+    // Fetch facturación programada (fp2026) ← NUEVO
+    gsGet('fp2026', function(rows){
+      if(rows && rows.length > 1) {
+        try{
+          var json = rows[1] && rows[1][0];
+          if(json) {
+            localStorage.setItem('alzak_fp2026', json);
+            if(typeof fpRender==='function') fpRender();
+          }
+        }catch(e){}
+      }
+    });
+
+    // Fetch estados Equipo Base
+    gsGet('eb_estado', function(rows){
+      if(rows && rows.length > 1) {
+        try{
+          var obj = {};
+          rows.slice(1).forEach(function(r){ if(r[0]) obj[r[0]]=r[1]; });
+          localStorage.setItem('eb_estado_2026', JSON.stringify(obj));
+        }catch(e){}
+      }
+    });
+  }
+}
+
+function concPdfAnalizar(base64, cfg) {
+  var mes_actual = document.getElementById('sel-periodo') ?
+    document.getElementById('sel-periodo').options[document.getElementById('sel-periodo').selectedIndex].text : '';
+
+  var prompt = 'Eres un experto en conciliacion bancaria colombiana. Analiza este extracto de ' + cfg.nombre + ' (' + cfg.banco + '). '
+    + cfg.prompt + ' '
+    + 'IMPORTANTE: Responde SOLO con JSON valido con esta estructura: '
+    + '{"periodo":"Mes YYYY","desde":"YYYY/MM/DD","hasta":"YYYY/MM/DD",'
+    + '"saldoApertura":0,"saldoCierre":0,"totalCreditos":0,"totalDebitos":0,'
+    + (cfg.tipo==='fondo'?'"adiciones":0,"retiros":0,"rendimientosNetos":0,"retencion":0,':'')
+    + '"movimientos":[{"f":"DD/MM","d":"descripcion","v":1234.56,"t":"tipo"}]}'
+    + ' Valores positivos=creditos, negativos=debitos. '
+    + 'Tipos: ingreso egreso transf interes impto interno fondo adicion. '
+    + 'Sin markdown, solo el JSON.';  fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 4000,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } },
+          { type: 'text', text: prompt }
+        ]
+      }]
+    })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    var text = data.content && data.content[0] && data.content[0].text;
+    if (!text) {
+      concPdfShowModal('error', cfg, 'No se pudo leer el extracto. Intenta de nuevo.');
+      return;
+    }
+    try {
+      // Clean JSON
+      var clean = text.replace(/```json|```/g, '').trim();
+      var result = JSON.parse(clean);
+      _concPdfResult = result;
+      concPdfShowModal('preview', cfg, result);
+    } catch(e) {
+      concPdfShowModal('error', cfg, 'Error procesando respuesta: ' + e.message);
+    }
+  })
+  .catch(function(err) {
+    concPdfShowModal('error', cfg, 'Error de conexion: ' + err.message);
+  });
+}
+
+function concPdfShowModal(state, cfg, data) {
+  // Remove existing modal
+  var existing = document.getElementById('conc-pdf-modal');
+  if (existing) existing.remove();
+
+  var modal = document.createElement('div');
+  modal.id = 'conc-pdf-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9500;'
+    + 'display:flex;align-items:center;justify-content:center;';
+
+  var inner = '';
+
+  if (state === 'loading') {
+    inner = '<div style="background:#fff;border-radius:14px;padding:32px 40px;text-align:center;min-width:300px;">'
+      + '<div style="font-size:32px;margin-bottom:12px;">⏳</div>'
+      + '<div style="font-size:14px;font-weight:700;color:#333;">Analizando extracto ' + cfg.nombre + '</div>'
+      + '<div style="font-size:12px;color:#aaa;margin-top:6px;">Claude IA esta leyendo el PDF...</div>'
+      + '</div>';
+  }
+
+  else if (state === 'error') {
+    inner = '<div style="background:#fff;border-radius:14px;padding:28px;max-width:420px;">'
+      + '<div style="font-size:14px;font-weight:700;color:#A32D2D;margin-bottom:8px;">❌ Error al procesar el PDF</div>'
+      + '<div style="font-size:12px;color:#666;">' + (data||'Error desconocido') + '</div>'
+      + '<button onclick="alzakCerrarConcModal()" '
+      + 'style="margin-top:16px;padding:8px 20px;background:#A32D2D;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:12px;">Cerrar</button>'
+      + '</div>';
+  }
+
+  else if (state === 'preview') {
+    var r = data;
+    // Check if this period+account already exists
+    var periodo = r.periodo || '';
+    var isDup = false;
+    if (periodo && typeof P !== 'undefined') {
+      var existingP = P.find(function(p){ return p.label === periodo; });
+      if (existingP) {
+        var accId = _concPdfAccount;
+        if (accId === 'ahorros' && existingP.sF && existingP.sF !== 0) isDup = true;
+        if (accId !== 'ahorros' && existingP[accId] && existingP[accId].sF && existingP[accId].sF !== 0) isDup = true;
+      }
+    }
+    var fmt = function(n) { return '$' + Math.abs(Math.round(n||0)).toLocaleString('es-CO'); };
+    var movRows = (r.movimientos||[]).slice(0,8).map(function(m) {
+      var col = m.v >= 0 ? '#2E7D32' : '#A32D2D';
+      return '<tr><td style="padding:3px 8px;font-size:11px;">' + (m.f||'') + '</td>'
+        + '<td style="padding:3px 8px;font-size:11px;max-width:200px;overflow:hidden;">' + (m.d||'').substring(0,40) + '</td>'
+        + '<td style="padding:3px 8px;font-size:11px;text-align:right;color:' + col + ';font-weight:700;">'
+        + (m.v>=0?'+':'') + fmt(m.v) + '</td>'
+        + '<td style="padding:3px 8px;font-size:10px;color:#888;">' + (m.t||'') + '</td></tr>';
+    }).join('');
+    var extraMov = (r.movimientos||[]).length > 8 ? '<tr><td colspan="4" style="padding:4px 8px;font-size:10px;color:#aaa;text-align:center;">...y ' + ((r.movimientos||[]).length-8) + ' movimientos mas</td></tr>' : '';
+
+    inner = '<div style="background:#fff;border-radius:14px;width:min(600px,94vw);max-height:88vh;overflow-y:auto;padding:24px;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
+      + '<div>'
+      + '<div style="font-size:14px;font-weight:700;color:#333;">✅ Extracto procesado — ' + cfg.nombre + '</div>'
+      + '<div style="font-size:11px;color:#aaa;">' + (r.periodo||'') + ' · ' + (r.desde||'') + ' al ' + (r.hasta||'') + '</div>'
+      + '</div>'
+      + '<button onclick="alzakCerrarConcModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#999;">&#x2715;</button>'
+      + '</div>'
+      // KPIs
+      + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">'
+      + '<div style="background:#F5F4F2;border-radius:8px;padding:10px;text-align:center;">'
+      + '<div style="font-size:10px;color:#888;font-weight:700;">SALDO APERTURA</div>'
+      + '<div style="font-size:13px;font-weight:700;color:#333;">' + fmt(r.saldoApertura) + '</div></div>'
+      + '<div style="background:#EAF3DE;border-radius:8px;padding:10px;text-align:center;">'
+      + '<div style="font-size:10px;color:#3B6D11;font-weight:700;">CREDITOS</div>'
+      + '<div style="font-size:13px;font-weight:700;color:#2E7D32;">+' + fmt(r.totalCreditos) + '</div></div>'
+      + '<div style="background:#FCEBEB;border-radius:8px;padding:10px;text-align:center;">'
+      + '<div style="font-size:10px;color:#791F1F;font-weight:700;">DEBITOS</div>'
+      + '<div style="font-size:13px;font-weight:700;color:#A32D2D;">-' + fmt(r.totalDebitos) + '</div></div>'
+      + '</div>'
+      + '<div style="background:#EBF3FB;border-radius:8px;padding:10px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">'
+      + '<span style="font-size:12px;font-weight:700;color:#0C447C;">SALDO CIERRE ' + (r.periodo||'').toUpperCase() + '</span>'
+      + '<span style="font-size:16px;font-weight:700;color:#0C447C;">' + fmt(r.saldoCierre) + '</span>'
+      + '</div>'
+      // Movements preview
+      + '<div style="font-size:11px;font-weight:700;color:#555;margin-bottom:6px;">Primeros movimientos (' + (r.movimientos||[]).length + ' total):</div>'
+      + '<div style="border:1px solid #eee;border-radius:8px;overflow:hidden;margin-bottom:16px;">'
+      + '<table style="width:100%;border-collapse:collapse;">'
+      + '<thead><tr style="background:#F5F4F2;">'
+      + '<th style="padding:5px 8px;text-align:left;font-size:10px;color:#888;">Fecha</th>'
+      + '<th style="padding:5px 8px;text-align:left;font-size:10px;color:#888;">Descripcion</th>'
+      + '<th style="padding:5px 8px;text-align:right;font-size:10px;color:#888;">Valor</th>'
+      + '<th style="padding:5px 8px;font-size:10px;color:#888;">Tipo</th>'
+      + '</tr></thead><tbody>' + movRows + extraMov + '</tbody></table>'
+      + '</div>'
+      // Action buttons
+      + '<div style="display:flex;gap:8px;">'
+      + '<button onclick="alzakCerrarConcModal()" '
+      + 'style="flex:1;padding:10px;background:#fff;color:#A32D2D;border:1.5px solid #A32D2D;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">✕ Descartar</button>'
+      + (isDup ? '<div style="background:#FFF3CD;border:1.5px solid #B45309;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;color:#7A4F00;"><strong>&#9888; Periodo ya cargado.</strong> Si continuas, los datos anteriores seran reemplazados.</div>' : '')
+      + '<button onclick="concPdfAgregar()" '
+      + 'style="flex:2;padding:10px;background:#2E7D32;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">✓ Agregar a conciliacion</button>'
+      + '</div>'
+      + '</div>';
+  }
+
+  modal.innerHTML = inner;
+  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+function fpDel(i) {
+  if(!confirm('¿Eliminar esta factura programada?')) return;
+  var data=fpLoad(); data.splice(i,1); fpSave(data); fpRender();
+}
+
+function fpEdit(i, key, val) {
+  var data = fpLoad();
+  if(data[i]) { data[i][key]=val; fpSave(data); fpRender(); }
+}
+
+function fpEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+function fpFmt(n) { return '$'+(Math.round(n||0)).toLocaleString('es-CO'); }
+
+function fpLoad() {
+  try {
+    var raw = localStorage.getItem('alzak_fp2026');
+    if (raw) { var d=JSON.parse(raw); if(d&&d.length) return d; }
+  } catch(e){}
+  return [];
+}
+
+function fpSelCli(i, sel) {
+  var inp = document.getElementById('fpinp-'+i);
+  if(sel.value==='__otro__') {
+    if(inp){inp.style.display='inline-block';inp.focus();}
+  } else {
+    if(inp) inp.style.display='none';
+    fpEdit(i,'cliente',sel.value);
+  }
+}
+
+function fpdfReset() {
+  _fpdfFile=null; _fpdfData=null;
+  fpdfStep(1);
+  var fn=document.getElementById('fpdf-fname'); if(fn) fn.textContent='';
+  var btn=document.getElementById('fpdf-btn-go'); if(btn){btn.disabled=true;btn.style.opacity='.45';}
+  var inp=document.getElementById('fpdf-input'); if(inp) inp.value='';
+}
+
+function pdfReset() {
+  ['pdf-step1','pdf-step2','pdf-step3','pdf-step4'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) el.style.display = id==='pdf-step1'?'block':'none';
+  });
+  _pdfFile = null; _pdfResultado = null;
+  var fn = document.getElementById('pdf-file-name');
+  if(fn) fn.textContent = '';
+  var btn = document.getElementById('pdf-btn-analizar');
+  if(btn){ btn.disabled=true; btn.style.opacity='.5'; }
+}
+
+function alzakExportarDatos() {
+  var backup = {
+    version:   2,
+    app:       'ALZAK GROUP SAS — Tablero Contable',
+    exportado: new Date().toISOString(),
+    datos:     {}
+  };
+
+  // 1. localStorage keys
+  ALZAK_BACKUP_KEYS.forEach(function(key) {
+    try {
+      var val = localStorage.getItem(key);
+      if (val) backup.datos[key] = JSON.parse(val);
+    } catch(e) {
+      try { backup.datos[key] = localStorage.getItem(key); } catch(e2){}
+    }
+  });
+
+  // 2. FACTURAS en memoria (incluye defaults si no están en localStorage)
+  if (typeof FACTURAS !== 'undefined' && FACTURAS.length) {
+    backup.datos['alzak_facturas'] = FACTURAS;
+  }
+
+  // 3. GASTOS_DATA en memoria
+  if (typeof GASTOS_DATA !== 'undefined' && GASTOS_DATA.length) {
+    backup.datos['alzak_gastos'] = GASTOS_DATA;
+  }
+
+  var fecha    = new Date().toISOString().slice(0,10);
+  var filename = 'ALZAK_backup_' + fecha + '.json';
+  var json     = JSON.stringify(backup, null, 2);
+  var blob     = new Blob([json], {type: 'application/json'});
+  var a        = document.createElement('a');
+  a.href       = URL.createObjectURL(blob);
+  a.download   = filename;
+  a.click();
+
+  // Update last backup timestamp
+  try { localStorage.setItem('alzak_last_backup', new Date().toISOString()); } catch(e){}
+
+  if (typeof mostrarToast === 'function') {
+    mostrarToast('✅ Backup guardado: ' + filename);
+  }
+}
+
+function alzakImportarDatos(input) {
+  var file = input.files[0];
+  if (!file) return;
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var backup = JSON.parse(e.target.result);
+
+      // Validate it's an ALZAK backup
+      if (!backup.datos || !backup.app || !backup.app.includes('ALZAK')) {
+        alert('❌ Este archivo no es un backup válido de ALZAK.');
+        return;
+      }
+
+      var fecha    = backup.exportado ? new Date(backup.exportado).toLocaleDateString('es-CO') : 'desconocida';
+      var nFacts   = backup.datos['alzak_facturas'] ? backup.datos['alzak_facturas'].length : 0;
+      var nGastos  = backup.datos['alzak_gastos']   ? backup.datos['alzak_gastos'].length   : 0;
+      var nPresup  = backup.datos['pf2026v2']        ? backup.datos['pf2026v2'].rows ? backup.datos['pf2026v2'].rows.length : 0 : 0;
+      var nFP      = backup.datos['alzak_fp2026']    ? backup.datos['alzak_fp2026'].length    : 0;
+
+      var msg = 'Restaurar backup de ALZAK?\n\n'
+        + '  Fecha: ' + fecha + '\n'
+        + '  Facturas: ' + nFacts + '\n'
+        + '  Gastos: ' + nGastos + '\n'
+        + '  Proyectos: ' + nPresup + '\n'
+        + '  Fact. programadas: ' + nFP + '\n\n'
+        + 'Esto reemplazara los datos actuales.';
+
+      if (!confirm(msg)) { input.value=''; return; }
+
+      // Restore each key
+      Object.keys(backup.datos).forEach(function(key) {
+        try {
+          var val = backup.datos[key];
+          localStorage.setItem(key, typeof val === 'string' ? val : JSON.stringify(val));
+        } catch(e) { console.error('Error restoring key', key, e); }
+      });
+
+      // Reload in-memory data
+      if (backup.datos['alzak_facturas'] && typeof FACTURAS !== 'undefined') {
+        FACTURAS = backup.datos['alzak_facturas'];
+        FACTURAS.forEach(function(f){
+          f.estado = typeof estadoFact==='function' ? estadoFact(f) : f.estado;
+        });
+      }
+      if (backup.datos['alzak_gastos'] && typeof GASTOS_DATA !== 'undefined') {
+        GASTOS_DATA = backup.datos['alzak_gastos'];
+      if (typeof frResetPool==='function') frResetPool();
+      if (typeof _FR_FUENTE_CACHE!=='undefined') _FR_FUENTE_CACHE={};
+      if (typeof frRender==='function' && typeof FR_DATA!=='undefined' && FR_DATA.length>0) setTimeout(frRender,200);
+      }
+
+      // Refresh UI
+      try { if(typeof actualizarTodo==='function') actualizarTodo(); } catch(e){}
+      try { if(typeof renderFacturas==='function') renderFacturas(); } catch(e){}
+      try { if(typeof renderHome==='function') renderHome(); } catch(e){}
+      try { if(typeof renderBalance==='function') renderBalance(); } catch(e){}
+      try { if(typeof pfRender==='function') pfRender(); } catch(e){}
+      try { if(typeof fpRender==='function') fpRender(); } catch(e){}
+      try { if(typeof fcRender==='function') setTimeout(fcRender,200); } catch(e){}
+
+      input.value = '';
+      try { localStorage.setItem('alzak_last_backup', new Date().toISOString()); } catch(e){}
+
+      if (typeof mostrarToast==='function') {
+        mostrarToast('✅ Backup restaurado correctamente — ' + nFacts + ' facturas cargadas');
+      }
+
+    } catch(err) {
+      alert('❌ Error leyendo el archivo: ' + err.message);
+      input.value = '';
+    }
+  };
+  reader.readAsText(file);
+}
+
+function alzakCerrarAccesos() {
+  var m = document.querySelector('div[id="accesos-modal"]');
+  if(m) m.remove();
+}
+
+function alzakVerAccesos() {
+  var hist = JSON.parse(localStorage.getItem('alzak_accesos') || '[]');
+  if(!hist.length) { alert('No hay accesos registrados localmente todavía.'); return; }
+
+  var modal = document.createElement('div');
+  modal.id = 'accesos-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9500;'
+    +'display:flex;align-items:center;justify-content:center;';
+
+  var rows = hist.slice(0,20).map(function(r){
+    var mapLink = (r.lat && r.lon)
+      ? '<a href="https://maps.google.com/?q='+r.lat+','+r.lon+'" target="_blank" '
+        +'style="color:#5DC3DA;">📍 Ver mapa</a>'
+      : '—';
+    return '<tr style="border-bottom:1px solid #f0eeec;">'
+      +'<td style="padding:6px 10px;font-size:11px;white-space:nowrap;">'+r.fecha+' '+r.hora+'</td>'
+      +'<td style="padding:6px 10px;font-size:11px;font-weight:700;color:#5DC3DA;">'+r.usuario+'</td>'
+      +'<td style="padding:6px 10px;font-size:11px;">'+r.ip+'</td>'
+      +'<td style="padding:6px 10px;font-size:11px;">'+r.ciudad+'</td>'
+      +'<td style="padding:6px 10px;font-size:11px;">'+mapLink+'</td>'
+      +'</tr>';
+  }).join('');
+
+  modal.innerHTML =
+    '<div style="background:#fff;border-radius:14px;width:min(800px,95vw);max-height:85vh;'
+    +'overflow-y:auto;padding:24px;box-shadow:0 8px 40px rgba(0,0,0,.25);">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
+        +'<div>'
+          +'<div style="font-size:15px;font-weight:700;color:#54504F;">🔐 Historial de accesos</div>'
+          +'<div style="font-size:11px;color:#aaa;">Últimos 20 ingresos al tablero</div>'
+        +'</div>'
+        +'<button onclick="alzakCerrarAccesos()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#999;">&#x2715;</button>'
+        +'style="background:none;border:none;font-size:20px;cursor:pointer;color:#999;">✕</button>'
+      +'</div>'
+      +'<div style="overflow-x:auto;">'
+        +'<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+          +'<thead><tr style="background:#EBF3FB;">'
+            +'<th style="padding:7px 10px;text-align:left;color:#0C447C;border-bottom:2px solid #5DC3DA;">Fecha y hora</th>'
+            +'<th style="padding:7px 10px;text-align:left;color:#0C447C;border-bottom:2px solid #5DC3DA;">Usuario</th>'
+            +'<th style="padding:7px 10px;text-align:left;color:#0C447C;border-bottom:2px solid #5DC3DA;">IP</th>'
+            +'<th style="padding:7px 10px;text-align:left;color:#0C447C;border-bottom:2px solid #5DC3DA;">Ciudad</th>'
+            +'<th style="padding:7px 10px;text-align:left;color:#0C447C;border-bottom:2px solid #5DC3DA;">Ubicación</th>'
+          +'</tr></thead>'
+          +'<tbody>'+rows+'</tbody>'
+        +'</table>'
+      +'</div>'
+    +'</div>';
+
+  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+function alzakFechaParaDias(val) {
+  if (!val) return '';
+  var s = String(val).trim();
+  // yyyy-MM-dd ya correcto
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // dd/MM/yyyy → yyyy-MM-dd
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+    var p = s.split('/'); return p[2]+'-'+p[1]+'-'+p[0];
+  }
+  // ISO timestamp: tomar solo fecha
+  if (s.indexOf('T') >= 0) {
+    var datePart = s.substring(0,10);
+    // Verificar si es realmente yyyy-MM-dd
+    if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return datePart;
+  }
+  return s;
+}
+</script>
+<script>
+
+// ── alzakLimpiarCache — limpia localStorage y re-sincroniza ──
+function alzakLimpiarCache() {
+  try { localStorage.clear(); } catch(e) {}
+  mostrarToast('🗑️ Caché limpiada — recargando...', '#54504F', 2000);
+  setTimeout(function() { alzakCargarDatosSheets(); }, 500);
+}
+
+// ── alzakToggleSaldos — oculta/muestra todos los valores ─────
+function alzakToggleSaldos() {
+  var btn = document.getElementById('btn-ocultar-saldos-nav');
+  var oculto = document.body.classList.toggle('saldos-ocultos');
+  if (btn) btn.title = oculto ? 'Mostrar saldos' : 'Ocultar saldos';
+}
+
+</script>
+<script>
+function concPdfAgregar() {
+  var r = _concPdfResult;
+  var accountId = _concPdfAccount;
+  if (!r || !accountId) return;
+
+  var periodo = r.periodo || '';
+  // Check if period already exists
+  var exists = P.some(function(p) { return p.label === periodo; });
+
+  // Build the new period entry
+  var newEntry = {
+    label:  periodo,
+    desde:  r.desde  || '',
+    hasta:  r.hasta  || '',
+    sA:     r.saldoApertura || 0,
+    tAb:    r.totalCreditos || 0,
+    tCar:   r.totalDebitos  || 0,
+    sF:     r.saldoCierre   || 0,
+    movs:   (r.movimientos  || []).map(function(m){ return {f:m.f, d:m.d, v:m.v, t:m.t}; })
+  };
+
+  if (accountId === 'fondo') {
+    newEntry.adiciones    = r.adiciones       || 0;
+    newEntry.retiros      = r.retiros         || 0;
+    newEntry.rendNetos    = r.rendimientosNetos|| 0;
+    newEntry.retencion    = r.retencion       || 0;
+    delete newEntry.tAb;
+    delete newEntry.tCar;
+  }
+
+  if (exists) {
+    // Update existing period
+    var idx = P.findIndex(function(p){ return p.label === periodo; });
+    if (accountId === 'ahorros') {
+      P[idx].sA   = newEntry.sA;
+      P[idx].tAb  = newEntry.tAb;
+      P[idx].tCar = newEntry.tCar;
+      P[idx].sF   = newEntry.sF;
+      P[idx].movs = newEntry.movs;
+    } else {
+      P[idx][accountId] = newEntry;
+    }
+    if(typeof mostrarToast==='function') mostrarToast('✅ ' + periodo + ' actualizado en ' + CONC_ACCOUNT_CONFIG[accountId].nombre);
+  } else {
+    // New period
+    if (accountId === 'ahorros') {
+      // Create full period entry with empty other accounts
+      var fullEntry = {
+        label: periodo,
+        desde: r.desde || '',
+        hasta: r.hasta || '',
+        sA:   newEntry.sA,
+        tAb:  newEntry.tAb,
+        tCar: newEntry.tCar,
+        sF:   newEntry.sF,
+        movs: newEntry.movs,
+        fid:  {sA:0, sF:0, adiciones:0, retiros:0, rendNetos:0, retencion:0, movs:[]},
+        caja: {sA:0, sF:0, tAb:0, tCar:0, movs:[]},
+        bold: {sA:0, sF:0, tAb:0, tCar:0, intereses:0, movs:[]}
+      };
+      P.push(fullEntry);
+    } else {
+      // Add to existing period or create minimal entry
+      var existing = P.find(function(p){ return p.label === periodo; });
+      if (existing) {
+        existing[accountId] = newEntry;
+      } else {
+        // Create period entry with just this account
+        var minEntry = {
+          label: periodo, desde: r.desde||'', hasta: r.hasta||'',
+          sA:0, tAb:0, tCar:0, sF:0, movs:[],
+          fid:{sA:0,sF:0,adiciones:0,retiros:0,rendNetos:0,retencion:0,movs:[]},
+          caja:{sA:0,sF:0,tAb:0,tCar:0,movs:[]},
+          bold:{sA:0,sF:0,tAb:0,tCar:0,intereses:0,movs:[]}
+        };
+        minEntry[accountId] = newEntry;
+        P.push(minEntry);
+      }
+    }
+    if(typeof mostrarToast==='function') mostrarToast('✅ ' + periodo + ' agregado a conciliacion — ' + CONC_ACCOUNT_CONFIG[accountId].nombre);
+  }
+
+  // Sort P by period
+  var MESES_KEY = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                   'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  P.sort(function(a,b){
+    var pa = a.label.split(' '), pb = b.label.split(' ');
+    var ya = parseInt(pa[1]||0), yb = parseInt(pb[1]||0);
+    if(ya !== yb) return ya - yb;
+    return MESES_KEY.indexOf(pa[0]) - MESES_KEY.indexOf(pb[0]);
+  });
+
+  // Update the periodo selector
+  var sel = document.getElementById('sel-periodo');
+  if (sel) {
+    sel.innerHTML = P.map(function(p,i){
+      return '<option value="'+i+'"'+(p.label===periodo?' selected':'')+'>'+p.label+'</option>';
+    }).join('');
+  }
+
+  // Refresh conciliacion
+  if (typeof renderConc === 'function') renderConc();
+  if (typeof renderBalance === 'function') setTimeout(renderBalance, 200);
+
+  // Close modal
+  alzakCerrarConcModal();
+}
+</script>
+<script>
+function fpSave(data) {
+  try { localStorage.setItem('alzak_fp2026', JSON.stringify(data)); } catch(e){}
+  // Sync to Sheet so the other user sees it
+  if(window.GS_SYNC_ACTIVO && typeof gsPost === 'function') {
+    try {
+      gsPost('fp2026', 'set', [['json'],[JSON.stringify(data)]]);
+    } catch(e){}
+  }
+}
+</script>
+<script>
+function fpdfStep(n) {
+  [1,2,3,4].forEach(function(i){
+    var el=document.getElementById('fpdf-step'+i);
+    if(el) el.style.display=(i===n?'block':'none');
+  });
+}
+</script>
 </body>

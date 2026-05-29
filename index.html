@@ -1973,6 +1973,7 @@ function alzakCargarDatosSheets(callback) {
               id:          'GS-' + idx,
               num:         r['N_Factura']||r['N Factura']||r['Factura']||r['N°']||'',
               fecha:       fechaDisplay || alzakFechaAISO(r['Fecha']||''),
+              fecha_raw:   r['Fecha']||'',  // dd/MM/yyyy — viene así del Apps Script
               vence:       venceDias,       // yyyy-MM-dd para diasHasta()
               venceDisplay:venceDisplay,    // dd/MM/yyyy para mostrar
               cliente:     r['Cliente']||'',
@@ -6285,11 +6286,29 @@ function confirmarPago(id) {
 
   cerrarModalPago();
 
+  // Persistir en Google Sheets
+  var factura = null;
+  for (var j = 0; j < FACTURAS.length; j++) { if (FACTURAS[j].id === id) { factura = FACTURAS[j]; break; } }
+  if (factura && typeof ALZAK_GS_URL !== 'undefined') {
+    fetch(ALZAK_GS_URL, {
+      method: 'POST', mode: 'no-cors',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        tab: '_update_cell',
+        sheet: 'facturacion',
+        colBuscar: 'N_Factura',
+        valBuscar: factura.num,
+        colActualizar: 'Estado',
+        nuevoValor: esPagada ? 'Pagada' : 'Pendiente'
+      })
+    });
+  }
+
   actualizarTodo();
 
   renderFacturas();
 
-  mostrarToast(esPagada ? '✅ Factura marcada como Pagada' : '⏳ Factura marcada como Pendiente');
+  mostrarToast(esPagada ? '✅ Factura marcada como Pagada — guardado en Sheets' : '⏳ Factura marcada como Pendiente — guardado en Sheets');
 
 }
 
@@ -8859,7 +8878,7 @@ function renderCarteraHome() {
     var mm={};
 
     for(var i=0;i<FACTURAS.length;i++){var f=FACTURAS[i];
-      var _fd=f.fecha||'',_dp,_mes,_anio;
+      var _fd=f.fecha_raw||f.fecha||'',_dp,_mes,_anio;
       if(_fd.indexOf('/')>=0){var _p=_fd.split('/');_mes=parseInt(_p[1]);_anio=parseInt(_p[2]);}
       else{_dp=_fd.split('-');_mes=parseInt(_dp[1]);_anio=parseInt(_dp[0]);}
       if(!_mes||!_anio)continue;

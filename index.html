@@ -2010,6 +2010,14 @@ function alzakCargarDatosSheets(callback) {
           cargados.push('Facturación: ' + FACTURAS.length);
       }
 
+      // ── Facturación Programada → FP_DATA ────────────────
+      if (data.programadas && data.programadas.length) {
+        FP_DATA = data.programadas;
+        // También sincronizar con localStorage para compatibilidad
+        try { localStorage.setItem('alzak_fp_2026', JSON.stringify(FP_DATA)); } catch(e) {}
+        cargados.push('Programadas: ' + FP_DATA.length);
+      }
+
       } catch(procErr) {
         console.error('Error procesando datos de Sheets:', procErr);
         mostrarToast('⚠️ Error procesando datos: ' + procErr.message, '#993C1D');
@@ -6826,6 +6834,7 @@ var GASTO_EDIT_IDX = -1;
 var GASTO_EST_SEL = 'pendiente';
 
 var GASTOS_DATA = [];
+var FP_DATA = []; // Facturación Programada — sincroniza con Sheets
 
 var CAT_COLS_G = {'Alimentacion y bienestar':'#C8DABB','Educacion y capacitacion':'#5DC3DA','Gastos administrativos':'#633806','Gastos de representacion':'#6EA1BA','Mantenimiento y reparaciones':'#993C1D','Materiales y suministros':'#854F0B','Salud ocupacional':'#085041','Seguridad y vigilancia':'#5F5E5A','Tecnologia y software':'#0C447C','Transporte y movilidad':'#7C4A00','Otro':'#888'};
 
@@ -16971,7 +16980,7 @@ function fcActualizar() {
 
   // ── Programadas ──────────────────────────────────────
   try {
-    JSON.parse(localStorage.getItem('alzak_fp_2026')||'[]').forEach(function(r) {
+    fpCargarDatos().forEach(function(r) {
       for (var m=0; m<12; m++) {
         var v = parseFloat(r['m'+(m+1)]||0);
         if (!v) continue;
@@ -17097,11 +17106,42 @@ function fcToggleDet(m) {
   if (row) row.style.display = (row.style.display === 'none') ? 'table-row' : 'none';
 }
 
+// ── Sincronizar FP_DATA con Google Sheets ────────────────
+function fpSyncSheets(data) {
+  // Guardar en localStorage (cache local)
+  try { localStorage.setItem('alzak_fp_2026', JSON.stringify(data)); } catch(e) {}
+  FP_DATA = data;
+  // POST al Sheet — modo no-cors (fire and forget)
+  if (typeof ALZAK_GS_URL !== 'undefined') {
+    fetch(ALZAK_GS_URL, {
+      method: 'POST', mode: 'no-cors',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        tab: '_programadas',
+        action: 'set',
+        rows: [['cliente','proyecto','monto','fecha','obs','m1','m2','m3','m4','m5','m6','m7','m8','m9','m10','m11','m12']].concat(
+          data.map(function(r) {
+            return [r.cliente||'',r.proyecto||'',r.monto||0,r.fecha||'',r.obs||'',
+              r.m1||0,r.m2||0,r.m3||0,r.m4||0,r.m5||0,r.m6||0,
+              r.m7||0,r.m8||0,r.m9||0,r.m10||0,r.m11||0,r.m12||0];
+          })
+        )
+      })
+    }).catch(function(){});
+  }
+}
+
+// ── Leer FP_DATA (Sheets tiene prioridad sobre localStorage) ──
+function fpCargarDatos() {
+  if (FP_DATA && FP_DATA.length) return FP_DATA;
+  try { return JSON.parse(localStorage.getItem('alzak_fp_2026')||'[]'); } catch(e) { return []; }
+}
+
 function fpRenderLista() {
   var el = document.getElementById('fp-lista');
   if (!el) return;
   var data = [];
-  try { data = JSON.parse(localStorage.getItem('alzak_fp_2026')||'[]'); } catch(e) {}
+  data = fpCargarDatos();
 
   if (!data.length) {
     el.innerHTML = '<div style="color:#aaa;font-size:11px;padding:10px 0;text-align:center">Sin facturas programadas aún — usa <strong>+ Agregar</strong> para planificar tus próximas facturas.</div>';
@@ -17131,7 +17171,7 @@ function fpRenderLista() {
     var mesIdx = parseInt(((r.fecha||'2026-01-01').split('-')[1]||'1')) - 1;
     if (mesIdx < 0 || mesIdx > 11) mesIdx = 0;
     var dp = diasP(r.cliente||'');
-    var fechaBase = new Date(2026, mesIdx, 15); // usar día 15 del mes
+    var fechaBase = new Date(2026, mesIdx, 1); // usar día 1 del mes (igual que fcActualizar)
     var cobro = new Date(fechaBase.getTime() + dp*86400000);
     var cobroStr = cobro.getDate()+' '+MNL[cobro.getMonth()]+' '+cobro.getFullYear();
     var bg = idx % 2 === 0 ? '#FDFCFF' : '#F8F5FF';
@@ -17160,8 +17200,7 @@ function fpRenderLista() {
 }
 
 function fpEditar(idx) {
-  var data = [];
-  try { data = JSON.parse(localStorage.getItem('alzak_fp_2026')||'[]'); } catch(e) {}
+  var data = fpCargarDatos();
   var r = data[idx];
   if (!r) return;
 
@@ -17229,16 +17268,16 @@ function fpGuardarEdicion(idx) {
   if (!monto)   { alert('Ingresa el monto.');                return; }
   if (!fecha)   { alert('Selecciona la fecha.');             return; }
   var data = [];
-  try { data = JSON.parse(localStorage.getItem('alzak_fp_2026')||'[]'); } catch(e) {}
+  data = fpCargarDatos();
   var entry = { cliente:cliente, proyecto:proyecto.trim(), monto:monto, fecha:fecha, obs:obs };
   for (var m=0; m<12; m++) entry['m'+(m+1)] = 0;
   var mes = parseInt((fecha.split('-')[1]||'1')) - 1;
   if (mes >= 0 && mes < 12) entry['m'+(mes+1)] = monto;
   data[idx] = entry;
-  localStorage.setItem('alzak_fp_2026', JSON.stringify(data));
+  fpSyncSheets(data);
   fpCerrarModal();
   fpRenderLista(); fcActualizar();
-  if (typeof mostrarToast === 'function') mostrarToast('✅ Factura programada actualizada', '#1D9E75', 2000);
+  if (typeof mostrarToast === 'function') mostrarToast('✅ Guardado en Sheets — visible para todo el equipo', '#1D9E75', 3000);
 }
 
 function fpEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
@@ -17338,21 +17377,19 @@ function fpGuardarNuevo() {
   for (var m=0; m<12; m++) nuevo['m'+(m+1)] = 0;
   var mes = parseInt((fecha.split('-')[1]||'1')) - 1;
   if (mes >= 0 && mes < 12) nuevo['m'+(mes+1)] = monto;
-  var data = [];
-  try { data = JSON.parse(localStorage.getItem('alzak_fp_2026')||'[]'); } catch(e) {}
+  var data = fpCargarDatos();
   data.push(nuevo);
-  localStorage.setItem('alzak_fp_2026', JSON.stringify(data));
+  fpSyncSheets(data);
   fpCerrarModal();
   fpRenderLista(); fcActualizar();
-  if (typeof mostrarToast === 'function') mostrarToast('✅ Factura programada agregada', '#1D9E75', 2000);
+  if (typeof mostrarToast === 'function') mostrarToast('✅ Guardado en Sheets — visible para todo el equipo', '#1D9E75', 3000);
 }
 
 function fpEliminar(idx) {
   if (!confirm('¿Eliminar esta factura programada?')) return;
-  var data = [];
-  try { data = JSON.parse(localStorage.getItem('alzak_fp_2026')||'[]'); } catch(e) {}
+  var data = fpCargarDatos();
   data.splice(idx, 1);
-  localStorage.setItem('alzak_fp_2026', JSON.stringify(data));
+  fpSyncSheets(data);
   fpRenderLista(); fcActualizar();
 }
 

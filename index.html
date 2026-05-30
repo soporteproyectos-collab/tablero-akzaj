@@ -148,54 +148,9 @@ select,input{padding:6px 10px;border:1px solid #d0cec8;border-radius:7px;font-si
 
 
 /* ── Ocultar saldos (botón 👁) ─────────────────────── */
-/* ── Modo ocultar saldos — overlay universal ─────────── */
-/* Overlay sobre el área de datos */
-#alzak-overlay {
-  display: none;
-  position: fixed;
-  inset: 56px 0 0 0; /* debajo del nav */
-  background: rgba(15, 23, 42, 0.92);
-  z-index: 8000;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
-  gap: 16px;
-}
-body.saldos-ocultos #alzak-overlay {
-  display: flex !important;
-}
-#alzak-overlay-msg {
-  color: rgba(255,255,255,0.7);
-  font-family: Montserrat, sans-serif;
-  font-size: 15px;
-  font-weight: 600;
-  text-align: center;
-  line-height: 1.6;
-}
-#alzak-overlay-ico {
-  font-size: 48px;
-  opacity: 0.5;
-}
-#alzak-overlay-btn {
-  margin-top: 8px;
-  padding: 10px 28px;
-  background: rgba(93,195,218,0.2);
-  border: 1px solid rgba(93,195,218,0.4);
-  border-radius: 24px;
-  color: #5DC3DA;
-  font-family: Montserrat, sans-serif;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-#alzak-overlay-btn:hover { background: rgba(93,195,218,0.35); }
 
 /* ══════════════════════════════════════════════════════════
-   MODO OCULTAR SALDOS — body.saldos-ocultos
-   Cubre TODOS los valores numéricos del tablero
+   MODO OCULTAR SALDOS — solo blur en números
    ══════════════════════════════════════════════════════════ */
 body.saldos-ocultos .ind-v,
 body.saldos-ocultos .met-v,
@@ -210,43 +165,45 @@ body.saldos-ocultos .grow-val.neg,
 body.saldos-ocultos .grow-val.dim,
 body.saldos-ocultos .st-ok,
 body.saldos-ocultos .st-w,
-body.saldos-ocultos .st-r,
-body.saldos-ocultos [data-val],
-/* Celdas de tablas con valores monetarios */
-body.saldos-ocultos td[style*="color:#0C447C"],
-body.saldos-ocultos td[style*="color:#C53030"],
-body.saldos-ocultos td[style*="color:#276749"],
-body.saldos-ocultos td[style*="color:#1D9E75"],
-body.saldos-ocultos td[style*="color:#68D391"],
-body.saldos-ocultos td[style*="color:#FC8181"],
-body.saldos-ocultos td[style*="color:#F6E05E"],
-body.saldos-ocultos td[style*="color:#B7791F"],
-body.saldos-ocultos td[style*="color:#553C9A"],
-body.saldos-ocultos td[style*="color:#0C6E3D"],
+body.saldos-ocultos .st-r {
+  filter: blur(5px) !important;
+  user-select: none !important;
+  transition: filter 0.25s ease !important;
+}
+/* Números en tablas dinámicas (conciliación, flujo de caja, balance, egresos) */
 body.saldos-ocultos td[style*="font-weight:700"],
 body.saldos-ocultos td[style*="font-weight: 700"],
-/* Spans con valores en conciliación */
-body.saldos-ocultos .conc-val,
-body.saldos-ocultos .balance-val,
-body.saldos-ocultos .er-val,
-/* Spans generados dinámicamente con $ */
+body.saldos-ocultos span[style*="font-weight:700"],
+body.saldos-ocultos span[style*="font-weight: 700"],
+body.saldos-ocultos td[style*="color:#0C447C"],
+body.saldos-ocultos td[style*="color:#C53030"],
+body.saldos-ocultos td[style*="color:#1D9E75"],
+body.saldos-ocultos td[style*="color:#68D391"],
+body.saldos-ocultos td[style*="color:#276749"],
 body.saldos-ocultos span[style*="color:#0C447C"],
 body.saldos-ocultos span[style*="color:#C53030"],
-body.saldos-ocultos span[style*="color:#276749"],
-body.saldos-ocultos span[style*="color:#68D391"],
-body.saldos-ocultos span[style*="color:#FC8181"],
-body.saldos-ocultos span[style*="color:#F6E05E"],
 body.saldos-ocultos span[style*="color:#1D9E75"],
+body.saldos-ocultos span[style*="color:#68D391"],
+body.saldos-ocultos span[style*="color:#276749"],
 body.saldos-ocultos span[style*="color:#B7791F"],
-body.saldos-ocultos span[style*="color:#553C9A"],
-body.saldos-ocultos span[style*="color:#0C6E3D"],
-body.saldos-ocultos span[style*="color:#FCA5A5"],
-body.saldos-ocultos span[style*="color:#6EE7B7"],
-body.saldos-ocultos span[style*="font-weight:700"],
-body.saldos-ocultos span[style*="font-weight: 700"] {
-  color: transparent !important;
-  text-shadow: 0 0 7px rgba(0,0,0,0.4) !important;
+body.saldos-ocultos span[style*="color:#553C9A"] {
+  filter: blur(5px) !important;
   user-select: none !important;
+  transition: filter 0.25s ease !important;
+}
+/* Quitar blur al mostrar */
+body:not(.saldos-ocultos) .ind-v,
+body:not(.saldos-ocultos) .met-v,
+body:not(.saldos-ocultos) .kpi-val,
+body:not(.saldos-ocultos) .tb,
+body:not(.saldos-ocultos) .tg,
+body:not(.saldos-ocultos) .tr,
+body:not(.saldos-ocultos) .tw,
+body:not(.saldos-ocultos) .grow-val,
+body:not(.saldos-ocultos) td[style*="font-weight:700"],
+body:not(.saldos-ocultos) span[style*="font-weight:700"] {
+  filter: none !important;
+  transition: filter 0.25s ease !important;
 }
 </style>
 
@@ -461,15 +418,7 @@ tbody tr:hover td{background:var(--cyan-light);}
 </head>
 
 <body class="saldos-ocultos">
-<!-- OVERLAY OCULTAR SALDOS -->
-<div id="alzak-overlay" onclick="alzakToggleSaldos()">
-  <div id="alzak-overlay-ico">🔒</div>
-  <div id="alzak-overlay-msg">
-    Datos confidenciales ocultos<br>
-    <span style="font-size:12px;font-weight:400;opacity:.7">Haz clic para mostrar los saldos</span>
-  </div>
-  <button id="alzak-overlay-btn" onclick="alzakToggleSaldos()">👁 Mostrar saldos</button>
-</div>
+
 
 <div id="login-screen" style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#0d1117 0%,#1a1f2e 40%,#0d1117 100%);">
 <div style="background:#fff;border-radius:16px;padding:40px 44px;width:380px;max-width:94vw;box-shadow:0 32px 80px rgba(0,0,0,.5);text-align:center;">

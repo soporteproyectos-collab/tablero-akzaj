@@ -9769,9 +9769,13 @@ var BAL_CONFIG = {
 
   // Saldos de apertura al 01-Ene-2026 (Cierre oficial 31-Dic-2025 — Kevin Díaz T.P. 103960-T)
   apertura2025: {
-    cxc:    312180000,  // Cuentas por cobrar comerciales cartera activa 2025
-    cxpProv: 155301000, // Cuentas por pagar proveedores nacionales
-    efectivo:  4485000  // Efectivo y equivalentes en cuentas bancarias
+    cxc:         312180000,  // Cuentas por cobrar comerciales cartera activa 2025
+    cxpProv:     155301000,  // Cuentas por pagar proveedores nacionales
+    efectivo:      4485000,  // Efectivo y equivalentes en cuentas bancarias
+    rete:        116724000,  // Impuestos anticipados (retefuente acumulada 2025)
+    equiposNeto:  72899000,  // PP&E neto al 31-Dic-2025 ($80.754.000 - $7.855.000 depreciación)
+    equiposBruto: 80754000,  // PP&E bruto al 31-Dic-2025
+    depreciacion:  7855000   // Depreciación acumulada al 31-Dic-2025
   }
 
 };
@@ -9979,9 +9983,15 @@ function calcBalMes(mes) {
   }
   var cxc = cxcAperturaPendiente + cxc2026Pendiente;
 
-  // 3. Retención en la fuente (anticipo de impuesto — activo)
-
-  var rete = factFil.reduce(function(a,f){return a+(f.retefuente||0);},0);
+  // 3. Retefuente = apertura 2025 + acumulado 2026 hasta el corte
+  var reteApertura = (BAL_CONFIG.apertura2025 && BAL_CONFIG.apertura2025.rete) ? BAL_CONFIG.apertura2025.rete : 0;
+  var rete2026 = factFil.filter(function(f){
+    var dp = fFechaPartes(f.fecha_raw || f.fecha);
+    return dp[0] && parseInt(dp[0]) >= 2026;
+  }).reduce(function(a,f){return a+(parseFloat(f.retefuente)||0);},0);
+  // Para el mes acumulado: apertura + 2026 acumulado
+  // Para un mes específico: apertura + facturas hasta ese mes
+  var rete = reteApertura + rete2026;
 
   var totalActCorr = totalBancos + cxc + rete;
 
@@ -9989,37 +9999,59 @@ function calcBalMes(mes) {
 
   // Tomar gastos de categorías de activos fijos que estén pagados
 
-  var CATS_ACTIVOS = [
+  // ── Activos No Corrientes ─────────────────────────────
+  // Apertura 2025 (cierre oficial Kevin Díaz)
+  var afApertura2025 = (BAL_CONFIG.apertura2025 && BAL_CONFIG.apertura2025.equiposNeto) ? BAL_CONFIG.apertura2025.equiposNeto : 0;
+  var afBruto2025    = (BAL_CONFIG.apertura2025 && BAL_CONFIG.apertura2025.equiposBruto) ? BAL_CONFIG.apertura2025.equiposBruto : 0;
+  var afDeprec2025   = (BAL_CONFIG.apertura2025 && BAL_CONFIG.apertura2025.depreciacion) ? BAL_CONFIG.apertura2025.depreciacion : 0;
 
+  // Equipos adquiridos en 2026 desde FR_DATA (facturas radicadas de proveedores de equipos)
+  // Categorías de activos en FR_DATA
+  var CATS_ACTIVOS_FR = [
+    'Equipos de Oficina','Equipos de oficina',
     'Equipos y Tecnología','Equipos y tecnologia',
-
-    'Servicios de Tecnología','Servicios de Tecnologia',
-
-    'Materiales y Construcción','Materiales y Construccion',
-
-    'Compras de Oficina y Suministros'
-
+    'Mobiliario y Enseres','Mobiliario y enseres',
+    'Materiales y Construcción','Materiales y Construccion'
   ];
 
-  var gfActivos = GASTOS_DATA.filter(function(r){
+  var activosPorCat = {};
+  var totalActivosGastos2026 = 0;
 
-    return CATS_ACTIVOS.indexOf(r['Categoria']||'') >= 0;
+  if (typeof FR_DATA !== 'undefined' && FR_DATA.length) {
+    FR_DATA.filter(function(r){
+      if (CATS_ACTIVOS_FR.indexOf(r['Categoria']||'') < 0) return false;
+      // Filtrar hasta el corte del mes
+      var fp = (r['Fecha']||'').split('/');
+      if (fp.length < 3) return true;
+      if (!mes) return true;
+      var fAnio = parseInt(fp[2]), fMes = parseInt(fp[1]);
+      if (fAnio > corteAnio_cxc) return false;
+      if (fAnio === corteAnio_cxc && fMes > corteMes_cxc) return false;
+      return true;
+    }).forEach(function(r){
+      var cat = r['Categoria']||'Equipos';
+      var v = parseFloat(r['Total (COP)']||r['Total_COP']||0);
+      activosPorCat[cat] = (activosPorCat[cat]||0) + v;
+      totalActivosGastos2026 += v;
+    });
+  }
 
-  });
-
-  var totalActivosGastos = gfActivos.reduce(function(a,r){
-
-    return a+parseFloat(r['Total_COP']||0);
-
-  },0);
+  var totalActivosGastos = totalActivosGastos2026; // 2026 additions
 
   // Sumar con activos fijos manuales configurados
 
   var af = BAL_CONFIG.activosFijos;
-
   var afManual = (af.equiposComputo||0)+(af.vehiculos||0)+(af.muebles||0)+(af.otrosActivos||0);
-
-  var totalAF = afManual + totalActivosGastos;
+  // Total PP&E = Apertura 2025 (neto) + Adquisiciones 2026 (FR_DATA) + Manual
+  var totalAF = afApertura2025 + totalActivosGastos + afManual;
+  // Guardar desglose para el render
+  var afDesglose = {
+    apertura2025: afApertura2025,
+    bruto2025:    afBruto2025,
+    deprec2025:   afDeprec2025,
+    adquisiciones2026: totalActivosGastos,
+    manual: afManual
+  };
 
   var totalAct = totalActCorr + totalAF;
 
@@ -10218,7 +10250,7 @@ function calcBalMes(mes) {
 
     totalActCorr:totalActCorr,
 
-    af:af, totalActivosGastos:totalActivosGastos, totalAF:totalAF,
+    af:af, totalActivosGastos:totalActivosGastos, totalAF:totalAF, activosPorCat:activosPorCat, afDesglose:afDesglose,
 
     totalAct:totalAct,
 
@@ -10426,46 +10458,43 @@ function renderBalance() {
 
   html += fila('Activos No Corrientes — Propiedades, Planta y Equipo', null, 'h', 0);
 
-  // Activos desde gastos — desglosados por categoría
+  var dsg = d.afDesglose || {};
 
-  var CATS_ACT = [
-
-    {key:'Equipos y Tecnología',      lbl:'Equipos de cómputo y tecnología'},
-
-    {key:'Equipos y tecnologia',      lbl:'Equipos de cómputo y tecnología'},
-
-    {key:'Servicios de Tecnología',   lbl:'Servicios de tecnología'},
-
-    {key:'Materiales y Construcción', lbl:'Materiales y construcción'},
-
-    {key:'Compras de Oficina y Suministros', lbl:'Compras de oficina y suministros'}
-
-  ];
-
-  var mostrados = {};
-
-  for (var ci=0;ci<CATS_ACT.length;ci++) {
-
-    var ca = CATS_ACT[ci];
-
-    if (mostrados[ca.lbl]) continue;
-
-    mostrados[ca.lbl] = true;
-
-    var v = GASTOS_DATA.filter(function(r){
-
-      return r['Categoria']===ca.key || (CATS_ACT.filter(function(x){return x.lbl===ca.lbl&&x.key===r['Categoria'];}).length>0);
-
-    }).reduce(function(a,r){return a+parseFloat(r['Total_COP']||0);},0);
-
-    if (v) html += fila(ca.lbl, v, 'item', 1, 'desde egresos');
-
+  // Apertura 2025 (cierre oficial)
+  if (dsg.bruto2025) {
+    html += fila('PP&E apertura 31-Dic-2025 (bruto)', dsg.bruto2025, 'item', 1, 'cierre oficial Kevin Díaz T.P. 103960-T');
+    html += fila('(−) Depreciación acumulada 2025', -dsg.deprec2025, 'item', 1, 'depreciación acumulada al cierre');
+  } else if (dsg.apertura2025) {
+    html += fila('PP&E neto apertura 01-Ene-2026', dsg.apertura2025, 'item', 1, 'cierre oficial 2025');
   }
 
-  // Activos manuales
+  // Adquisiciones 2026 desde FR_DATA
+  var CATS_DISPLAY = {
+    'Equipos de Oficina':        'Equipos de oficina 2026 (cómputo, celulares, TV)',
+    'Equipos y Tecnología':      'Equipos de oficina 2026',
+    'Equipos y tecnologia':      'Equipos de oficina 2026',
+    'Mobiliario y Enseres':      'Mobiliario y enseres 2026',
+    'Mobiliario y enseres':      'Mobiliario y enseres 2026',
+    'Materiales y Construcción': 'Obras y adecuaciones 2026',
+    'Materiales y Construccion': 'Obras y adecuaciones 2026'
+  };
+  var dispActivos = {};
+  if (d.activosPorCat) {
+    Object.keys(d.activosPorCat).forEach(function(cat) {
+      var lbl = CATS_DISPLAY[cat] || (cat + ' 2026');
+      dispActivos[lbl] = (dispActivos[lbl]||0) + d.activosPorCat[cat];
+    });
+  }
+  Object.keys(dispActivos).forEach(function(lbl) {
+    if (dispActivos[lbl] > 0)
+      html += fila(lbl, dispActivos[lbl], 'item', 1, 'facturas radicadas 2026');
+  });
 
-  if (d.af.equiposComputo) html += fila('Equipos de cómputo (manual)', d.af.equiposComputo, 'item', 1);
+  if (!dsg.apertura2025 && !dsg.adquisiciones2026)
+    html += fila('Sin activos fijos registrados', 0, 'item', 1);
 
+  // Manuales adicionales
+  if (d.af.equiposComputo) html += fila('Equipos adicionales (manual)', d.af.equiposComputo, 'item', 1);
   if (d.af.vehiculos)      html += fila('Vehículos', d.af.vehiculos, 'item', 1);
 
   if (d.af.muebles)        html += fila('Muebles y enseres', d.af.muebles, 'item', 1);

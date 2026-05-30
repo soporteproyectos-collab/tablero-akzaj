@@ -148,46 +148,50 @@ select,input{padding:6px 10px;border:1px solid #d0cec8;border-radius:7px;font-si
 
 
 /* ── Ocultar saldos (botón 👁) ─────────────────────── */
-/* ── Blur en contenedores numéricos dinámicos ─────────── */
-body.saldos-ocultos #dash-gastos-kpis,
-body.saldos-ocultos #fr-kpis,
-body.saldos-ocultos #er-kpis,
-body.saldos-ocultos #home-kpis,
-body.saldos-ocultos #conc-resumen-global,
-body.saldos-ocultos #conc-panel-disponible,
-body.saldos-ocultos #balance-tabla,
-body.saldos-ocultos #er-chart,
-body.saldos-ocultos #fc-tabla-main,
-body.saldos-ocultos .met-card,
-body.saldos-ocultos .ind,
-body.saldos-ocultos .grow-line,
-body.saldos-ocultos .conc-kpi,
-body.saldos-ocultos .kpi-card,
-body.saldos-ocultos #home-split-right .card {
-  filter: blur(6px) !important;
-  user-select: none !important;
-  pointer-events: none !important;
-  transition: filter 0.3s ease !important;
+/* ── Modo ocultar saldos — overlay universal ─────────── */
+/* Overlay sobre el área de datos */
+#alzak-overlay {
+  display: none;
+  position: fixed;
+  inset: 56px 0 0 0; /* debajo del nav */
+  background: rgba(15, 23, 42, 0.92);
+  z-index: 8000;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  gap: 16px;
 }
-body:not(.saldos-ocultos) #dash-gastos-kpis,
-body:not(.saldos-ocultos) #fr-kpis,
-body:not(.saldos-ocultos) #er-kpis,
-body:not(.saldos-ocultos) #home-kpis,
-body:not(.saldos-ocultos) #conc-resumen-global,
-body:not(.saldos-ocultos) #conc-panel-disponible,
-body:not(.saldos-ocultos) #balance-tabla,
-body:not(.saldos-ocultos) #er-chart,
-body:not(.saldos-ocultos) #fc-tabla-main,
-body:not(.saldos-ocultos) .met-card,
-body:not(.saldos-ocultos) .ind,
-body:not(.saldos-ocultos) .grow-line,
-body:not(.saldos-ocultos) .conc-kpi,
-body:not(.saldos-ocultos) .kpi-card,
-body:not(.saldos-ocultos) #home-split-right .card {
-  filter: none !important;
-  pointer-events: auto !important;
-  transition: filter 0.3s ease !important;
+body.saldos-ocultos #alzak-overlay {
+  display: flex !important;
 }
+#alzak-overlay-msg {
+  color: rgba(255,255,255,0.7);
+  font-family: Montserrat, sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.6;
+}
+#alzak-overlay-ico {
+  font-size: 48px;
+  opacity: 0.5;
+}
+#alzak-overlay-btn {
+  margin-top: 8px;
+  padding: 10px 28px;
+  background: rgba(93,195,218,0.2);
+  border: 1px solid rgba(93,195,218,0.4);
+  border-radius: 24px;
+  color: #5DC3DA;
+  font-family: Montserrat, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+#alzak-overlay-btn:hover { background: rgba(93,195,218,0.35); }
 
 /* ══════════════════════════════════════════════════════════
    MODO OCULTAR SALDOS — body.saldos-ocultos
@@ -457,6 +461,15 @@ tbody tr:hover td{background:var(--cyan-light);}
 </head>
 
 <body class="saldos-ocultos">
+<!-- OVERLAY OCULTAR SALDOS -->
+<div id="alzak-overlay" onclick="alzakToggleSaldos()">
+  <div id="alzak-overlay-ico">🔒</div>
+  <div id="alzak-overlay-msg">
+    Datos confidenciales ocultos<br>
+    <span style="font-size:12px;font-weight:400;opacity:.7">Haz clic para mostrar los saldos</span>
+  </div>
+  <button id="alzak-overlay-btn" onclick="alzakToggleSaldos()">👁 Mostrar saldos</button>
+</div>
 
 <div id="login-screen" style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#0d1117 0%,#1a1f2e 40%,#0d1117 100%);">
 <div style="background:#fff;border-radius:16px;padding:40px 44px;width:380px;max-width:94vw;box-shadow:0 32px 80px rgba(0,0,0,.5);text-align:center;">
@@ -19771,28 +19784,29 @@ function alzakLimpiarCache() {
 
 // ── alzakToggleSaldos — oculta/muestra todos los valores ─────
 function alzakToggleSaldos() {
-  var btn = document.getElementById('btn-ocultar-saldos-nav');
   var oculto = document.body.classList.toggle('saldos-ocultos');
+  var btn = document.getElementById('btn-ocultar-saldos-nav');
   if (btn) {
-    btn.innerHTML = oculto ? '&#128065;' : '&#128065;&#65038;';
-    btn.title = oculto ? 'Mostrar saldos (actualmente ocultos)' : 'Ocultar saldos';
-    btn.style.opacity = oculto ? '0.5' : '1';
+    btn.innerHTML = oculto ? '&#128065;' : '&#128065;';
+    btn.title = oculto ? 'Mostrar saldos' : 'Ocultar saldos';
+    btn.style.opacity = oculto ? '0.45' : '1';
+    btn.style.background = oculto ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.15)';
   }
 }
 
-// Inicializar estado del botón al cargar
+// Inicializar botón al cargar — arranca oculto
 (function() {
   var _initOjo = function() {
     var btn = document.getElementById('btn-ocultar-saldos-nav');
     if (btn) {
-      btn.style.opacity = '0.5';
-      btn.title = 'Mostrar saldos (actualmente ocultos)';
+      btn.style.opacity = '0.45';
+      btn.title = 'Mostrar saldos';
     }
   };
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', _initOjo);
   } else {
-    _initOjo();
+    setTimeout(_initOjo, 100);
   }
 })();
 
@@ -19977,10 +19991,14 @@ function alzakGenerarInforme() {
   }
 
   // ── Indicadores financieros
-  var utilidadBruta   = totalFacturado - totalCostos;
+  // Utilidad del Estado de Resultados = Ingresos - Costos radicados (FR_DATA)
+  var utilidadBruta   = totalFacturado - totalCostos;   // Utilidad bruta
   var margenBruto     = pct(utilidadBruta, totalFacturado);
-  var utilidadOp      = totalFacturado - totalEgresos;
+  // Utilidad operacional = Ingresos - (Costos + Egresos operativos)
+  var utilidadOp      = totalFacturado - totalCostos - totalEgresos;
   var margenOp        = pct(utilidadOp, totalFacturado);
+  // Para el resumen: usar utilidad operacional como la métrica principal (Estado de Resultados)
+  var utilidadER      = utilidadOp; // Coincide con Estado de Resultados acumulado
   var recaudo         = pct(totalCobrado, totalFacturado + totalPendiente);
 
   // ── Liquidez (activo corriente = caja disponible)
@@ -20079,97 +20097,5 @@ function alzakGenerarInforme() {
     'de las cuales <strong>' + nPagadas + ' están pagadas</strong> (' + recaudo + '% de recaudo). ' +
     'La cartera pendiente asciende a <strong>' + fm(totalPendiente) + '</strong>. ' +
     'Los costos registrados en facturas radicadas suman <strong>' + fm(totalCostos) + '</strong>, ' +
-    'generando una utilidad bruta de <strong class="' + (utilidadBruta>=0?'verde':'rojo') + '">' + fm(utilidadBruta) + '</strong>.' +
-    '</div></div>' +
-
-    // 2. KPIs principales
-    '<div class="seccion"><h3>💰 Indicadores Financieros Clave</h3>' +
-    '<div class="kpi-grid">' +
-    '<div class="kpi"><div class="kpi-lbl">Total Facturado</div><div class="kpi-val azul">' + fm(totalFacturado) + '</div><div class="kpi-sub">' + nFacturas + ' facturas</div></div>' +
-    '<div class="kpi"><div class="kpi-lbl">Total Cobrado</div><div class="kpi-val verde">' + fm(totalCobrado) + '</div><div class="kpi-sub">' + recaudo + '% recaudo</div></div>' +
-    '<div class="kpi"><div class="kpi-lbl">Cartera Pendiente</div><div class="kpi-val naranja">' + fm(totalPendiente) + '</div><div class="kpi-sub">por cobrar</div></div>' +
-    '<div class="kpi"><div class="kpi-lbl">Utilidad Bruta</div><div class="kpi-val ' + (utilidadBruta>=0?'verde':'rojo') + '">' + fm(utilidadBruta) + '</div><div class="kpi-sub">margen ' + margenBruto + '%</div></div>' +
-    '</div></div>' +
-
-    // 3. Indicadores técnicos
-    '<div class="seccion"><h3>📐 Indicadores Financieros Técnicos</h3>' +
-    '<div class="ind-grid">' +
-    '<div class="ind-card ' + (margenBruto>=30?'ok':margenBruto>=10?'warn':'bad') + '">' +
-    '<div class="ind-nombre">MARGEN BRUTO</div>' +
-    '<div class="ind-valor ' + (margenBruto>=30?'verde':margenBruto>=10?'naranja':'rojo') + '">' + margenBruto + '%</div>' +
-    '<div class="ind-desc">Porcentaje de utilidad después de costos directos. Saludable: >30%</div></div>' +
-
-    '<div class="ind-card ' + (margenOp>=15?'ok':margenOp>=0?'warn':'bad') + '">' +
-    '<div class="ind-nombre">MARGEN OPERACIONAL</div>' +
-    '<div class="ind-valor ' + (margenOp>=15?'verde':margenOp>=0?'naranja':'rojo') + '">' + margenOp + '%</div>' +
-    '<div class="ind-desc">Eficiencia operativa neta. Saludable: >15% para servicios profesionales</div></div>' +
-
-    '<div class="ind-card ' + (recaudo>=80?'ok':recaudo>=50?'warn':'bad') + '">' +
-    '<div class="ind-nombre">ÍNDICE DE RECAUDO</div>' +
-    '<div class="ind-valor ' + (recaudo>=80?'verde':recaudo>=50?'naranja':'rojo') + '">' + recaudo + '%</div>' +
-    '<div class="ind-desc">Eficiencia en cobro de cartera. Óptimo: >80%</div></div>' +
-
-    '<div class="ind-card ' + (parseFloat(pruebaAcida)>=2?'ok':parseFloat(pruebaAcida)>=1?'warn':'bad') + '">' +
-    '<div class="ind-nombre">PRUEBA ÁCIDA (meses)</div>' +
-    '<div class="ind-valor ' + (parseFloat(pruebaAcida)>=2?'verde':parseFloat(pruebaAcida)>=1?'naranja':'rojo') + '">' + pruebaAcida + '</div>' +
-    '<div class="ind-desc">Meses de operación cubiertos con caja disponible. Óptimo: >2 meses</div></div>' +
-
-    '<div class="ind-card ' + (parseFloat(cobertura)>=1.5?'ok':parseFloat(cobertura)>=1?'warn':'bad') + '">' +
-    '<div class="ind-nombre">COBERTURA DE GASTOS</div>' +
-    '<div class="ind-valor ' + (parseFloat(cobertura)>=1.5?'verde':parseFloat(cobertura)>=1?'naranja':'rojo') + '">' + cobertura + 'x</div>' +
-    '<div class="ind-desc">Veces que los ingresos cubren los gastos totales. Óptimo: >1.5x</div></div>' +
-
-    '<div class="ind-card ' + (endeudamiento<=50?'ok':endeudamiento<=70?'warn':'bad') + '">' +
-    '<div class="ind-nombre">CONCENTRACIÓN DE COSTOS</div>' +
-    '<div class="ind-valor ' + (endeudamiento<=50?'verde':endeudamiento<=70?'naranja':'rojo') + '">' + endeudamiento + '%</div>' +
-    '<div class="ind-desc">Costos como % de ingresos brutos. Saludable: <50% para consultoría</div></div>' +
-    '</div></div>' +
-
-    // 4. Clientes top
-    '<div class="seccion"><h3>🏢 Concentración por Cliente</h3>' +
-    '<table><tr><th>Cliente</th><th>Facturado</th><th>Participación</th></tr>' +
-    clientesTop.map(function(c){
-      var v = clienteMap[c];
-      var p = pct(v, totalFacturado);
-      return '<tr><td><strong>'+c+'</strong></td><td>'+fm(v)+'</td><td><div style="display:flex;align-items:center;gap:8px"><div style="background:#e8f0fe;border-radius:4px;height:8px;width:100px"><div style="background:#0C447C;border-radius:4px;height:8px;width:'+p+'px"></div></div>'+p+'%</div></td></tr>';
-    }).join('') +
-    '</table>' +
-    (clientesTop.length === 1 ? '<div class="alerta" style="margin-top:16px">⚠️ <strong>Riesgo de concentración:</strong> El 100% de los ingresos proviene de un solo cliente. Se recomienda diversificar el portafolio.</div>' : '') +
-    '</div>' +
-
-    // 5. Costos por categoría
-    (frTop.length ? '<div class="seccion"><h3>📋 Principales Categorías de Costo (Radicadas)</h3>' +
-    '<table><tr><th>Categoría</th><th>Total</th><th>% del costo</th></tr>' +
-    frTop.map(function(c){
-      var v = frCatMap[c];
-      var p = pct(v, totalCostos);
-      return '<tr><td>'+c+'</td><td>'+fm(v)+'</td><td>'+p+'%</td></tr>';
-    }).join('') +
-    '</table></div>' : '') +
-
-    // 6. Alertas y recomendaciones
-    '<div class="seccion"><h3>🚨 Alertas y Recomendaciones</h3>' +
-    '<div style="display:flex;flex-direction:column;gap:10px;font-size:13px">' +
-    (totalPendiente > 0 ? '<div class="alerta">💰 Cartera pendiente de <strong>' + fm(totalPendiente) + '</strong> — gestionar cobro activo en los próximos 30 días.</div>' : '') +
-    (recaudo < 70 ? '<div class="alerta">📉 Índice de recaudo por debajo del 70%. Revisar política de cobro y términos de pago con clientes.</div>' : '') +
-    (margenOp < 0  ? '<div class="alerta" style="background:#fdeaea;border-color:#f44336;color:#C53030">🔴 La compañía opera con pérdida operacional. Acción inmediata requerida en reducción de costos.</div>' : '') +
-    '<div style="background:#f0fff4;border:1px solid #68D391;border-radius:10px;padding:14px 18px;color:#276749">✅ <strong>Fortalezas:</strong> Portafolio de clientes de alto valor (farmacéuticas multinacionales), servicios especializados de investigación científica con barreras de entrada altas.</div>' +
-    '</div></div>' +
-
-    // Pie
-    '<div style="text-align:center;padding:20px;font-size:11px;color:#aaa">' +
-    'Informe generado automáticamente por el Sistema Contable ALZAK · ' + fechaStr + ' · Confidencial' +
-    '</div>' +
-
-    '</div></body></html>';
-
-  var ventana = window.open('', '_blank', 'width=1100,height=800,scrollbars=yes');
-  if (ventana) {
-    ventana.document.write(html);
-    ventana.document.close();
-  } else {
-    mostrarToast('⚠️ Permite ventanas emergentes para ver el informe', '#993C1D', 4000);
-  }
-}
-</script>
-</body>
+    'resultando en una utilidad operacional de <strong style=\\"color:\'+(utilidadOp>=0?'#1D9E75':'#C53030')+'\\">\' + fm(utilidadOp) + \'</strong>.' +
+    '>

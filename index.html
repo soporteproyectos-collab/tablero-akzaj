@@ -2045,6 +2045,8 @@ function alzakCargarDatosSheets(callback) {
             return {
               id:          'GS-' + idx,
               num:         r['N_Factura']||r['N Factura']||r['Factura']||r['N°']||'',
+              estado:      r['Estado']||'',
+              concepto:    r['Concepto']||'',
               fecha:       fechaDisplay || alzakFechaAISO(r['Fecha']||''),
               fecha_raw:   r['Fecha']||'',  // dd/MM/yyyy — viene así del Apps Script
               vence:       venceDias,       // yyyy-MM-dd para diasHasta()
@@ -2069,7 +2071,34 @@ function alzakCargarDatosSheets(callback) {
           try {
             localStorage.setItem('alzak_facturas_gs', JSON.stringify(FACTURAS));
           } catch(e) {}
-          cargados.push('Facturación: ' + FACTURAS.length);
+          // Separar programadas del Sheet de Facturación → alimentan FP_DATA
+          var programadasDelSheet = FACTURAS.filter(function(f){ return (f.estado||'').toLowerCase() === 'programada'; });
+          FACTURAS = FACTURAS.filter(function(f){ return (f.estado||'').toLowerCase() !== 'programada'; });
+
+          // Fusionar con FP_DATA (Sheet maestro tiene prioridad, pero si vacío usar programadas del Sheet fact.)
+          if (programadasDelSheet.length > 0) {
+            // Convertir formato FACTURAS → formato FP_DATA
+            var fpDelSheet = programadasDelSheet.map(function(f, idx) {
+              var fechaISO = '';
+              var dp = (f.fecha_raw || f.fecha || '').split('/');
+              if (dp.length === 3) fechaISO = dp[2]+'-'+dp[1]+'-'+dp[0];
+              else fechaISO = f.fecha_raw || f.fecha || '';
+              var mes = fechaISO ? parseInt(fechaISO.split('-')[1]||'1') : 1;
+              var entry = { cliente: f.cliente||'', proyecto: f.concepto||'', monto: f.bruto||0, fecha: fechaISO, obs: 'Del Sheet de Facturación' };
+              for (var m=0; m<12; m++) entry['m'+(m+1)] = 0;
+              if (mes >= 1 && mes <= 12) entry['m'+mes] = f.bruto||0;
+              return entry;
+            });
+            // Agregar al FP_DATA sin duplicar (por N_Factura/consecutivo)
+            var fpExistentes = FP_DATA.map(function(r){ return r.cliente+'|'+r.monto; });
+            fpDelSheet.forEach(function(fp) {
+              var key = fp.cliente+'|'+fp.monto;
+              if (fpExistentes.indexOf(key) < 0) { FP_DATA.push(fp); fpExistentes.push(key); }
+            });
+            try { localStorage.setItem('alzak_fp_2026', JSON.stringify(FP_DATA)); } catch(e) {}
+          }
+
+          cargados.push('Facturación: ' + FACTURAS.length + (programadasDelSheet.length?' (+'+programadasDelSheet.length+' prog.)':''));
       }
 
       // ── Facturación Programada → FP_DATA ────────────────

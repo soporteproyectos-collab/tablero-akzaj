@@ -511,6 +511,7 @@ tbody tr:hover td{background:var(--cyan-light);}
   <!-- COLUMNA IZQUIERDA: Tablero financiero (scrollable) -->
   <div id="home-split-left" style="flex:1.1;min-width:0;overflow-y:auto;padding:16px 14px 16px 20px;border-right:1px solid #e8e5e0">
     <div id="widget-resumen" style="margin-bottom:12px"></div>
+    <div id="home-flujo-neto"></div>
     <div id="home-bancos-panel-mini" style="display:none"></div>
 
 <div id="h-datos">
@@ -9620,6 +9621,33 @@ function renderResumenTablero() {
 
   el.innerHTML = html;
 
+  // ── Panel Flujo Neto ──────────────────────────────────
+  var panelFlujo = g('home-flujo-neto');
+  if (panelFlujo && typeof GASTOS_DATA !== 'undefined') {
+    var egOp = GASTOS_DATA.filter(function(r){
+      var t=(r['Tipo_Movimiento']||'').toLowerCase();
+      var c=(r['Categoria']||r['Categoría']||'').toLowerCase();
+      return t!=='traslado'&&c.indexOf('traslado')<0&&c.indexOf('inversion')<0;
+    }).reduce(function(a,r){return a+alzakParseNum(r['Total_COP']||r['Total ($)']||0);},0);
+    var egDIAN = GASTOS_DATA.filter(function(r){
+      var c=(r['Categoria']||r['Categoría']||'').trim();
+      return c.indexOf('Obligaci')>=0&&c.indexOf('DIAN')>=0;
+    }).reduce(function(a,r){return a+alzakParseNum(r['Total_COP']||r['Total ($)']||0);},0);
+    var egTotal = egOp + egDIAN;
+    var neto = totalCobrado - egTotal;
+    var col = neto>=0?'#1D9E75':'#C53030';
+    var bgN = neto>=0?'#F0FFF4':'#FFF5F5';
+    panelFlujo.innerHTML =
+      '<div style="background:'+bgN+';border-radius:12px;padding:14px 20px;border-left:4px solid '+col+';margin-top:10px">' +
+      '<div style="font-size:10px;font-weight:700;color:#888;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">📊 Flujo Neto 2026 — Cobrado vs Total Pagado</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">' +
+      '<div style="text-align:center"><div style="font-size:9px;color:#888;margin-bottom:3px">FACTURADO</div><div style="font-size:14px;font-weight:800;color:#0C447C" class="tb">'+F(totalFact)+'</div><div style="font-size:9px;color:#aaa">total emitido</div></div>' +
+      '<div style="text-align:center"><div style="font-size:9px;color:#888;margin-bottom:3px">COBRADO</div><div style="font-size:14px;font-weight:800;color:#1D9E75" class="tg">'+F(totalCobrado)+'</div><div style="font-size:9px;color:#aaa">efectivo recibido</div></div>' +
+      '<div style="text-align:center"><div style="font-size:9px;color:#888;margin-bottom:3px">TOTAL PAGADO</div><div style="font-size:14px;font-weight:800;color:#C53030" class="tr">'+F(egTotal)+'</div><div style="font-size:9px;color:#aaa">op. '+F(egOp)+' + DIAN '+F(egDIAN)+'</div></div>' +
+      '<div style="text-align:center;border-left:2px solid '+col+';padding-left:12px"><div style="font-size:9px;color:#888;margin-bottom:3px">NETO DE CAJA</div><div style="font-size:16px;font-weight:800;color:'+col+'">'+(neto>=0?'+':'')+F(neto)+'</div><div style="font-size:10px;font-weight:700;color:'+col+'">'+(neto>=0?'✅ Superávit':'⚠️ Déficit')+'</div></div>' +
+      '</div></div>';
+  }
+
   // Fecha
 
   var fd = g('rs-fecha');
@@ -12982,7 +13010,11 @@ function renderGastosDashboard() {
 
   var totalAll=GASTOS_DATA.filter(esOpDash).reduce(function(a,r){return a+parseFloat(r['Total_COP']||0);},0);
 
-  var totalDIAN=GASTOS_DATA.filter(function(r){return !esOpDash(r);}).reduce(function(a,r){return a+parseFloat(r['Total_COP']||0);},0);
+  var totalDIAN=GASTOS_DATA.filter(function(r){
+    var c=(r['Categoria']||r['Categoría']||'').trim();
+    return (c==='Obligacion Tributaria DIAN'||c==='Obligaciones Tributarias DIAN'||
+            (c.indexOf('Obligaci')>=0&&c.indexOf('DIAN')>=0));
+  }).reduce(function(a,r){return a+alzakParseNum(r['Total_COP']||r['Total ($)']||0);},0);
 
   var pagadoAll=GASTOS_DATA.filter(function(r){return r._pagada&&esOpDash(r);}).reduce(function(a,r){return a+parseFloat(r['Total_COP']||0);},0);
 

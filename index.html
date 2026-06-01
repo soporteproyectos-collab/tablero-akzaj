@@ -17289,7 +17289,13 @@ function fpRenderLista() {
   var MNL = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   var MNF = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
+  // Ordenar por fecha programada ascendente
+  data = data.slice().sort(function(a,b){
+    return new Date(a.fecha||'2099-12-31') - new Date(b.fecha||'2099-12-31');
+  });
+
   var totalProg = data.reduce(function(a,r){return a+(parseFloat(r.monto)||0);},0);
+  var hoyMs = new Date().getTime();
 
   var html = '<div style="overflow-x:auto">';
   html += '<table style="width:100%;border-collapse:collapse;font-size:11px">';
@@ -17304,19 +17310,33 @@ function fpRenderLista() {
   html += '</tr></thead><tbody>';
 
   data.forEach(function(r, idx) {
-    var mesIdx = parseInt(((r.fecha||'2026-01-01').split('-')[1]||'1')) - 1;
+    var fechaBase = r.fecha ? new Date(r.fecha) : null;
+    var mesIdx = fechaBase ? fechaBase.getMonth() : parseInt(((r.fecha||'2026-01-01').split('-')[1]||'1')) - 1;
     if (mesIdx < 0 || mesIdx > 11) mesIdx = 0;
     var dp = diasP(r.cliente||'');
-    // Usar fecha exacta guardada para consistencia con el modal
-    var fechaBase = r.fecha ? new Date(r.fecha) : new Date(2026, mesIdx, 1);
-    var cobro = new Date(fechaBase.getTime() + dp*86400000);
-    var cobroStr = cobro.getDate()+' '+MNL[cobro.getMonth()]+' '+cobro.getFullYear();
-    var bg = idx % 2 === 0 ? '#FDFCFF' : '#F8F5FF';
-    html += '<tr style="background:'+bg+';border-bottom:1px solid #EDE9FE">';
+    var fechaFactStr = fechaBase
+      ? (fechaBase.getDate()+' '+MNL[fechaBase.getMonth()]+' '+fechaBase.getFullYear())
+      : MNL[mesIdx];
+    var cobro = fechaBase ? new Date(fechaBase.getTime() + dp*86400000) : null;
+    var cobroStr = cobro ? (cobro.getDate()+' '+MNL[cobro.getMonth()]+' '+cobro.getFullYear()) : '—';
+
+    // Alerta: faltan ≤2 días para facturar
+    var diasParaFacturar = fechaBase ? Math.ceil((fechaBase.getTime() - hoyMs) / 86400000) : 999;
+    var alerta2dias = diasParaFacturar >= 0 && diasParaFacturar <= 2;
+    var alertaVencida = diasParaFacturar < 0;
+
+    var bg = alerta2dias ? '#FFFBEB' : alertaVencida ? '#FFF5F5' : (idx%2===0?'#FDFCFF':'#F8F5FF');
+    var badge = alerta2dias
+      ? '<span style="background:#F59E0B;color:#fff;font-size:9px;font-weight:700;border-radius:4px;padding:2px 5px;margin-left:4px">¡HOY/MAÑANA!</span>'
+      : alertaVencida
+      ? '<span style="background:#EF4444;color:#fff;font-size:9px;font-weight:700;border-radius:4px;padding:2px 5px;margin-left:4px">VENCIDA</span>'
+      : '';
+
+    html += '<tr style="background:'+bg+';border-bottom:1px solid #EDE9FE'+(alerta2dias?';border-left:3px solid #F59E0B':alertaVencida?';border-left:3px solid #EF4444':'')+'">';
     html += '<td style="padding:7px 10px;font-weight:600;color:#553C9A">'+fpEsc(r.cliente||'')+'</td>';
-    html += '<td style="padding:7px 10px;color:#666;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+fpEsc(r.proyecto||'')+'">'+fpEsc((r.proyecto||'').substring(0,40))+'</td>';
+    html += '<td style="padding:7px 10px;color:#666;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+fpEsc(r.proyecto||'')+'">'+fpEsc((r.proyecto||'').substring(0,35))+'</td>';
     html += '<td style="padding:7px 10px;text-align:right;font-weight:700;color:#0C447C">$'+Math.round(parseFloat(r.monto)||0).toLocaleString('es-CO')+'</td>';
-    html += '<td style="padding:7px 8px;text-align:center;color:#374151">'+MNL[mesIdx]+'</td>';
+    html += '<td style="padding:7px 8px;text-align:center;color:#374151;font-weight:600">'+fechaFactStr+badge+'</td>';
     html += '<td style="padding:7px 8px;text-align:center;color:#888">'+dp+' días</td>';
     html += '<td style="padding:7px 8px;text-align:center;font-weight:600;color:#276749">'+cobroStr+'</td>';
     html += '<td style="padding:7px 8px;text-align:center;white-space:nowrap">';
@@ -19967,19 +19987,31 @@ function alzakGenerarInforme() {
   var nPagadas       = (typeof FACTURAS!=='undefined') ? FACTURAS.filter(function(f){return f.pagada;}).length : 0;
   var recaudo        = pct(totalCobrado, totalFacturado + totalPendiente);
 
+  // Costos 2026 únicamente (FR_DATA filtrado por año)
   var totalCostos = 0;
   if (typeof FR_DATA!=='undefined' && FR_DATA.length)
-    totalCostos = FR_DATA.reduce(function(a,r){return a+parseFloat(r['Total (COP)']||r['Total_COP']||0);},0);
+    totalCostos = FR_DATA.filter(function(r){
+      var fp = (r['Fecha']||'').split('/');
+      return fp.length >= 3 && parseInt(fp[2]) === 2026;
+    }).reduce(function(a,r){return a+parseFloat(r['Total (COP)']||r['Total_COP']||0);},0);
 
+  // Egresos operativos 2026 (excluyendo traslados, inversiones y DIAN)
   var totalEgresos = 0;
   if (typeof GASTOS_DATA!=='undefined')
     totalEgresos = GASTOS_DATA.filter(function(r){
       var t=(r['Tipo_Movimiento']||'').toLowerCase();
       var c=(r['Categoria']||r['Categoría']||'').toLowerCase();
-      return t!=='traslado' && c.indexOf('traslado')<0 && c.indexOf('inversion')<0;
+      if (t==='traslado') return false;
+      if (c.indexOf('traslado')>=0) return false;
+      if (c.indexOf('inversion')>=0||c.indexOf('inversión')>=0) return false;
+      if (c.indexOf('obligaci')>=0&&c.indexOf('dian')>=0) return false;
+      if (c.indexOf('obligaci')>=0&&c.indexOf('tribut')>=0) return false;
+      return true;
     }).reduce(function(a,r){return a+parseFloat(r['Total_COP']||r['Total ($)']||0);},0);
 
-  var utilidadOp  = totalFacturado - totalCostos - totalEgresos;
+  // Utilidad operacional = Ingresos 2026 - Costos radicados 2026
+  // (coincide con Estado de Resultados — NO resta egresos que son pagos de caja)
+  var utilidadOp  = totalFacturado - totalCostos;
   var margenOp    = pct(utilidadOp, totalFacturado);
   var margenBruto = pct(totalFacturado - totalCostos, totalFacturado);
 

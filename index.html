@@ -152,6 +152,20 @@ select,input{padding:6px 10px;border:1px solid #d0cec8;border-radius:7px;font-si
 /* ══════════════════════════════════════════════════════════
    MODO OCULTAR SALDOS — solo blur en números
    ══════════════════════════════════════════════════════════ */
+/* Blur contenedores completos — cubre Canvas, SVG y texto dinámico */
+body.saldos-ocultos #home-split-left,
+body.saldos-ocultos #home-split-right {
+  filter: blur(8px) !important;
+  user-select: none !important;
+  pointer-events: none !important;
+  transition: filter 0.3s !important;
+}
+body:not(.saldos-ocultos) #home-split-left,
+body:not(.saldos-ocultos) #home-split-right {
+  filter: none !important;
+  pointer-events: auto !important;
+  transition: filter 0.3s !important;
+}
 body.saldos-ocultos .ind-v,
 body.saldos-ocultos .met-v,
 body.saldos-ocultos .kpi-val,
@@ -19928,161 +19942,189 @@ function fpdfStep(n) {
 </script>
 
 <script>
-// ── Guardar para el equipo (sincroniza con Sheets) ───────────
+// ── Guardar para el equipo ────────────────────────────────
 function alzakGuardarParaEquipo() {
   mostrarToast('💾 Guardando para el equipo...', '#0C447C', 1500);
-  // Sync programadas
   if (typeof fpSyncSheets === 'function') fpSyncSheets(typeof fpCargarDatos === 'function' ? fpCargarDatos() : []);
-  // Sync estado facturas
-  if (typeof guardarDatos === 'function') try { guardarDatos(); } catch(e) {}
   setTimeout(function() {
     mostrarToast('✅ Guardado — Paula puede sincronizar y verá los últimos datos', '#1D9E75', 3000);
   }, 1600);
 }
 
-// ── Informe Ejecutivo ALZAK — abre en nueva ventana ──────────
+// ── Informe Ejecutivo ─────────────────────────────────────
 function alzakGenerarInforme() {
-  // Recopilar datos
   var hoy = new Date();
   var MN = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  var mesActual = MN[hoy.getMonth()] + ' ' + hoy.getFullYear();
-  var fechaStr  = hoy.getDate() + ' de ' + MN[hoy.getMonth()] + ' de ' + hoy.getFullYear();
+  var fechaStr = hoy.getDate() + ' de ' + MN[hoy.getMonth()] + ' de ' + hoy.getFullYear();
 
   function fm(n) { return '$' + Math.round(n||0).toLocaleString('es-CO'); }
   function pct(a,b) { return b ? Math.round(a/b*100) : 0; }
 
-  // ── Ingresos
-  var totalFacturado = (typeof FACTURAS !== 'undefined') ? FACTURAS.reduce(function(a,f){return a+(f.bruto||0);},0) : 0;
-  var totalCobrado   = (typeof FACTURAS !== 'undefined') ? FACTURAS.filter(function(f){return f.pagada;}).reduce(function(a,f){return a+(f.total||0);},0) : 0;
-  var totalPendiente = (typeof FACTURAS !== 'undefined') ? FACTURAS.filter(function(f){return !f.pagada;}).reduce(function(a,f){return a+(f.total||0);},0) : 0;
-  var nFacturas      = (typeof FACTURAS !== 'undefined') ? FACTURAS.length : 0;
-  var nPagadas       = (typeof FACTURAS !== 'undefined') ? FACTURAS.filter(function(f){return f.pagada;}).length : 0;
+  var totalFacturado = (typeof FACTURAS!=='undefined') ? FACTURAS.reduce(function(a,f){return a+(f.bruto||0);},0) : 0;
+  var totalCobrado   = (typeof FACTURAS!=='undefined') ? FACTURAS.filter(function(f){return f.pagada;}).reduce(function(a,f){return a+(f.total||0);},0) : 0;
+  var totalPendiente = (typeof FACTURAS!=='undefined') ? FACTURAS.filter(function(f){return !f.pagada;}).reduce(function(a,f){return a+(f.total||0);},0) : 0;
+  var nFacturas      = (typeof FACTURAS!=='undefined') ? FACTURAS.length : 0;
+  var nPagadas       = (typeof FACTURAS!=='undefined') ? FACTURAS.filter(function(f){return f.pagada;}).length : 0;
+  var recaudo        = pct(totalCobrado, totalFacturado + totalPendiente);
 
-  // ── Costos (FR_DATA = radicadas)
   var totalCostos = 0;
-  if (typeof FR_DATA !== 'undefined' && FR_DATA.length) {
-    totalCostos = FR_DATA.reduce(function(a,r){
-      var v = parseFloat(r['Total (COP)']||r['Total_COP']||0);
-      return a + v;
-    }, 0);
-  }
+  if (typeof FR_DATA!=='undefined' && FR_DATA.length)
+    totalCostos = FR_DATA.reduce(function(a,r){return a+parseFloat(r['Total (COP)']||r['Total_COP']||0);},0);
 
-  // ── Egresos operativos
   var totalEgresos = 0;
-  if (typeof GASTOS_DATA !== 'undefined') {
+  if (typeof GASTOS_DATA!=='undefined')
     totalEgresos = GASTOS_DATA.filter(function(r){
-      var cat = (r['Categoria']||r['Categoría']||'').toLowerCase();
-      var tipo = (r['Tipo_Movimiento']||'').toLowerCase();
-      return cat.indexOf('traslado') < 0 && cat.indexOf('inversion') < 0 && tipo !== 'traslado';
-    }).reduce(function(a,r){ return a + parseFloat(r['Total_COP']||r['Total ($)']||0); }, 0);
-  }
+      var t=(r['Tipo_Movimiento']||'').toLowerCase();
+      var c=(r['Categoria']||r['Categoría']||'').toLowerCase();
+      return t!=='traslado' && c.indexOf('traslado')<0 && c.indexOf('inversion')<0;
+    }).reduce(function(a,r){return a+parseFloat(r['Total_COP']||r['Total ($)']||0);},0);
 
-  // ── Indicadores financieros
-  // Utilidad del Estado de Resultados = Ingresos - Costos radicados (FR_DATA)
-  var utilidadBruta   = totalFacturado - totalCostos;   // Utilidad bruta
-  var margenBruto     = pct(utilidadBruta, totalFacturado);
-  // Utilidad operacional = Ingresos - (Costos + Egresos operativos)
-  var utilidadOp      = totalFacturado - totalCostos - totalEgresos;
-  var margenOp        = pct(utilidadOp, totalFacturado);
-  // Para el resumen: usar utilidad operacional como la métrica principal (Estado de Resultados)
-  var utilidadER      = utilidadOp; // Coincide con Estado de Resultados acumulado
-  var recaudo         = pct(totalCobrado, totalFacturado + totalPendiente);
+  var utilidadOp  = totalFacturado - totalCostos - totalEgresos;
+  var margenOp    = pct(utilidadOp, totalFacturado);
+  var margenBruto = pct(totalFacturado - totalCostos, totalFacturado);
 
-  // ── Liquidez (activo corriente = caja disponible)
   var cajaTotal = 0;
-  if (typeof P !== 'undefined' && P.length) {
-    var ultimo = P[P.length-1];
-    cajaTotal = (ultimo.sF||0) + ((ultimo.fid&&ultimo.fid.sF)||0) + ((ultimo.caja&&ultimo.caja.sF)||0) + ((ultimo.bold&&ultimo.bold.sF)||0);
+  if (typeof P!=='undefined' && P.length) {
+    var ul = P[P.length-1];
+    cajaTotal = (ul.sF||0)+((ul.fid&&ul.fid.sF)||0)+((ul.caja&&ul.caja.sF)||0)+((ul.bold&&ul.bold.sF)||0);
   }
-  var pruebaAcida     = totalFacturado > 0 ? (cajaTotal / (totalEgresos/12||1)).toFixed(2) : '—';
-  var cobertura       = totalEgresos   > 0 ? (totalFacturado / totalEgresos).toFixed(2) : '—';
-  var endeudamiento   = (totalCostos + totalEgresos) > 0 ? pct(totalCostos, totalFacturado) : 0;
+  var pruebaAcida = totalEgresos>0 ? (cajaTotal/(totalEgresos/12)).toFixed(2) : '—';
+  var cobertura   = totalEgresos>0 ? (totalFacturado/totalEgresos).toFixed(2) : '—';
 
-  // ── Clientes top
   var clienteMap = {};
-  if (typeof FACTURAS !== 'undefined') {
-    FACTURAS.forEach(function(f) {
-      clienteMap[f.cliente||'N/A'] = (clienteMap[f.cliente||'N/A']||0) + (f.bruto||0);
-    });
-  }
-  var clientesTop = Object.keys(clienteMap).sort(function(a,b){return clienteMap[b]-clienteMap[a];}).slice(0,5);
+  if (typeof FACTURAS!=='undefined')
+    FACTURAS.forEach(function(f){clienteMap[f.cliente||'N/A']=(clienteMap[f.cliente||'N/A']||0)+(f.bruto||0);});
+  var clientesTop = Object.keys(clienteMap).sort(function(a,b){return clienteMap[b]-clienteMap[a];}).slice(0,6);
 
-  // ── Radicadas top
-  var frCatMap = {};
-  if (typeof FR_DATA !== 'undefined') {
-    FR_DATA.forEach(function(r){
-      var cat = r['Categoria']||'Otros';
-      frCatMap[cat] = (frCatMap[cat]||0) + parseFloat(r['Total (COP)']||0);
-    });
-  }
-  var frTop = Object.keys(frCatMap).sort(function(a,b){return frCatMap[b]-frCatMap[a];}).slice(0,5);
+  var semaforo = margenOp>=20?'🟢':margenOp>=0?'🟡':'🔴';
+  var analisis = margenOp>=20
+    ? 'La compañía presenta una posición financiera <strong>sólida</strong>, con margen operacional superior al 20%.'
+    : margenOp>=0
+    ? 'La compañía opera con margen positivo pero ajustado. Se recomienda acelerar el recaudo de cartera.'
+    : 'La compañía presenta <strong>pérdida operacional</strong>. Acción inmediata requerida en costos y facturación.';
 
-  // ── Análisis textual automático
-  var semaforo = margenOp >= 20 ? '🟢' : margenOp >= 5 ? '🟡' : '🔴';
-  var analisis = '';
-  if (margenOp >= 20) analisis = 'La compañía presenta una posición financiera <strong>sólida</strong>, con un margen operacional superior al 20%, lo que indica eficiencia en la gestión de costos y capacidad de generación de valor.';
-  else if (margenOp >= 0) analisis = 'La compañía opera con margen positivo pero ajustado. Se recomienda revisar la estructura de costos y acelerar el recaudo de cartera pendiente.';
-  else analisis = 'La compañía presenta pérdida operacional. Es prioritario revisar la estructura de costos, acelerar facturación y gestionar el recaudo de cartera de forma inmediata.';
+  var colUtil = utilidadOp>=0?'#1D9E75':'#C53030';
 
-  // ── Generar HTML del informe
-  var html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">' +
-    '<title>Informe Ejecutivo ALZAK GROUP SAS — ' + fechaStr + '</title>' +
-    '<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">' +
-    '<style>' +
-    'body{font-family:Montserrat,sans-serif;margin:0;padding:0;background:#f4f6f9;color:#1a1a2e;}' +
-    '.portada{background:linear-gradient(135deg,#1E3A5F 0%,#0C447C 60%,#5BC8CD 100%);color:#fff;padding:60px 80px;min-height:200px;}' +
-    '.portada h1{font-size:32px;font-weight:800;margin:0 0 8px;}' +
-    '.portada h2{font-size:16px;font-weight:400;opacity:.8;margin:0 0 40px;}' +
-    '.portada .meta{font-size:13px;opacity:.6;}' +
-    '.contenido{max-width:1000px;margin:0 auto;padding:40px 20px;}' +
-    '.seccion{background:#fff;border-radius:14px;padding:28px 32px;margin-bottom:24px;box-shadow:0 2px 12px rgba(0,0,0,.06);}' +
-    '.seccion h3{font-size:16px;font-weight:700;color:#1E3A5F;margin:0 0 20px;padding-bottom:10px;border-bottom:2px solid #e8f0fe;}' +
-    '.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}' +
-    '.kpi{background:#f8faff;border-radius:10px;padding:16px;text-align:center;}' +
-    '.kpi-lbl{font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}' +
-    '.kpi-val{font-size:20px;font-weight:800;}' +
-    '.kpi-sub{font-size:10px;color:#aaa;margin-top:4px;}' +
-    '.verde{color:#1D9E75;} .rojo{color:#C53030;} .azul{color:#0C447C;} .naranja{color:#B7791F;}' +
-    '.ind-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}' +
-    '.ind-card{border-radius:10px;padding:16px 20px;border-left:4px solid;}' +
-    '.ind-card.ok{background:#f0fff4;border-color:#1D9E75;}' +
-    '.ind-card.warn{background:#fffbeb;border-color:#B7791F;}' +
-    '.ind-card.bad{background:#fff5f5;border-color:#C53030;}' +
-    '.ind-nombre{font-size:11px;font-weight:700;color:#555;margin-bottom:6px;}' +
-    '.ind-valor{font-size:22px;font-weight:800;margin-bottom:4px;}' +
-    '.ind-desc{font-size:10px;color:#888;line-height:1.4;}' +
-    'table{width:100%;border-collapse:collapse;font-size:12px;}' +
-    'th{background:#1E3A5F;color:#fff;padding:8px 12px;text-align:left;font-weight:600;}' +
-    'td{padding:8px 12px;border-bottom:1px solid #f0ede8;}' +
-    'tr:nth-child(even) td{background:#f8faff;}' +
-    '.alerta{background:#fff3e0;border:1px solid #FFB74D;border-radius:10px;padding:16px 20px;font-size:13px;color:#E65100;}' +
-    '.semaforo{font-size:14px;line-height:1.6;}' +
-    '@media print{body{background:#fff;} .no-print{display:none;} .seccion{box-shadow:none;border:1px solid #eee;}}' +
-    '</style></head><body>' +
+  var html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
+    +'<title>Informe Ejecutivo ALZAK — '+fechaStr+'</title>'
+    +'<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">'
+    +'<style>'
+    +'*{box-sizing:border-box;}'
+    +'body{font-family:Montserrat,sans-serif;margin:0;background:#f4f6f9;color:#1a1a2e;}'
+    +'.header{background:linear-gradient(135deg,#1E3A5F,#0C447C 60%,#5BC8CD);color:#fff;padding:48px 64px;}'
+    +'.header h1{font-size:28px;font-weight:800;margin:0 0 6px}'
+    +'.header p{font-size:13px;opacity:.7;margin:0}'
+    +'.body{max-width:960px;margin:0 auto;padding:32px 20px}'
+    +'.card{background:#fff;border-radius:12px;padding:24px 28px;margin-bottom:20px;box-shadow:0 2px 10px rgba(0,0,0,.06)}'
+    +'.card h2{font-size:14px;font-weight:700;color:#1E3A5F;margin:0 0 16px;padding-bottom:10px;border-bottom:2px solid #e8f0fe}'
+    +'.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}'
+    +'.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}'
+    +'.kpi{background:#f8faff;border-radius:8px;padding:14px;text-align:center}'
+    +'.kpi-l{font-size:9px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}'
+    +'.kpi-v{font-size:18px;font-weight:800}'
+    +'.kpi-s{font-size:10px;color:#aaa;margin-top:3px}'
+    +'.ind{border-radius:8px;padding:14px 16px}'
+    +'.ind.ok{background:#f0fff4;border-left:4px solid #1D9E75}'
+    +'.ind.warn{background:#fffbeb;border-left:4px solid #B7791F}'
+    +'.ind.bad{background:#fff5f5;border-left:4px solid #C53030}'
+    +'.ind-n{font-size:10px;font-weight:700;color:#666;margin-bottom:4px}'
+    +'.ind-v{font-size:20px;font-weight:800;margin-bottom:3px}'
+    +'.ind-d{font-size:10px;color:#999;line-height:1.4}'
+    +'table{width:100%;border-collapse:collapse;font-size:12px}'
+    +'th{background:#1E3A5F;color:#fff;padding:8px 12px;text-align:left;font-weight:600}'
+    +'td{padding:8px 12px;border-bottom:1px solid #f0ede8}'
+    +'tr:nth-child(even) td{background:#f8faff}'
+    +'.alerta{background:#fff3e0;border:1px solid #FFB74D;border-radius:8px;padding:12px 16px;font-size:12px;color:#E65100;margin-top:10px}'
+    +'@media print{.no-print{display:none}.card{box-shadow:none;border:1px solid #eee}body{background:#fff}}'
+    +'</style></head><body>'
+    +'<div class="header">'
+    +'<div style="display:flex;justify-content:space-between;align-items:flex-start">'
+    +'<div><div style="font-size:10px;opacity:.5;letter-spacing:2px;margin-bottom:12px">INFORME EJECUTIVO FINANCIERO — CONFIDENCIAL</div>'
+    +'<h1>ALZAK GROUP SAS</h1>'
+    +'<p>NIT 900.898.741-8 · Cartagena · Corte: '+fechaStr+' · Acumulado 2026</p></div>'
+    +'<div style="text-align:right;opacity:.6;font-size:12px">'+semaforo+' Estado general<br>'+MN[hoy.getMonth()]+' '+hoy.getFullYear()+'</div>'
+    +'</div></div>'
+    +'<div class="body">'
+    +'<div class="no-print" style="text-align:right;margin-bottom:16px">'
+    +'<button onclick="window.print()" style="background:#1E3A5F;color:#fff;border:none;border-radius:8px;padding:9px 22px;font-size:12px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif">🖨️ Imprimir / PDF</button>'
+    +'</div>'
 
-    // Portada
-    '<div class="portada">' +
-    '<div style="display:flex;justify-content:space-between;align-items:flex-start">' +
-    '<div><div style="font-size:11px;opacity:.5;margin-bottom:16px;letter-spacing:2px">INFORME EJECUTIVO FINANCIERO</div>' +
-    '<h1>ALZAK GROUP SAS</h1><h2>NIT 900.898.741-8 · Cartagena, Colombia</h2>' +
-    '<div class="meta">Corte: ' + fechaStr + ' · Acumulado 2026</div></div>' +
-    '<div style="text-align:right;opacity:.7"><div style="font-size:40px">📊</div><div style="font-size:12px;margin-top:8px">Preparado por<br>Sistema Contable ALZAK</div></div>' +
-    '</div></div>' +
+    // Resumen
+    +'<div class="card">'
+    +'<h2>📋 Resumen Ejecutivo</h2>'
+    +'<div style="font-size:13px;color:#444;line-height:1.7">'+semaforo+' '+analisis+'<br><br>'
+    +'ALZAK ha emitido <strong>'+nFacturas+' facturas</strong> por <strong>'+fm(totalFacturado)+'</strong>. '
+    +'Cobrado: <strong>'+fm(totalCobrado)+'</strong> ('+recaudo+'%). '
+    +'Costos radicados: <strong>'+fm(totalCostos)+'</strong>. '
+    +'Utilidad operacional: <strong style="color:'+colUtil+'">'+fm(utilidadOp)+'</strong>.'
+    +'</div></div>'
 
-    '<div class="contenido">' +
+    // KPIs
+    +'<div class="card"><h2>💰 Indicadores Clave</h2>'
+    +'<div class="grid4">'
+    +'<div class="kpi"><div class="kpi-l">Total Facturado</div><div class="kpi-v" style="color:#0C447C">'+fm(totalFacturado)+'</div><div class="kpi-s">'+nFacturas+' facturas</div></div>'
+    +'<div class="kpi"><div class="kpi-l">Cobrado</div><div class="kpi-v" style="color:#1D9E75">'+fm(totalCobrado)+'</div><div class="kpi-s">'+recaudo+'% recaudo</div></div>'
+    +'<div class="kpi"><div class="kpi-l">Por Cobrar</div><div class="kpi-v" style="color:#B7791F">'+fm(totalPendiente)+'</div><div class="kpi-s">cartera activa</div></div>'
+    +'<div class="kpi"><div class="kpi-l">Utilidad Operacional</div><div class="kpi-v" style="color:'+colUtil+'">'+fm(utilidadOp)+'</div><div class="kpi-s">margen '+margenOp+'%</div></div>'
+    +'</div></div>'
 
-    // Botón imprimir
-    '<div class="no-print" style="text-align:right;margin-bottom:20px">' +
-    '<button onclick="window.print()" style="background:#1E3A5F;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:13px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif">🖨️ Imprimir / Guardar PDF</button></div>' +
+    // Indicadores técnicos
+    +'<div class="card"><h2>📐 Indicadores Financieros</h2>'
+    +'<div class="grid3">'
+    +'<div class="ind '+(margenBruto>=30?'ok':margenBruto>=10?'warn':'bad')+'">'
+    +'<div class="ind-n">MARGEN BRUTO</div>'
+    +'<div class="ind-v" style="color:'+(margenBruto>=30?'#1D9E75':margenBruto>=10?'#B7791F':'#C53030')+'">'+margenBruto+'%</div>'
+    +'<div class="ind-d">Saludable: &gt;30% para consultoría</div></div>'
+    +'<div class="ind '+(margenOp>=15?'ok':margenOp>=0?'warn':'bad')+'">'
+    +'<div class="ind-n">MARGEN OPERACIONAL</div>'
+    +'<div class="ind-v" style="color:'+(margenOp>=15?'#1D9E75':margenOp>=0?'#B7791F':'#C53030')+'">'+margenOp+'%</div>'
+    +'<div class="ind-d">Eficiencia operativa neta</div></div>'
+    +'<div class="ind '+(recaudo>=80?'ok':recaudo>=50?'warn':'bad')+'">'
+    +'<div class="ind-n">ÍNDICE DE RECAUDO</div>'
+    +'<div class="ind-v" style="color:'+(recaudo>=80?'#1D9E75':recaudo>=50?'#B7791F':'#C53030')+'">'+recaudo+'%</div>'
+    +'<div class="ind-d">Óptimo: &gt;80%</div></div>'
+    +'<div class="ind '+(parseFloat(pruebaAcida)>=2?'ok':parseFloat(pruebaAcida)>=1?'warn':'bad')+'">'
+    +'<div class="ind-n">PRUEBA ÁCIDA (meses)</div>'
+    +'<div class="ind-v" style="color:'+(parseFloat(pruebaAcida)>=2?'#1D9E75':parseFloat(pruebaAcida)>=1?'#B7791F':'#C53030')+'">'+pruebaAcida+'</div>'
+    +'<div class="ind-d">Meses de caja disponible</div></div>'
+    +'<div class="ind '+(parseFloat(cobertura)>=1.5?'ok':parseFloat(cobertura)>=1?'warn':'bad')+'">'
+    +'<div class="ind-n">COBERTURA DE GASTOS</div>'
+    +'<div class="ind-v" style="color:'+(parseFloat(cobertura)>=1.5?'#1D9E75':parseFloat(cobertura)>=1?'#B7791F':'#C53030')+'">'+cobertura+'x</div>'
+    +'<div class="ind-d">Ingresos ÷ Gastos totales</div></div>'
+    +'<div class="ind '+(totalPendiente<totalFacturado*0.3?'ok':totalPendiente<totalFacturado*0.6?'warn':'bad')+'">'
+    +'<div class="ind-n">CARTERA / FACTURADO</div>'
+    +'<div class="ind-v" style="color:'+(totalPendiente<totalFacturado*0.3?'#1D9E75':totalPendiente<totalFacturado*0.6?'#B7791F':'#C53030')+'">'+pct(totalPendiente,totalFacturado)+'%</div>'
+    +'<div class="ind-d">% sin cobrar del total</div></div>'
+    +'</div></div>'
 
-    // 1. Resumen ejecutivo
-    '<div class="seccion">' +
-    '<h3>📋 Resumen Ejecutivo</h3>' +
-    '<div class="semaforo">' + semaforo + ' <strong>Situación general:</strong> ' + analisis + '</div>' +
-    '<div style="margin-top:16px;font-size:13px;color:#555;line-height:1.7">' +
-    'A la fecha de corte, ALZAK GROUP SAS ha emitido <strong>' + nFacturas + ' facturas</strong> por un valor total de <strong>' + fm(totalFacturado) + '</strong>, ' +
-    'de las cuales <strong>' + nPagadas + ' están pagadas</strong> (' + recaudo + '% de recaudo). ' +
-    'La cartera pendiente asciende a <strong>' + fm(totalPendiente) + '</strong>. ' +
-    'Los costos registrados en facturas radicadas suman <strong>' + fm(totalCostos) + '</strong>, ' +
-    'resultando en una utilidad operacional de <strong style=\\"color:\'+(utilidadOp>=0?'#1D9E75':'#C53030')+'\\">\' + fm(utilidadOp) + \'</strong>.' +
-    '>
+    // Clientes
+    +'<div class="card"><h2>🏢 Concentración por Cliente</h2>'
+    +'<table><tr><th>Cliente</th><th>Facturado</th><th>%</th></tr>'
+    +clientesTop.map(function(c){
+      var v=clienteMap[c], p=pct(v,totalFacturado);
+      return '<tr><td><strong>'+c+'</strong></td><td>'+fm(v)+'</td>'
+        +'<td><div style="display:flex;align-items:center;gap:6px">'
+        +'<div style="background:#e8f0fe;border-radius:3px;height:6px;width:80px">'
+        +'<div style="background:#0C447C;border-radius:3px;height:6px;width:'+Math.min(p,100)+'px"></div>'
+        +'</div>'+p+'%</div></td></tr>';
+    }).join('')
+    +'</table></div>'
+
+    // Alertas
+    +'<div class="card"><h2>🚨 Alertas y Recomendaciones</h2>'
+    +(totalPendiente>0?'<div class="alerta">💰 Cartera pendiente <strong>'+fm(totalPendiente)+'</strong> — gestionar cobro activo.</div>':'')
+    +(recaudo<70?'<div class="alerta" style="margin-top:8px">📉 Recaudo bajo 70%. Revisar política de cobro.</div>':'')
+    +(utilidadOp<0?'<div class="alerta" style="background:#fdeaea;border-color:#f44336;color:#C53030;margin-top:8px">🔴 Pérdida operacional — revisar estructura de costos.</div>':'')
+    +'<div style="background:#f0fff4;border:1px solid #68D391;border-radius:8px;padding:12px 16px;font-size:12px;color:#276749;margin-top:8px">✅ Portafolio de clientes de alto valor: farmacéuticas multinacionales con contratos recurrentes.</div>'
+    +'</div>'
+
+    +'<div style="text-align:center;padding:16px;font-size:10px;color:#bbb">Informe generado automáticamente · '+fechaStr+' · Confidencial ALZAK GROUP SAS</div>'
+    +'</div></body></html>';
+
+  var v = window.open('', '_blank', 'width=1100,height=820,scrollbars=yes');
+  if (v) { v.document.write(html); v.document.close(); }
+  else mostrarToast('⚠️ Permite ventanas emergentes en Chrome para ver el informe', '#993C1D', 4000);
+}
+</script>
+</body>
+</html>

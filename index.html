@@ -2075,16 +2075,17 @@ function alzakCargarDatosSheets(callback) {
             var fechaDisplay = alzakFechaDisplay(r['Fecha']||'');
             var pagada = (r['Estado']||'').toLowerCase().indexOf('pagad') >= 0 ||
                          (r['Estado']||'').toLowerCase() === 'cobrada';
+            var estadoRaw = (r['Estado']||'pendiente').trim();
             return {
               id:          'GS-' + idx,
               num:         r['N_Factura']||r['N Factura']||r['Factura']||r['N°']||'',
-              estado:      r['Estado']||'',
+              estado:      estadoRaw,
               concepto:    r['Concepto']||'',
               fecha:       fechaDisplay || alzakFechaAISO(r['Fecha']||''),
-              fecha_raw:   r['Fecha']||'',  // dd/MM/yyyy — viene así del Apps Script
-              vence:       venceDias,       // yyyy-MM-dd para diasHasta()
-              venceDisplay:venceDisplay,    // dd/MM/yyyy para mostrar
-              cliente:     r['Cliente']||'',
+              fecha_raw:   r['Fecha']||'',
+              vence:       venceDias,
+              venceDisplay:venceDisplay,
+              cliente:     (r['Cliente']||'').trim(),
               nit:         r['NIT']||'',
               descripcion: r['Concepto']||r['Descripcion']||'',
               bruto:       bruto,
@@ -2092,8 +2093,7 @@ function alzakCargarDatosSheets(callback) {
               retefuente:  rete,
               reteiva:     Math.round(iva * 0.15),
               total:       total,
-              pagada:      pagada,
-              estado:      r['Estado']||'pendiente'
+              pagada:      estadoRaw.toLowerCase().indexOf('pagad') >= 0
             };
           });
           if (typeof renderFacturas === 'function') renderFacturas();

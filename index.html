@@ -10007,12 +10007,15 @@ function calcBalMes(mes) {
 
   // Equipos adquiridos en 2026 desde FR_DATA (facturas radicadas de proveedores de equipos)
   // Categorías de activos en FR_DATA
+  // Activos fijos reales — excluye Studio14 (ajuste 2025) e ítems menores
   var CATS_ACTIVOS_FR = [
     'Equipos de Oficina','Equipos de oficina',
     'Equipos y Tecnología','Equipos y tecnologia',
-    'Mobiliario y Enseres','Mobiliario y enseres',
-    'Materiales y Construcción','Materiales y Construccion'
+    'Mobiliario y Enseres','Mobiliario y enseres'
+    // Materiales y Construcción se excluye — son gastos de mantenimiento/remodelación
   ];
+  // Comprobantes a EXCLUIR de activos (Studio14 y menores)
+  var EXCLUIR_ACTIVOS = ['ST-130','F591344584']; // Studio14, IKEO tapete/manta
 
   var activosPorCat = {};
   var totalActivosGastos2026 = 0;
@@ -10020,6 +10023,12 @@ function calcBalMes(mes) {
   if (typeof FR_DATA !== 'undefined' && FR_DATA.length) {
     FR_DATA.filter(function(r){
       if (CATS_ACTIVOS_FR.indexOf(r['Categoria']||'') < 0) return false;
+      // Excluir comprobantes específicos (Studio14, ítems no activos)
+      var ncomp = String(r['N Comprobante']||r['N_Comprobante']||'').trim();
+      if (EXCLUIR_ACTIVOS.indexOf(ncomp) >= 0) return false;
+      // Excluir montos menores a $200.000 (no se capitalizan)
+      var v = parseFloat(r['Total (COP)']||r['Total_COP']||0);
+      if (v < 200000) return false;
       // Filtrar hasta el corte del mes
       var fp = (r['Fecha']||'').split('/');
       if (fp.length < 3) return true;

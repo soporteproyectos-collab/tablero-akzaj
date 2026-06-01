@@ -2137,10 +2137,13 @@ function alzakCargarDatosSheets(callback) {
       }
 
       // ── Facturación Programada → FP_DATA ────────────────
-      if (data.programadas && data.programadas.length) {
+      // NOTA: Las programadas del Sheet de Facturación ya fueron procesadas arriba
+      // Solo agregar las del Sheet maestro si FP_DATA está vacío
+      if (FP_DATA.length === 0 && data.programadas && data.programadas.length) {
         FP_DATA = data.programadas;
-        // También sincronizar con localStorage para compatibilidad
         try { localStorage.setItem('alzak_fp_2026', JSON.stringify(FP_DATA)); } catch(e) {}
+        cargados.push('Programadas maestro: ' + FP_DATA.length);
+      } else if (FP_DATA.length > 0) {
         cargados.push('Programadas: ' + FP_DATA.length);
       }
 
@@ -2158,6 +2161,8 @@ function alzakCargarDatosSheets(callback) {
       if (typeof renderCarteraHome      === 'function') setTimeout(renderCarteraHome, 100);
       if (typeof renderResumenTablero   === 'function') setTimeout(renderResumenTablero, 150);
       if (typeof renderHomeGastos        === 'function') setTimeout(renderHomeGastos, 180);
+      if (typeof fpRenderLista          === 'function') setTimeout(fpRenderLista, 200);
+      if (typeof fcActualizar           === 'function') setTimeout(fcActualizar, 250);
       if (typeof frRender               === 'function') setTimeout(function(){ _FR_FUENTE_CACHE={}; _FR_MOVS_POOL=null; frRender(); }, 200);
       if (typeof renderEstadoResultados === 'function') setTimeout(renderEstadoResultados, 250);
       if (typeof renderBalance          === 'function') setTimeout(renderBalance, 300);

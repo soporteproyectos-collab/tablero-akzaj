@@ -17147,7 +17147,14 @@ function fcActualizar() {
       // Calcular mes de vencimiento real (según días de pago del cliente)
       var diasP = diasPagoCliente(f.cliente||'');
       var fechaMs = new Date(fAnio, m, parseInt(dp[0])||1).getTime();
-      var venceMs = fechaMs + diasP * 86400000;
+      // Usar vencimiento real del Sheet si existe (yyyy-MM-dd), si no calcular
+      var venceMs;
+      if (f.vence && f.vence.length >= 8) {
+        venceMs = new Date(f.vence).getTime();
+        if (isNaN(venceMs)) venceMs = fechaMs + diasP * 86400000;
+      } else {
+        venceMs = fechaMs + diasP * 86400000;
+      }
       var venceMes = new Date(venceMs).getMonth();
       var venceAnio = new Date(venceMs).getFullYear();
 
@@ -17385,52 +17392,72 @@ function fpRenderLista() {
   var totalProg = data.reduce(function(a,r){return a+(parseFloat(r.monto)||0);},0);
   var hoyMs = new Date().getTime();
 
+  // Agrupar por cliente
+  var grupos = {};
+  data.forEach(function(r, idx) {
+    var cli = r.cliente||'Sin cliente';
+    if (!grupos[cli]) grupos[cli] = {total:0, filas:[]};
+    grupos[cli].total += parseFloat(r.monto)||0;
+    grupos[cli].filas.push({r:r, idx:idx});
+  });
+  var clientesOrden = Object.keys(grupos).sort();
+
   var html = '<div style="overflow-x:auto">';
   html += '<table style="width:100%;border-collapse:collapse;font-size:11px">';
   html += '<thead><tr style="background:#EDE9FE;color:#553C9A">';
-  html += '<th style="padding:7px 10px;text-align:left;font-weight:700">Cliente</th>';
-  html += '<th style="padding:7px 10px;text-align:left;font-weight:700">Proyecto</th>';
+  html += '<th style="padding:7px 10px;text-align:left;font-weight:700">Cliente / Proyecto</th>';
   html += '<th style="padding:7px 10px;text-align:right;font-weight:700">Monto</th>';
-  html += '<th style="padding:7px 8px;text-align:center;font-weight:700">Mes fact.</th>';
+  html += '<th style="padding:7px 8px;text-align:center;font-weight:700">Fecha fact.</th>';
   html += '<th style="padding:7px 8px;text-align:center;font-weight:700">Días cobro</th>';
   html += '<th style="padding:7px 8px;text-align:center;font-weight:700">Cobro est.</th>';
   html += '<th style="padding:7px 8px;text-align:center;font-weight:700">Acciones</th>';
   html += '</tr></thead><tbody>';
 
-  data.forEach(function(r, idx) {
-    var fechaBase = r.fecha ? new Date(r.fecha) : null;
-    var mesIdx = fechaBase ? fechaBase.getMonth() : parseInt(((r.fecha||'2026-01-01').split('-')[1]||'1')) - 1;
-    if (mesIdx < 0 || mesIdx > 11) mesIdx = 0;
-    var dp = diasP(r.cliente||'');
-    var fechaFactStr = fechaBase
-      ? (fechaBase.getDate()+' '+MNL[fechaBase.getMonth()]+' '+fechaBase.getFullYear())
-      : MNL[mesIdx];
-    var cobro = fechaBase ? new Date(fechaBase.getTime() + dp*86400000) : null;
-    var cobroStr = cobro ? (cobro.getDate()+' '+MNL[cobro.getMonth()]+' '+cobro.getFullYear()) : '—';
+  clientesOrden.forEach(function(cli) {
+    var grp = grupos[cli];
+    var expanded = true; // por defecto expandido
+    var grpId = 'fp-grp-'+cli.replace(/[^a-z0-9]/gi,'_');
 
-    // Alerta: faltan ≤2 días para facturar
-    var diasParaFacturar = fechaBase ? Math.ceil((fechaBase.getTime() - hoyMs) / 86400000) : 999;
-    var alerta2dias = diasParaFacturar >= 0 && diasParaFacturar <= 2;
-    var alertaVencida = diasParaFacturar < 0;
+    // Fila encabezado del cliente
+    html += '<tr style="background:#EDE9FE;cursor:pointer" data-grp="' + grpId + '" onclick="fpToggleGrupo(this.getAttribute(\\"data-grp\\"))">';
+    html += '<td style="padding:8px 10px;font-weight:700;color:#553C9A" colspan="2">';
+    html += '<span id="ico-'+grpId+'" style="margin-right:6px;font-size:10px">▼</span>';
+    html += fpEsc(cli);
+    html += '</td>';
+    html += '<td style="padding:8px 10px;text-align:right;font-weight:700;color:#553C9A">$'+Math.round(grp.total).toLocaleString('es-CO')+'</td>';
+    html += '<td colspan="3" style="padding:8px 10px;color:#888;font-size:10px">'+grp.filas.length+' factura'+(grp.filas.length>1?'s':'')+'</td>';
+    html += '</tr>';
 
-    var bg = alerta2dias ? '#FFFBEB' : alertaVencida ? '#FFF5F5' : (idx%2===0?'#FDFCFF':'#F8F5FF');
-    var badge = alerta2dias
-      ? '<span style="background:#F59E0B;color:#fff;font-size:9px;font-weight:700;border-radius:4px;padding:2px 5px;margin-left:4px">¡HOY/MAÑANA!</span>'
-      : alertaVencida
-      ? '<span style="background:#EF4444;color:#fff;font-size:9px;font-weight:700;border-radius:4px;padding:2px 5px;margin-left:4px">VENCIDA</span>'
-      : '';
-
-    html += '<tr style="background:'+bg+';border-bottom:1px solid #EDE9FE'+(alerta2dias?';border-left:3px solid #F59E0B':alertaVencida?';border-left:3px solid #EF4444':'')+'">';
-    html += '<td style="padding:7px 10px;font-weight:600;color:#553C9A">'+fpEsc(r.cliente||'')+'</td>';
-    html += '<td style="padding:7px 10px;color:#666;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+fpEsc(r.proyecto||'')+'">'+fpEsc((r.proyecto||'').substring(0,35))+'</td>';
-    html += '<td style="padding:7px 10px;text-align:right;font-weight:700;color:#0C447C">$'+Math.round(parseFloat(r.monto)||0).toLocaleString('es-CO')+'</td>';
-    html += '<td style="padding:7px 8px;text-align:center;color:#374151;font-weight:600">'+fechaFactStr+badge+'</td>';
-    html += '<td style="padding:7px 8px;text-align:center;color:#888">'+dp+' días</td>';
-    html += '<td style="padding:7px 8px;text-align:center;font-weight:600;color:#276749">'+cobroStr+'</td>';
-    html += '<td style="padding:7px 8px;text-align:center;white-space:nowrap">';
-    html += '<button onclick="fpEditar('+idx+')" title="Editar" style="background:#EDE9FE;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px;color:#553C9A;margin-right:4px">✏️</button>';
-    html += '<button onclick="fpEliminar('+idx+')" title="Eliminar" style="background:#FEE2E2;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px;color:#C53030">🗑️</button>';
-    html += '</td></tr>';
+    // Filas detalle del cliente
+    grp.filas.forEach(function(item, fi) {
+      var r = item.r, idx = item.idx;
+      var fechaBase = r.fecha ? new Date(r.fecha) : null;
+      var dp = diasP(r.cliente||'');
+      var fechaFactStr = fechaBase
+        ? (fechaBase.getDate()+' '+MNL[fechaBase.getMonth()]+' '+fechaBase.getFullYear())
+        : '—';
+      var cobro = fechaBase ? new Date(fechaBase.getTime() + dp*86400000) : null;
+      var cobroStr = cobro ? (cobro.getDate()+' '+MNL[cobro.getMonth()]+' '+cobro.getFullYear()) : '—';
+      var diasParaFacturar = fechaBase ? Math.ceil((fechaBase.getTime() - hoyMs) / 86400000) : 999;
+      var alerta2dias = diasParaFacturar >= 0 && diasParaFacturar <= 2;
+      var alertaVencida = diasParaFacturar < 0;
+      var bg = alerta2dias ? '#FFFBEB' : alertaVencida ? '#FFF5F5' : (fi%2===0?'#FDFCFF':'#F8F5FF');
+      var badge = alerta2dias
+        ? '<span style="background:#F59E0B;color:#fff;font-size:9px;font-weight:700;border-radius:4px;padding:2px 5px;margin-left:4px">¡HOY/MAÑANA!</span>'
+        : alertaVencida
+        ? '<span style="background:#EF4444;color:#fff;font-size:9px;font-weight:700;border-radius:4px;padding:2px 5px;margin-left:4px">VENCIDA</span>'
+        : '';
+      html += '<tr class="'+grpId+'" style="background:'+bg+';border-bottom:1px solid #EDE9FE'+(alerta2dias?';border-left:3px solid #F59E0B':alertaVencida?';border-left:3px solid #EF4444':'')+'">';
+      html += '<td style="padding:6px 10px 6px 24px;color:#666;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+fpEsc(r.proyecto||'')+'">'+fpEsc((r.proyecto||'').substring(0,45))+'</td>';
+      html += '<td style="padding:6px 10px;text-align:right;font-weight:700;color:#0C447C">$'+Math.round(parseFloat(r.monto)||0).toLocaleString('es-CO')+'</td>';
+      html += '<td style="padding:6px 8px;text-align:center;color:#374151;font-weight:600">'+fechaFactStr+badge+'</td>';
+      html += '<td style="padding:6px 8px;text-align:center;color:#888">'+dp+' días</td>';
+      html += '<td style="padding:6px 8px;text-align:center;font-weight:600;color:#276749">'+cobroStr+'</td>';
+      html += '<td style="padding:6px 8px;text-align:center;white-space:nowrap">';
+      html += '<button onclick="fpEditar('+idx+')" title="Editar" style="background:#EDE9FE;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px;color:#553C9A;margin-right:4px">✏️</button>';
+      html += '<button onclick="fpEliminar('+idx+')" title="Eliminar" style="background:#FEE2E2;border:none;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px;color:#C53030">🗑️</button>';
+      html += '</td></tr>';
+    });
   });
 
   // Fila total
@@ -17523,6 +17550,14 @@ function fpGuardarEdicion(idx) {
   fpCerrarModal();
   fpRenderLista(); fcActualizar();
   if (typeof mostrarToast === 'function') mostrarToast('✅ Guardado en Sheets — visible para todo el equipo', '#1D9E75', 3000);
+}
+
+function fpToggleGrupo(grpId) {
+  var rows = document.querySelectorAll('.'+grpId);
+  var ico  = document.getElementById('ico-'+grpId);
+  var visible = rows.length && rows[0].style.display !== 'none';
+  rows.forEach(function(r){ r.style.display = visible ? 'none' : ''; });
+  if (ico) ico.textContent = visible ? '▶' : '▼';
 }
 
 function fpEsc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }

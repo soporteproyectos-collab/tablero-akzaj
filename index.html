@@ -9040,17 +9040,29 @@ function renderCarteraHome() {
       mm[mk].total+=f.total;if(f.pagada)mm[mk].cobrado+=f.total;else if(estadoFact(f)==='vencida')mm[mk].vencida+=f.total;else mm[mk].pendiente+=f.total;
     }
 
+    // Agregar programadas de FP_DATA a meses futuros
+    var hoyMes=new Date().getMonth()+1, hoyAnio=new Date().getFullYear();
+    if(typeof FP_DATA!=='undefined'){
+      FP_DATA.forEach(function(fp){
+        if(!fp.fecha)return;
+        var fpd=fp.fecha.split('-');
+        var fMes=parseInt(fpd[1]||0),fAnio=parseInt(fpd[0]||0);
+        if(!fMes||!fAnio)return;
+        var mk=MN[fMes-1]+' '+fAnio;
+        if(!mm[mk])mm[mk]={total:0,cobrado:0,pendiente:0,vencida:0,programada:0,mes:fMes,anio:fAnio};
+        if(!mm[mk].programada)mm[mk].programada=0;
+        mm[mk].programada+=(parseFloat(fp.monto)||0);
+      });
+    }
     var meses=Object.keys(mm).sort(function(a,b){return mm[a].anio!==mm[b].anio?mm[a].anio-mm[b].anio:mm[a].mes-mm[b].mes;});
-
-    var maxV=0;for(var i=0;i<meses.length;i++)if(mm[meses[i]].total>maxV)maxV=mm[meses[i]].total;maxV=maxV*1.15||1;
-
-    // Gráfico de barras — SVG responsivo con etiquetas legibles
+    var maxV=0;
+    for(var i=0;i<meses.length;i++){var mv=mm[meses[i]];var tv=mv.total+(mv.programada||0);if(tv>maxV)maxV=tv;}
+    maxV=maxV*1.15||1;
     var nM=meses.length;
-    var W=500, H=130, PL=52, PR=10, PT=14, PB=26;
-    var CW=W-PL-PR, CH=H-PT-PB;
+    var W=500,H=130,PL=52,PR=10,PT=14,PB=26;
+    var CW=W-PL-PR,CH=H-PT-PB;
     var bw=Math.max(20,Math.min(60,CW/nM*0.55));
     var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px">';
-    // Líneas de referencia y etiquetas eje Y
     for(var t=0;t<=4;t++){
       var yv=Math.round(PT+CH-(t/4)*CH);
       var yVal=maxV*t/4;
@@ -9060,36 +9072,38 @@ function renderCarteraHome() {
     }
     for(var i=0;i<nM;i++){
       var m=meses[i],md=mm[m];
+      var esFuturo=md.anio>hoyAnio||(md.anio===hoyAnio&&md.mes>hoyMes);
       var cx=Math.round(PL+(i+0.5)*(CW/nM));
+      var yBase=PT+CH;
+      var hProg=md.programada?Math.round(((md.programada||0)/maxV)*CH):0;
       var hC=Math.round((md.cobrado/maxV)*CH);
       var hP=Math.round((md.pendiente/maxV)*CH);
       var hV=Math.round((md.vencida/maxV)*CH);
-      var yBase=PT+CH;
-      // Barras apiladas: vencida (base), pendiente, cobrado (tope)
+      // Barras reales
       if(hV>0)svg+='<rect x="'+(cx-bw/2)+'" y="'+(yBase-hV)+'" width="'+bw+'" height="'+hV+'" fill="#E24B4A" rx="2"/>';
       if(hP>0)svg+='<rect x="'+(cx-bw/2)+'" y="'+(yBase-hV-hP)+'" width="'+bw+'" height="'+hP+'" fill="#EF9F27" rx="0"/>';
       if(hC>0)svg+='<rect x="'+(cx-bw/2)+'" y="'+(yBase-hV-hP-hC)+'" width="'+bw+'" height="'+hC+'" fill="#1D9E75" rx="2"/>';
-      // Etiqueta valor total sobre la barra
-      var totM=md.total/1000000;
-      var totLbl=totM>=100?Math.round(totM)+'M': totM>=10?(Math.round(totM*10)/10)+'M': (Math.round(totM*100)/100)+'M';
-      var yLblV=yBase-hV-hP-hC-5;
-      if(yLblV<PT+8) yLblV=PT+8;
-      svg+='<text x="'+cx+'" y="'+yLblV+'" text-anchor="middle" font-size="9" font-weight="700" fill="#3a8fa8" font-family="Montserrat,sans-serif">$'+totLbl+'</text>';
-      // Etiqueta mes eje X
+      // Barra programada (encima si hay real, sola si es futuro puro)
+      if(hProg>0){
+        var yProg=yBase-hV-hP-hC-hProg;
+        svg+='<rect x="'+(cx-bw/2)+'" y="'+yProg+'" width="'+bw+'" height="'+hProg+'" fill="#7C3AED" opacity="0.3" rx="2"/>';
+        svg+='<rect x="'+(cx-bw/2)+'" y="'+yProg+'" width="'+bw+'" height="'+hProg+'" fill="none" stroke="#7C3AED" stroke-width="1.5" stroke-dasharray="4,3" rx="2"/>';
+      }
+      // Etiqueta valor
+      var totMes=md.total+(md.programada||0);
+      var totM=totMes/1000000;
+      var totLbl=totM>=100?Math.round(totM)+'M':totM>=10?(Math.round(totM*10)/10)+'M':(Math.round(totM*100)/100)+'M';
+      var hTot=hV+hP+hC+hProg;
+      var yLblV=yBase-hTot-5;
+      if(yLblV<PT+8)yLblV=PT+8;
+      var lblCol=(esFuturo&&md.total===0)?'#7C3AED':'#3a8fa8';
+      svg+='<text x="'+cx+'" y="'+yLblV+'" text-anchor="middle" font-size="9" font-weight="700" fill="'+lblCol+'" font-family="Montserrat,sans-serif">$'+totLbl+'</text>';
       var mesLbl=m.replace(' 2026','').replace(' 2025','').substring(0,3);
-      svg+='<text x="'+cx+'" y="'+(H-8)+'" text-anchor="middle" font-size="11" fill="#555" font-family="Montserrat,sans-serif">'+mesLbl+'</text>';
+      var mesCol=(esFuturo&&md.total===0)?'#7C3AED':'#555';
+      svg+='<text x="'+cx+'" y="'+(H-8)+'" text-anchor="middle" font-size="11" fill="'+mesCol+'" font-weight="'+(esFuturo&&md.total===0?'700':'400')+'" font-family="Montserrat,sans-serif">'+mesLbl+'</text>';
     }
     svg+='</svg>';
-
-    barEl.innerHTML=svg+'<div style="display:flex;gap:14px;margin-top:6px;flex-wrap:wrap">'
-
-      +'<span style="font-size:10px;display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#1D9E75;display:inline-block"></span>Pagado</span>'
-
-      +'<span style="font-size:10px;display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#EF9F27;display:inline-block"></span>Pendiente</span>'
-
-      +'<span style="font-size:10px;display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#E24B4A;display:inline-block"></span>Vencida</span>'
-
-      +'</div>';
+    barEl.innerHTML=svg+'<div style="display:flex;gap:14px;margin-top:6px;flex-wrap:wrap">'      +'<span style="font-size:10px;display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#1D9E75;display:inline-block"></span>Pagado</span>'      +'<span style="font-size:10px;display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#EF9F27;display:inline-block"></span>Pendiente</span>'      +'<span style="font-size:10px;display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#E24B4A;display:inline-block"></span>Vencida</span>'      +'<span style="font-size:10px;display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#7C3AED;opacity:0.5;display:inline-block"></span>Programada</span>'      +'</div>';
 
   }else if(barEl){barEl.innerHTML='';}
 
@@ -9522,7 +9536,11 @@ function renderResumenTablero() {
 
     + card('⏳','Facturas por cobrar',totalPendFact,'#A32D2D','#FFF1F2', FACTURAS.filter(function(f){return !f.pagada;}).length+' facturas pendientes','')
 
-    + card('📤','Gastos por pagar',   totalPendEgr,'#993C1D','#FFF1F2', GASTOS_DATA.filter(function(r){return !r._pagada;}).length+' proveedores pendientes','')
+    + (function(){
+        var totalProg = 0, nProg = 0;
+        if(typeof FP_DATA!=='undefined') FP_DATA.forEach(function(fp){ totalProg+=(parseFloat(fp.monto)||0); nProg++; });
+        return card('🗓️','Programado 2026', totalProg,'#553C9A','#F5F3FF', nProg+' facturas programadas','');
+      })()
 
     + (function(){
         // Rendimientos financieros: Fiducuenta + Bold CF + Intereses Bancolombia

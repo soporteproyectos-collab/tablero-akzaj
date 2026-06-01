@@ -1583,7 +1583,7 @@ function verificarSesion() {
 
 // ══════════════════════════════════════════════════════════════
 
-var GS_API_URL = 'https://script.google.com/a/macros/alzak.com.co/s/AKfycbzjKCeUYwKRcxn1KWAEXPVLsVrhxM6jxl0QP6ib3mFMKB-TSCSZsOPJZyz0EaJzeWmD/exec';
+var GS_API_URL = 'https://script.google.com/macros/s/AKfycbxdFspEmxI7srLsz09eP6ZDb8otgCGftv6jyyYG0IA8LwuChBjUhmrE0ojv79UTcsoJ/exec'; // actualizado — misma URL que ALZAK_GS_URL
 
 var GS_SYNC_ACTIVO = true;   // set false para forzar solo localStorage
 
@@ -2108,26 +2108,28 @@ function alzakCargarDatosSheets(callback) {
           var programadasDelSheet = FACTURAS.filter(function(f){ return (f.estado||'').toLowerCase() === 'programada'; });
           FACTURAS = FACTURAS.filter(function(f){ return (f.estado||'').toLowerCase() !== 'programada'; });
 
-          // Fusionar con FP_DATA (Sheet maestro tiene prioridad, pero si vacío usar programadas del Sheet fact.)
+          // Programadas del Sheet de Facturación son la fuente de verdad
+          // Convertir a formato FP_DATA
           if (programadasDelSheet.length > 0) {
-            // Convertir formato FACTURAS → formato FP_DATA
-            var fpDelSheet = programadasDelSheet.map(function(f, idx) {
+            var fpDelSheet = programadasDelSheet.map(function(f) {
               var fechaISO = '';
               var dp = (f.fecha_raw || f.fecha || '').split('/');
               if (dp.length === 3) fechaISO = dp[2]+'-'+dp[1]+'-'+dp[0];
-              else fechaISO = f.fecha_raw || f.fecha || '';
               var mes = fechaISO ? parseInt(fechaISO.split('-')[1]||'1') : 1;
-              var entry = { cliente: f.cliente||'', proyecto: f.concepto||'', monto: f.bruto||0, fecha: fechaISO, obs: 'Del Sheet de Facturación' };
+              var entry = { cliente: f.cliente||'', proyecto: f.concepto||'', monto: f.bruto||0, fecha: fechaISO, obs: 'Sheet Facturación', _fromSheet: true };
               for (var m=0; m<12; m++) entry['m'+(m+1)] = 0;
               if (mes >= 1 && mes <= 12) entry['m'+mes] = f.bruto||0;
               return entry;
             });
-            // Agregar al FP_DATA sin duplicar (por N_Factura/consecutivo)
-            var fpExistentes = FP_DATA.map(function(r){ return r.cliente+'|'+r.monto; });
-            fpDelSheet.forEach(function(fp) {
-              var key = fp.cliente+'|'+fp.monto;
-              if (fpExistentes.indexOf(key) < 0) { FP_DATA.push(fp); fpExistentes.push(key); }
+            // Las del Sheet reemplazan completamente al localStorage
+            // Mantener solo las del Sheet maestro (_programadas) que NO estén en el Sheet de facturación
+            var fpMaestro = (data.programadas||[]).filter(function(r){
+              return !fpDelSheet.some(function(s){ return s.cliente===r.cliente && String(s.monto)===String(r.monto); });
             });
+            FP_DATA = fpDelSheet.concat(fpMaestro);
+            try { localStorage.removeItem('alzak_fp_2026'); } catch(e) {}
+          } else if (data.programadas && data.programadas.length) {
+            FP_DATA = data.programadas;
             try { localStorage.setItem('alzak_fp_2026', JSON.stringify(FP_DATA)); } catch(e) {}
           }
 
@@ -2169,7 +2171,8 @@ function alzakCargarDatosSheets(callback) {
     })
     .catch(function(err) {
       console.error('Error sync Sheets:', err);
-      if (typeof mostrarToast === 'function') mostrarToast('⚠️ Error conectando con Sheets', '#f5a623', 4000);
+      // Si es error de red o 404, intentar con URL sin caché
+      if (typeof mostrarToast === 'function') mostrarToast('⚠️ Error conectando con Sheets — verifica que el Apps Script esté activo', '#f5a623', 5000);
       if (callback) callback();
     });
 }

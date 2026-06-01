@@ -2161,6 +2161,34 @@ function alzakCargarDatosSheets(callback) {
       if (typeof _FR_MOVS_POOL   !== 'undefined') _FR_MOVS_POOL    = null;
 
       // ── Re-renderizar todo ───────────────────────────────
+      // ── Cargar extractos de conciliación desde Sheets ────
+      if (data._conciliacion) {
+        try {
+          var concData = typeof data._conciliacion === 'string'
+            ? JSON.parse(data._conciliacion) : data._conciliacion;
+          if (Array.isArray(concData) && concData.length) {
+            concData.forEach(function(saved_p) {
+              var existing = P.find(function(p){ return p.label === saved_p.label; });
+              if (existing) {
+                Object.assign(existing, saved_p);
+              } else {
+                P.push(saved_p);
+              }
+            });
+            var MK = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+              'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+            P.sort(function(a,b){
+              var pa=a.label.split(' '),pb=b.label.split(' ');
+              var ya=parseInt(pa[1]||0),yb=parseInt(pb[1]||0);
+              if(ya!==yb)return ya-yb;
+              return MK.indexOf(pa[0])-MK.indexOf(pb[0]);
+            });
+            try { localStorage.setItem('alzak_periodos_v2', JSON.stringify(P)); } catch(e) {}
+            cargados.push('Conciliación: ' + concData.length + ' períodos');
+          }
+        } catch(e) { console.warn('Error cargando conciliación:', e); }
+      }
+
       if (typeof renderFacturas         === 'function') setTimeout(renderFacturas, 50);
       if (typeof renderCarteraHome      === 'function') setTimeout(renderCarteraHome, 100);
       if (typeof renderResumenTablero   === 'function') setTimeout(renderResumenTablero, 150);
@@ -15911,7 +15939,7 @@ DATA['TC ABR-MAY 2026'] = {
   ]
 };
 
-const P=[
+var P=[
 {label:'Enero 2026',desde:'2025/12/31',hasta:'2026/01/31',
  sA:11325.27,tAb:75260267.37,tCar:48484155.12,sF:26787437.52,
  movs:[
@@ -16336,6 +16364,36 @@ const P=[
   {f:'30/04',d:'Envío por Llaves',v:-1908712,t:'egreso'}
  ]}
 }];
+
+// ── Cargar extractos guardados desde localStorage ──────
+(function() {
+  try {
+    var saved = localStorage.getItem('alzak_periodos_v2');
+    if (saved) {
+      var data = JSON.parse(saved);
+      if (Array.isArray(data) && data.length) {
+        // Merge: actualizar P con los datos guardados
+        data.forEach(function(saved_p) {
+          var existing = P.find(function(p){ return p.label === saved_p.label; });
+          if (existing) {
+            // Actualizar el período existente con los datos guardados
+            Object.assign(existing, saved_p);
+          } else {
+            P.push(saved_p);
+          }
+        });
+        var MESES_KEY = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+          'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        P.sort(function(a,b){
+          var pa=a.label.split(' '),pb=b.label.split(' ');
+          var ya=parseInt(pa[1]||0),yb=parseInt(pb[1]||0);
+          if(ya!==yb)return ya-yb;
+          return MESES_KEY.indexOf(pa[0])-MESES_KEY.indexOf(pb[0]);
+        });
+      }
+    }
+  } catch(e) { console.warn('No se pudieron cargar extractos guardados:', e); }
+})();
 
 // ── Tarjeta de Credito BCS — datos por periodo ───────────────────────────
 const TC_DATA = [
@@ -19001,6 +19059,45 @@ function alzakRegistrarAcceso(usuario) {
     });
 }
 
+// ── Configuración de cuentas para el conciliador PDF ────
+var CONC_ACCOUNT_CONFIG = {
+  ahorros: {
+    nombre: 'Bancolombia Ahorros *6556',
+    banco:  'Bancolombia',
+    tipo:   'ahorros',
+    prompt: 'Extrae todos los movimientos del extracto de cuenta de ahorros Bancolombia. Identifica el saldo de apertura, saldo de cierre, total créditos y total débitos del período.',
+    color:  '#5BC8CD'
+  },
+  fondo: {
+    nombre: 'Fiducuenta Bancolombia',
+    banco:  'Fiduciaria Bancolombia',
+    tipo:   'fondo',
+    prompt: 'Extrae los movimientos de este extracto de Fiducuenta (Fondo de Inversión Colectiva). Identifica adiciones, retiros, rendimientos netos y retención en la fuente sobre rendimientos.',
+    color:  '#6950B8'
+  },
+  caja: {
+    nombre: 'Caja Social Corriente *2970',
+    banco:  'Banco Caja Social',
+    tipo:   'caja',
+    prompt: 'Extrae todos los movimientos del extracto de cuenta corriente Banco Caja Social. Identifica el saldo de apertura, saldo de cierre, total créditos y débitos.',
+    color:  '#C2410C'
+  },
+  bold: {
+    nombre: 'Bold CF *2371',
+    banco:  'Bold Compañía de Financiamiento',
+    tipo:   'bold',
+    prompt: 'Extrae todos los movimientos de este extracto de Bold CF (depósito ordinario). Identifica saldo apertura, saldo cierre, ingresos por ventas/pagos recibidos, retiros/envíos y comisiones. Los movimientos de Bold típicamente incluyen pagos con datáfono, transferencias PSE y envíos por llaves.',
+    color:  '#1E3A5F'
+  },
+  tc: {
+    nombre: 'TC BCS VISA 4704-3710',
+    banco:  'Banco Caja Social',
+    tipo:   'tc',
+    prompt: 'Extrae los movimientos de este estado de cuenta de Tarjeta de Crédito VISA Banco Caja Social. Identifica saldo anterior, compras del mes, pagos realizados, saldo de cierre, cupo total y diferidos pendientes.',
+    color:  '#DC2626'
+  }
+};
+
 function concPdfLoad(input, accountId) {
   var file = input.files[0];
   if (!file) return;
@@ -20120,6 +20217,26 @@ function concPdfAgregar() {
     if(ya !== yb) return ya - yb;
     return MESES_KEY.indexOf(pa[0]) - MESES_KEY.indexOf(pb[0]);
   });
+
+  // ── Guardar extractos en localStorage (persiste entre sesiones) ──
+  try {
+    localStorage.setItem('alzak_periodos_v2', JSON.stringify(P));
+  } catch(e) {}
+
+  // ── Guardar en Sheets para que Paula y NJAZ lo vean ────────
+  if (typeof ALZAK_GS_URL !== 'undefined') {
+    fetch(ALZAK_GS_URL, {
+      method: 'POST', mode: 'no-cors',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        tab: '_conciliacion',
+        action: 'set',
+        rows: [['json'], [JSON.stringify(P)]]
+      })
+    }).catch(function(){});
+    if (typeof mostrarToast === 'function')
+      setTimeout(function(){ mostrarToast('☁️ Extracto guardado en la nube — visible para todo el equipo', '#1D9E75', 3000); }, 500);
+  }
 
   // Update the periodo selector
   var sel = document.getElementById('sel-periodo');

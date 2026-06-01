@@ -1924,6 +1924,39 @@ document.addEventListener('keydown', function(e) {
 // ══ SINCRONIZACIÓN COMPLETA — 3 SHEETS ══════════════════════
 var ALZAK_GS_URL = 'https://script.google.com/macros/s/AKfycbxdFspEmxI7srLsz09eP6ZDb8otgCGftv6jyyYG0IA8LwuChBjUhmrE0ojv79UTcsoJ/exec';
 
+// ── Parseo numérico robusto — maneja formato COP con puntos y comas ──
+function alzakParseNum(val) {
+  if (val === null || val === undefined || val === '') return 0;
+  if (typeof val === 'number') return val;
+  var s = String(val).trim();
+  // Quitar símbolo $, espacios
+  s = s.replace(/[$\s]/g, '');
+  // Formato COP: 15.402.178 o 15.402.178,50
+  // Si tiene múltiples puntos → los puntos son separadores de miles
+  var numPuntos = (s.match(/\./g)||[]).length;
+  var numComas  = (s.match(/,/g)||[]).length;
+  if (numPuntos > 1) {
+    // Puntos como miles: 15.402.178 → quitar puntos
+    s = s.replace(/\./g, '');
+    if (numComas === 1) s = s.replace(',', '.'); // coma como decimal
+  } else if (numPuntos === 1 && numComas === 1) {
+    var posP = s.indexOf('.');
+    var posC = s.indexOf(',');
+    if (posP < posC) {
+      // 15.402,50 → punto miles, coma decimal
+      s = s.replace('.', '').replace(',', '.');
+    } else {
+      // 15,402.50 → coma miles, punto decimal
+      s = s.replace(',', '');
+    }
+  } else if (numComas === 1 && numPuntos === 0) {
+    // 15402,50 → coma decimal
+    s = s.replace(',', '.');
+  }
+  var n = parseFloat(s);
+  return isNaN(n) ? 0 : n;
+}
+
 function alzakCargarDatosSheets(callback) {
   var url = ALZAK_GS_URL + '?tab=_datos_todos';
   mostrarToast('🔄 Sincronizando datos desde Google Sheets...', '#0C447C', 4000);
@@ -2021,10 +2054,10 @@ function alzakCargarDatosSheets(callback) {
       // Facturación → FACTURAS — SIEMPRE reemplazar con datos frescos de Sheets
       if (data.facturacion && data.facturacion.length) {
           FACTURAS = data.facturacion.map(function(r, idx) {
-            var bruto = parseFloat(r['Subtotal_COP']||r['Subtotal (COP)']||r['Subtotal']||r['Base gravable']||r['Valor']||0);
-            var iva   = parseFloat(r['IVA_COP']||r['IVA (COP)']||r['IVA']||0);
-            var total = parseFloat(r['Total_COP']||r['Total (COP)']||r['Total']||bruto+iva||0);
-            var rete  = parseFloat(r['Retefuente']||r['RteFuente']||r['Retención']||0);
+            var bruto = alzakParseNum(r['Subtotal_COP']||r['Subtotal (COP)']||r['Subtotal']||r['Base gravable']||r['Valor']||0);
+            var iva   = alzakParseNum(r['IVA_COP']||r['IVA (COP)']||r['IVA']||0);
+            var total = alzakParseNum(r['Total_COP']||r['Total (COP)']||r['Total']||0) || (bruto+iva);
+            var rete  = alzakParseNum(r['Retefuente']||r['RteFuente']||r['Retención']||0);
             var _vRaw = r['Vencimiento']||r['Fecha Vencimiento']||r['Vence']||'';
             // FORZAR yyyy-MM-dd — extraer fecha SIN conversión UTC
             var _vClean = '';

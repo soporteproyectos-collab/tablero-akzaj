@@ -19697,36 +19697,32 @@ function concPdfAnalizar(base64, cfg) {
     + '"movimientos":[{"f":"DD/MM","d":"descripcion","v":1234.56,"t":"tipo"}]}'
     + ' Valores positivos=creditos, negativos=debitos. '
     + 'Tipos: ingreso egreso transf interes impto interno fondo adicion. '
-    + 'Sin markdown, solo el JSON.';  fetch('https://api.anthropic.com/v1/messages', {
+    + 'Sin markdown, solo el JSON.';
+
+  // Enviar al Apps Script que hace el llamado a Anthropic (evita CORS)
+  fetch(ALZAK_GS_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 4000,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } },
-          { type: 'text', text: prompt }
-        ]
-      }]
+      tab:    '_analizar_pdf',
+      base64: base64,
+      prompt: prompt,
+      cuenta: cfg.nombre
     })
   })
   .then(function(r) { return r.json(); })
   .then(function(data) {
-    var text = data.content && data.content[0] && data.content[0].text;
-    if (!text) {
-      concPdfShowModal('error', cfg, 'No se pudo leer el extracto. Intenta de nuevo.');
+    if (!data.ok || !data.texto) {
+      concPdfShowModal('error', cfg, data.error || 'No se pudo leer el extracto. Intenta de nuevo.');
       return;
     }
     try {
-      // Clean JSON
-      var clean = text.replace(/```json|```/g, '').trim();
+      var clean = data.texto.replace(/```json|```/g, '').trim();
       var result = JSON.parse(clean);
       _concPdfResult = result;
       concPdfShowModal('preview', cfg, result);
     } catch(e) {
-      concPdfShowModal('error', cfg, 'Error procesando respuesta: ' + e.message);
+      concPdfShowModal('error', cfg, 'Error procesando respuesta: ' + e.message + ' — Respuesta: ' + data.texto.substring(0,200));
     }
   })
   .catch(function(err) {

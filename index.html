@@ -16616,9 +16616,9 @@ function renderGlobal(p){
     const cC='#5BC8CD',cP='#A78BFA',cO='#FB923C',cN='#60A5FA',cG='#34D399',cA='#FBBF24';
     drawBars('ch1',[{label:'Ahorros',color:cC,data:[dAh]},{label:'Fiducuenta',color:cP,data:[dFid]},{label:'Caja Social',color:cO,data:[dCj]},{label:'Bold CF',color:cN,data:[dBl]}],[p.label.split(' ')[0]]);
     drawBars('ch2',[{label:'Externos Ahorros',color:cG,data:[ingAh]},{label:'Externos Caja',color:cO,data:[ingCj]},{label:'Rendimientos',color:cP,data:[rend]},{label:'Intereses',color:cA,data:[int_+intBl]}],[p.label.split(' ')[0]]);
-    drawBars('ch3',[{label:'Ahorros',color:cC,data:P.slice(0,idx+1).map(x=>x.sF)},{label:'Fiducuenta',color:cP,data:P.slice(0,idx+1).map(x=>x.fid.sF)},{label:'Caja Social',color:cO,data:P.slice(0,idx+1).map(x=>x.caja.sF)},{label:'Bold CF',color:cN,data:P.slice(0,idx+1).map(x=>x.bold.sF)}],labels);
+    drawBars('ch3',[{label:'Ahorros',color:cC,data:P.slice(0,idx+1).map(x=>x.sF)},{label:'Fiducuenta',color:cP,data:P.slice(0,idx+1).map(x=>x.fid?x.fid.sF:0)},{label:'Caja Social',color:cO,data:P.slice(0,idx+1).map(x=>x.caja?x.caja.sF:0)},{label:'Bold CF',color:cN,data:P.slice(0,idx+1).map(x=>x.bold?x.bold.sF:0)}],labels);
     let cE=0,cR=0,cI=0;const dE=[],dR=[],dI=[];
-    P.slice(0,idx+1).forEach(per=>{cE+=st(per.movs,'ingreso')+st(per.caja.movs,'ingreso');dE.push(cE);cR+=per.fid.rendNetos;dR.push(cR);cI+=st(per.movs,'interes')+per.bold.intereses;dI.push(cI);});
+    P.slice(0,idx+1).forEach(per=>{cE+=st(per.movs,'ingreso')+st((per.caja&&per.caja.movs)||[],'ingreso');dE.push(cE);cR+=(per.fid&&per.fid.rendNetos)||0;dR.push(cR);cI+=st(per.movs,'interes')+((per.bold&&per.bold.intereses)||0);dI.push(cI);});
     drawBars('ch4',[{label:'Externos acum.',color:cG,data:dE},{label:'Rendim. acum.',color:cP,data:dR},{label:'Intereses acum.',color:cA,data:dI}],labels);
   });
 }
@@ -16765,7 +16765,7 @@ function renderFondo(p){
   const sfCalc=fid.sA+fid.adiciones-fid.retiros+fid.rendNetos-fid.retencion;
   const ok=Math.abs(sfCalc-fid.sF)<1;
   document.getElementById('fid-per').textContent=p.desde+' al '+p.hasta;
-  const tbody=fid.movs.map(m=>{const meta=TMF[m.t]||{l:m.t,c:'pz'};return`<tr><td style="color:var(--gray-mid);font-weight:500;white-space:nowrap">${m.f}</td><td>${m.d}</td><td><span class="pill ${meta.c}">${meta.l}</span></td><td style="text-align:right"><span class="${m.v>=0?'ap':'an'}">${m.v>=0?'+':'-'}${fc(m.v)}</span></td></tr>`;}).join('');
+  const tbody=(fid.movs||[]).map(m=>{const meta=TMF[m.t]||{l:m.t,c:'pz'};return`<tr><td style="color:var(--gray-mid);font-weight:500;white-space:nowrap">${m.f}</td><td>${m.d}</td><td><span class="pill ${meta.c}">${meta.l}</span></td><td style="text-align:right"><span class="${m.v>=0?'ap':'an'}">${m.v>=0?'+':'-'}${fc(m.v)}</span></td></tr>`;}).join('');
   document.getElementById('body-fondo').innerHTML=`
     <div class="alert ${ok?'aok':'awk'}"><strong>${ok?'✓ Cuadre perfecto':'⚠ Diferencia'}</strong> ${ok?'Saldo calculado coincide con extracto Fiduciaria Bancolombia.':'Diferencia de '+fc(sfCalc-fid.sF)+'.'}
     </div>

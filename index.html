@@ -2164,28 +2164,36 @@ function alzakCargarDatosSheets(callback) {
 
       // ── Re-renderizar todo ───────────────────────────────
       // ── Cargar extractos de conciliación desde Sheets ────
+      // REGLA: P[] hardcodeado tiene prioridad. Sheets solo agrega meses nuevos.
       if (data._conciliacion) {
         try {
           var concData = typeof data._conciliacion === 'string'
             ? JSON.parse(data._conciliacion) : data._conciliacion;
           if (Array.isArray(concData) && concData.length) {
-            concData.forEach(function(saved_p) {
-              var existing = P.find(function(p){ return p.label === saved_p.label; });
-              if (existing) {
-                Object.assign(existing, saved_p);
-              } else {
-                P.push(saved_p);
-              }
-            });
             var MK = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
               'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+            var agregados = 0;
+            concData.forEach(function(saved_p) {
+              var existing = P.find(function(p){ return p.label === saved_p.label; });
+              if (!existing) {
+                // Mes nuevo — agregar completo
+                P.push(saved_p);
+                agregados++;
+              } else {
+                // Mes existente — solo completar campos que faltan
+                if (!existing.sA && saved_p.sA) existing.sA = saved_p.sA;
+                if (!existing.sF && saved_p.sF) existing.sF = saved_p.sF;
+                if (!existing.fid  && saved_p.fid)  { existing.fid  = saved_p.fid;  agregados++; }
+                if (!existing.caja && saved_p.caja) { existing.caja = saved_p.caja; agregados++; }
+                if (!existing.bold && saved_p.bold) { existing.bold = saved_p.bold; agregados++; }
+              }
+            });
             P.sort(function(a,b){
               var pa=a.label.split(' '),pb=b.label.split(' ');
               var ya=parseInt(pa[1]||0),yb=parseInt(pb[1]||0);
               if(ya!==yb)return ya-yb;
               return MK.indexOf(pa[0])-MK.indexOf(pb[0]);
             });
-            try { localStorage.setItem('alzak_periodos_v2', JSON.stringify(P)); } catch(e) {}
             cargados.push('Conciliación: ' + concData.length + ' períodos');
           }
         } catch(e) { console.warn('Error cargando conciliación:', e); }
@@ -16344,25 +16352,31 @@ var P=[
  ]}
 }];
 
-// ── Cargar extractos guardados desde localStorage ──────
+// ── Cargar extractos de Drive (solo nuevos meses) ──────
+// REGLA: P[] hardcodeado tiene prioridad. Drive solo agrega meses nuevos.
 (function() {
   try {
     var saved = localStorage.getItem('alzak_periodos_v2');
     if (saved) {
       var data = JSON.parse(saved);
       if (Array.isArray(data) && data.length) {
-        // Merge: actualizar P con los datos guardados
-        data.forEach(function(saved_p) {
-          var existing = P.find(function(p){ return p.label === saved_p.label; });
-          if (existing) {
-            // Actualizar el período existente con los datos guardados
-            Object.assign(existing, saved_p);
-          } else {
-            P.push(saved_p);
-          }
-        });
         var MESES_KEY = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
           'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        data.forEach(function(saved_p) {
+          var existing = P.find(function(p){ return p.label === saved_p.label; });
+          if (!existing) {
+            // Solo agregar meses que NO existen en P[] hardcodeado
+            P.push(saved_p);
+          } else {
+            // Completar SOLO campos que faltan (sA===0 y no tiene datos)
+            // NUNCA sobreescribir datos que ya existen en el hardcodeado
+            if (!existing.sA && saved_p.sA) existing.sA = saved_p.sA;
+            if (!existing.sF && saved_p.sF) existing.sF = saved_p.sF;
+            if (!existing.fid && saved_p.fid) existing.fid = saved_p.fid;
+            if (!existing.caja && saved_p.caja) existing.caja = saved_p.caja;
+            if (!existing.bold && saved_p.bold) existing.bold = saved_p.bold;
+          }
+        });
         P.sort(function(a,b){
           var pa=a.label.split(' '),pb=b.label.split(' ');
           var ya=parseInt(pa[1]||0),yb=parseInt(pb[1]||0);
@@ -16371,7 +16385,7 @@ var P=[
         });
       }
     }
-  } catch(e) { console.warn('No se pudieron cargar extractos guardados:', e); }
+  } catch(e) { console.warn('Error cargando extractos:', e); }
 })();
 
 // ── Tarjeta de Credito BCS — datos por periodo ───────────────────────────

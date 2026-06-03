@@ -511,7 +511,6 @@ tbody tr:hover td{background:var(--cyan-light);}
   <!-- COLUMNA IZQUIERDA: Tablero financiero (scrollable) -->
   <div id="home-split-left" style="flex:1.1;min-width:0;overflow-y:auto;padding:16px 14px 16px 20px;border-right:1px solid #e8e5e0">
     <div id="widget-resumen" style="margin-bottom:12px"></div>
-    <div id="home-flujo-neto"></div>
     <div id="home-bancos-panel-mini" style="display:none"></div>
 
 <div id="h-datos">
@@ -921,6 +920,9 @@ tbody tr:hover td{background:var(--cyan-light);}
     <div id="fc-tabla-main" style="margin-bottom:16px">
       <div style="color:#aaa;font-size:12px">Sincroniza para ver el flujo de caja.</div>
     </div>
+
+    <!-- Panel Flujo Neto Real -->
+    <div id="home-flujo-neto" style="margin-bottom:16px"></div>
 
     <!-- Facturación Programada -->
     <div style="border-top:1px solid #f0ede8;padding-top:14px">
@@ -2195,6 +2197,7 @@ function alzakCargarDatosSheets(callback) {
       if (typeof renderHomeGastos        === 'function') setTimeout(renderHomeGastos, 180);
       if (typeof fpRenderLista          === 'function') setTimeout(fpRenderLista, 200);
       if (typeof fcActualizar           === 'function') setTimeout(fcActualizar, 250);
+      if (typeof fcActualizarFlujoPanelNeto === 'function') setTimeout(fcActualizarFlujoPanelNeto, 300);
       if (typeof frRender               === 'function') setTimeout(function(){ _FR_FUENTE_CACHE={}; _FR_MOVS_POOL=null; frRender(); }, 200);
       if (typeof renderEstadoResultados === 'function') setTimeout(renderEstadoResultados, 250);
       if (typeof renderBalance          === 'function') setTimeout(renderBalance, 300);
@@ -9649,32 +9652,7 @@ function renderResumenTablero() {
 
   el.innerHTML = html;
 
-  // ── Panel Flujo Neto ──────────────────────────────────
-  var panelFlujo = g('home-flujo-neto');
-  if (panelFlujo && typeof GASTOS_DATA !== 'undefined') {
-    var egOp = GASTOS_DATA.filter(function(r){
-      var t=(r['Tipo_Movimiento']||'').toLowerCase();
-      var c=(r['Categoria']||r['Categoría']||'').toLowerCase();
-      return t!=='traslado'&&c.indexOf('traslado')<0&&c.indexOf('inversion')<0;
-    }).reduce(function(a,r){return a+alzakParseNum(r['Total_COP']||r['Total ($)']||0);},0);
-    var egDIAN = GASTOS_DATA.filter(function(r){
-      var c=(r['Categoria']||r['Categoría']||'').trim();
-      return c.indexOf('Obligaci')>=0&&c.indexOf('DIAN')>=0;
-    }).reduce(function(a,r){return a+alzakParseNum(r['Total_COP']||r['Total ($)']||0);},0);
-    var egTotal = egOp + egDIAN;
-    var neto = totalCobrado - egTotal;
-    var col = neto>=0?'#1D9E75':'#C53030';
-    var bgN = neto>=0?'#F0FFF4':'#FFF5F5';
-    panelFlujo.innerHTML =
-      '<div style="background:'+bgN+';border-radius:12px;padding:14px 20px;border-left:4px solid '+col+';margin-top:10px">' +
-      '<div style="font-size:10px;font-weight:700;color:#888;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">📊 Flujo Neto 2026 — Cobrado vs Total Pagado</div>' +
-      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">' +
-      '<div style="text-align:center"><div style="font-size:9px;color:#888;margin-bottom:3px">FACTURADO</div><div style="font-size:14px;font-weight:800;color:#0C447C" class="tb">'+F(totalFact)+'</div><div style="font-size:9px;color:#aaa">total emitido</div></div>' +
-      '<div style="text-align:center"><div style="font-size:9px;color:#888;margin-bottom:3px">COBRADO</div><div style="font-size:14px;font-weight:800;color:#1D9E75" class="tg">'+F(totalCobrado)+'</div><div style="font-size:9px;color:#aaa">efectivo recibido</div></div>' +
-      '<div style="text-align:center"><div style="font-size:9px;color:#888;margin-bottom:3px">TOTAL PAGADO</div><div style="font-size:14px;font-weight:800;color:#C53030" class="tr">'+F(egTotal)+'</div><div style="font-size:9px;color:#aaa">op. '+F(egOp)+' + DIAN '+F(egDIAN)+'</div></div>' +
-      '<div style="text-align:center;border-left:2px solid '+col+';padding-left:12px"><div style="font-size:9px;color:#888;margin-bottom:3px">NETO DE CAJA</div><div style="font-size:16px;font-weight:800;color:'+col+'">'+(neto>=0?'+':'')+F(neto)+'</div><div style="font-size:10px;font-weight:700;color:'+col+'">'+(neto>=0?'✅ Superávit':'⚠️ Déficit')+'</div></div>' +
-      '</div></div>';
-  }
+  // El panel flujo neto ahora se renderiza desde fcActualizar() debajo del FC
 
   // Fecha
 
@@ -15742,6 +15720,7 @@ function renderBcol() {
     <button class="btn" onclick="exportarCSVConc()">↓ CSV</button>
     <button class="btn btn-pri" onclick="window.print()">⎙ Imprimir</button>
     <button class="btn btn-pri" onclick="pdfUploadOpen()" style="background:#2E7D32;border-color:#2E7D32;">📂 Nuevo mes</button>
+    <button class="btn btn-sec" onclick="alzakSyncDrive()" title="Leer PDFs desde carpetas de Google Drive" style="background:#1565C0;border-color:#1565C0;color:#fff;margin-left:6px">☁️ Sync Drive</button>
   </div>
 </div>
 
@@ -17408,6 +17387,77 @@ function fcActualizar() {
 
   html += '</tbody></table></div>';
   el.innerHTML = html;
+
+  // Actualizar panel de flujo neto
+  if (typeof fcActualizarFlujoPanelNeto === 'function') setTimeout(fcActualizarFlujoPanelNeto, 50);
+}
+
+function fcActualizarFlujoPanelNeto() {
+  var panel = document.getElementById('home-flujo-neto');
+  if (!panel) return;
+
+  function fm(n) { return '$' + Math.round(Math.abs(n||0)).toLocaleString('es-CO'); }
+
+  // ── Entradas reales a bancos (desde conciliación P[]) ──
+  var entradasBancos = 0;
+  if (typeof P !== 'undefined') {
+    P.forEach(function(per) {
+      // Bancolombia ahorros
+      entradasBancos += (per.tAb || 0);
+      // Fiducuenta — adiciones + rendimientos
+      if (per.fid) entradasBancos += ((per.fid.adiciones||0) + (per.fid.rendNetos||0));
+      // Caja Social
+      if (per.caja) entradasBancos += (per.caja.tAb || 0);
+      // Bold CF
+      if (per.bold) entradasBancos += (per.bold.tAb || 0);
+    });
+  }
+
+  // ── Total pagado (desde Sheet de Egresos) ──
+  var egOp = 0, egDIAN = 0;
+  if (typeof GASTOS_DATA !== 'undefined') {
+    GASTOS_DATA.forEach(function(r) {
+      var t = (r['Tipo_Movimiento']||'').toLowerCase();
+      var c = (r['Categoria']||r['Categoría']||'').toLowerCase().trim();
+      if (t === 'traslado' || c.indexOf('traslado') >= 0 || c.indexOf('inversion') >= 0) return;
+      var v = alzakParseNum(r['Total_COP']||r['Total ($)']||0);
+      if (c.indexOf('obligaci') >= 0 && c.indexOf('dian') >= 0) egDIAN += v;
+      else egOp += v;
+    });
+  }
+  var egTotal = egOp + egDIAN;
+  var neto = entradasBancos - egTotal;
+  var col = neto >= 0 ? '#1D9E75' : '#C53030';
+  var bg  = neto >= 0 ? '#F0FFF4' : '#FFF5F5';
+  var bord = neto >= 0 ? '#1D9E75' : '#C53030';
+
+  panel.innerHTML =
+    '<div style="background:'+bg+';border-radius:12px;padding:16px 20px;border-left:4px solid '+bord+';border:1px solid '+(neto>=0?'#C6F6D5':'#FED7D7')+'">' +
+    '<div style="font-size:10px;font-weight:700;color:#666;margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px">📊 Acumulado del período — Entradas reales vs Pagos realizados</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:1px solid #e0ddd8;border-radius:10px;overflow:hidden">' +
+
+    // Entradas reales
+    '<div style="padding:14px 16px;background:#fff;border-right:1px solid #e0ddd8">' +
+    '<div style="font-size:9px;font-weight:700;color:#888;margin-bottom:4px;text-transform:uppercase">ENTRÓ A LOS BANCOS</div>' +
+    '<div style="font-size:18px;font-weight:800;color:#0C447C">'+fm(entradasBancos)+'</div>' +
+    '<div style="font-size:9px;color:#aaa;margin-top:3px">créditos reales conciliación</div>' +
+    '</div>' +
+
+    // Total pagado
+    '<div style="padding:14px 16px;background:#fff;border-right:1px solid #e0ddd8">' +
+    '<div style="font-size:9px;font-weight:700;color:#888;margin-bottom:4px;text-transform:uppercase">SALIÓ DE LOS BANCOS</div>' +
+    '<div style="font-size:18px;font-weight:800;color:#C53030">'+fm(egTotal)+'</div>' +
+    '<div style="font-size:9px;color:#aaa;margin-top:3px">op. '+fm(egOp)+' · DIAN '+fm(egDIAN)+'</div>' +
+    '</div>' +
+
+    // Neto
+    '<div style="padding:14px 16px;background:'+(neto>=0?'#F0FFF4':'#FFF5F5')+'">' +
+    '<div style="font-size:9px;font-weight:700;color:#888;margin-bottom:4px;text-transform:uppercase">NETO DE CAJA</div>' +
+    '<div style="font-size:20px;font-weight:800;color:'+col+'">'+(neto>=0?'+':'')+fm(Math.abs(neto))+'</div>' +
+    '<div style="font-size:10px;font-weight:700;color:'+col+';margin-top:3px">'+(neto>=0?'✅ Superávit':'⚠️ Déficit de caja')+'</div>' +
+    '</div>' +
+
+    '</div></div>';
 }
 
 function fcToggleDet(m) {
@@ -20465,6 +20515,24 @@ function alzakGenerarInforme() {
   var v = window.open('', '_blank', 'width=1100,height=820,scrollbars=yes');
   if (v) { v.document.write(html); v.document.close(); }
   else mostrarToast('⚠️ Permite ventanas emergentes en Chrome para ver el informe', '#993C1D', 4000);
+}
+
+function alzakSyncDrive() {
+  mostrarToast('☁️ Leyendo extractos de Drive...', '#1565C0', 3000);
+  fetch(ALZAK_GS_URL + '?tab=_sync_extractos')
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (data.ok) {
+        var res = data.resultado || {};
+        var msgs = Object.keys(res).map(function(k){ return k + ': ' + res[k]; }).join(' | ');
+        mostrarToast('✅ Drive sync: ' + (msgs || 'Sin PDFs nuevos'), '#1D9E75', 5000);
+        // Recargar conciliación
+        setTimeout(alzakCargarDatosSheets, 1000);
+      } else {
+        mostrarToast('⚠️ Error sync Drive: ' + (data.error||''), '#993C1D', 5000);
+      }
+    })
+    .catch(function(e){ mostrarToast('⚠️ Error: ' + e.message, '#993C1D', 4000); });
 }
 </script>
 </body>

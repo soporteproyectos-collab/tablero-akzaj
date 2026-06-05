@@ -2164,7 +2164,6 @@ function alzakCargarDatosSheets(callback) {
 
       // ── Re-renderizar todo ───────────────────────────────
       // ── Cargar extractos de conciliación desde Sheets ────
-      // REGLA: P[] hardcodeado tiene prioridad. Sheets solo agrega meses nuevos.
       if (data._conciliacion) {
         try {
           var concData = typeof data._conciliacion === 'string'
@@ -2172,20 +2171,22 @@ function alzakCargarDatosSheets(callback) {
           if (Array.isArray(concData) && concData.length) {
             var MK = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
               'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-            var agregados = 0;
-            concData.forEach(function(saved_p) {
-              var existing = P.find(function(p){ return p.label === saved_p.label; });
-              if (!existing) {
-                // Mes nuevo — agregar completo
-                P.push(saved_p);
-                agregados++;
+            concData.forEach(function(sp) {
+              var ex = P.find(function(p){ return p.label === sp.label; });
+              if (!ex) {
+                P.push(sp);
               } else {
-                // Mes existente — solo completar campos que faltan
-                if (!existing.sA && saved_p.sA) existing.sA = saved_p.sA;
-                if (!existing.sF && saved_p.sF) existing.sF = saved_p.sF;
-                if (!existing.fid  && saved_p.fid)  { existing.fid  = saved_p.fid;  agregados++; }
-                if (!existing.caja && saved_p.caja) { existing.caja = saved_p.caja; agregados++; }
-                if (!existing.bold && saved_p.bold) { existing.bold = saved_p.bold; agregados++; }
+                // Actualizar saldos Bancolombia si vienen del Drive
+                if (sp.sA)   ex.sA   = sp.sA;
+                if (sp.sF)   ex.sF   = sp.sF;
+                if (sp.tAb)  ex.tAb  = sp.tAb;
+                if (sp.tCar) ex.tCar = sp.tCar;
+                if (sp.movs && sp.movs.length) ex.movs = sp.movs;
+                // Actualizar cuentas secundarias siempre
+                if (sp.fid)  ex.fid  = sp.fid;
+                if (sp.caja) ex.caja = sp.caja;
+                if (sp.bold) ex.bold = sp.bold;
+                if (sp.tc)   ex.tc   = sp.tc;
               }
             });
             P.sort(function(a,b){
@@ -16352,8 +16353,7 @@ var P=[
  ]}
 }];
 
-// ── Cargar extractos de Drive (solo nuevos meses) ──────
-// REGLA: P[] hardcodeado tiene prioridad. Drive solo agrega meses nuevos.
+// ── Cargar extractos desde localStorage ──────────────────
 (function() {
   try {
     var saved = localStorage.getItem('alzak_periodos_v2');
@@ -16362,19 +16362,18 @@ var P=[
       if (Array.isArray(data) && data.length) {
         var MESES_KEY = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
           'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-        data.forEach(function(saved_p) {
-          var existing = P.find(function(p){ return p.label === saved_p.label; });
-          if (!existing) {
-            // Solo agregar meses que NO existen en P[] hardcodeado
-            P.push(saved_p);
+        data.forEach(function(sp) {
+          var ex = P.find(function(p){ return p.label === sp.label; });
+          if (!ex) {
+            P.push(sp);
           } else {
-            // Completar SOLO campos que faltan (sA===0 y no tiene datos)
-            // NUNCA sobreescribir datos que ya existen en el hardcodeado
-            if (!existing.sA && saved_p.sA) existing.sA = saved_p.sA;
-            if (!existing.sF && saved_p.sF) existing.sF = saved_p.sF;
-            if (!existing.fid && saved_p.fid) existing.fid = saved_p.fid;
-            if (!existing.caja && saved_p.caja) existing.caja = saved_p.caja;
-            if (!existing.bold && saved_p.bold) existing.bold = saved_p.bold;
+            if (sp.sA)   ex.sA   = sp.sA;
+            if (sp.sF)   ex.sF   = sp.sF;
+            if (sp.tAb)  ex.tAb  = sp.tAb;
+            if (sp.tCar) ex.tCar = sp.tCar;
+            if (sp.fid)  ex.fid  = sp.fid;
+            if (sp.caja) ex.caja = sp.caja;
+            if (sp.bold) ex.bold = sp.bold;
           }
         });
         P.sort(function(a,b){

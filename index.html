@@ -2031,8 +2031,7 @@ function alzakParseNum(val) {
 
 function alzakCargarDatosSheets(callback) {
   var org = alzakGetOrgActiva();
-  var baseUrl = (ALZAK_ORG_ACTIVA === 'FOUNDATION') ? ALZAK_GS_URL_FOUNDATION : ALZAK_GS_URL;
-  var url = baseUrl + '?tab=_datos_todos'
+  var url = ALZAK_GS_URL + '?tab=_datos_todos'
     + '&sheetFac=' + encodeURIComponent(org.facturacion)
     + '&sheetRad=' + encodeURIComponent(org.radicadas)
     + '&sheetEgr=' + encodeURIComponent(org.egresos);

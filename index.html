@@ -5414,7 +5414,7 @@ function renderConcGrupos() {
 
   ];
 
-  var totalSaldo = GRUPOS.reduce(function(a,gr){return a+gr.keys.reduce(function(s,k){return s+(DB[k].info.sfin||0);},0);},0);
+  var totalSaldo = GRUPOS.reduce(function(a,gr){return a+gr.keys.reduce(function(s,k){return s+((_todos[k]&&_todos[k].info)?(_todos[k].info.sfin||0):0);},0);},0);
 
   var BANCO_EXP = typeof _bancoExpanded !== 'undefined' ? _bancoExpanded : '';
 
@@ -5430,7 +5430,7 @@ function renderConcGrupos() {
 
     for(var ki=0;ki<gr.keys.length;ki++){var _ext=_todos[gr.keys[ki]];if(!_ext||!_ext.info)continue;var ms=_ext.movs||[];for(var j=0;j<ms.length;j++)grMovs.push(ms[j]);}
 
-    var grSald=gr.keys.reduce(function(a,k){return a+(DB[k].info.sfin||0);},0);
+    var grSald=gr.keys.reduce(function(a,k){return a+((_todos[k]&&_todos[k].info)?(_todos[k].info.sfin||0):0);},0);
 
     var grAb=grMovs.reduce(function(a,m){return a+(m.ab||0);},0);
 

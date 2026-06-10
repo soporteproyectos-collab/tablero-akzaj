@@ -535,7 +535,7 @@ tbody tr:hover td{background:var(--cyan-light);}
 
 <div>
 
-<div style="font-size:15px;font-weight:700;color:#5DC3DA">📄 Facturación ALZAK GROUP SAS</div>
+<div style="font-size:15px;font-weight:700;color:#5DC3DA" id="fac-org-title">📄 Facturación ALZAK GROUP SAS</div>
 
 <div style="font-size:11px;color:#888;margin-top:2px">Facturas electrónicas emitidas · Estado de cartera</div>
 
@@ -1637,6 +1637,12 @@ function alzakCambiarOrg(orgKey) {
   // Actualizar color del selector
   var sel = document.getElementById('org-selector');
   if (sel) { sel.style.borderColor = org.color; sel.style.color = org.color; }
+  // Actualizar título de facturación
+  var facTitle = document.getElementById('fac-org-title');
+  if (facTitle) {
+    facTitle.textContent = '📄 Facturación ' + org.nombre;
+    facTitle.style.color = org.color;
+  }
   // Limpiar datos anteriores
   FR_DATA = []; GASTOS_DATA = []; FACTURAS = []; FP_DATA = [];
   // Recargar
@@ -6717,7 +6723,7 @@ function renderFacturas() {
   if (kp) kp.innerHTML =
     '<div class="met"><div class="met-l" style="color:#888">Base gravable</div><div class="met-v tb">' + F(totalBruto) + '</div><div class="met-s">' + FACTURAS.length + ' facturas emitidas</div></div>' +
     '<div class="met"><div class="met-l" style="color:#0F6E56">IVA generado 19%</div><div class="met-v" style="color:#0F6E56;font-weight:700">+' + F(totalIVA) + '</div><div class="met-s">IVA en facturas</div></div>' +
-    '<div class="met"><div class="met-l" style="color:#854F0B">Rte. fuente 11%</div><div class="met-v" style="color:#854F0B;font-weight:700">−' + F(totalRteF) + '</div><div class="met-s">Retención aplicada</div></div>' +
+    (ALZAK_ORG_ACTIVA !== 'FOUNDATION' ? '<div class="met"><div class="met-l" style="color:#854F0B">Rte. fuente 11%</div><div class="met-v" style="color:#854F0B;font-weight:700">−' + F(totalRteF) + '</div><div class="met-s">Retención aplicada</div></div>' : '') +
     '<div class="met"><div class="met-l" style="color:#3C3489">Rte. IVA 15%</div><div class="met-v" style="color:#3C3489;font-weight:700">−' + F(totalRteIVA) + '</div><div class="met-s">15% del IVA cobrado</div></div>' +
     '<div class="met" style="border:1.5px solid #993C1D22"><div class="met-l" style="color:#993C1D">Neto a cobrar</div><div class="met-v" style="color:#993C1D;font-weight:700">' + F(totalNeto) + '</div><div class="met-s">Base+IVA−Retenciones</div></div>' +
     '<div class="met"><div class="met-l" style="color:#888">% Recaudo</div><div class="met-v ' + (pctCobro>70?'tg':pctCobro>30?'tw':'tr') + '">' + pctCobro + '%</div><div class="met-s">' + FACTURAS.filter(function(f){return f.pagada;}).length + ' pagadas · ' + FACTURAS.filter(function(f){return !f.pagada;}).length + ' pendientes</div></div>';
@@ -9630,7 +9636,7 @@ function renderResumenTablero() {
 
     +'<div style="font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;background:'+(utilidad>=0?'#F5F4F2':'#FEE2E2')+';color:'+(utilidad>=0?'#C8DABB':'#A32D2D')+'">'
 
-    +(totalEgr===0&&!(typeof FR_DATA!=='undefined'&&FR_DATA.length)&&!GASTOS_DATA.length ? '📊 Carga datos' : utilidad>=0?'✅ Utilidad positiva':'⚠️ Pérdida')
+    +(totalEgr===0&&!(typeof FR_DATA!=='undefined'&&FR_DATA.length)&&!GASTOS_DATA.length ? '📊 Carga datos' : utilidad>=0?(ALZAK_ORG_ACTIVA==='FOUNDATION'?'✅ Excedente':'✅ Utilidad positiva'):(ALZAK_ORG_ACTIVA==='FOUNDATION'?'⚠️ Pérdida':'⚠️ Pérdida'))
 
     +'</div>'
 
@@ -9648,7 +9654,7 @@ function renderResumenTablero() {
           : (GASTOS_DATA.length ? GASTOS_DATA.length+' egresos' : 'Carga facturas radicadas')),
         '')
 
-    + card('📊','Utilidad ant. imp.',utilidad,  utilidad>=0?'#1D6F42':'#A32D2D', utilidad>=0?'#F0FDF4':'#FEF2F2', 'Margen '+margen+'% · 2026', (typeof FR_DATA!=='undefined'&&FR_DATA.length?'Fact. emitidas – Fact. radicadas':'Carga datos para ver utilidad'))
+    + card('📊', ALZAK_ORG_ACTIVA==='FOUNDATION' ? (utilidad>=0?'Excedentes':'Pérdidas') : 'Utilidad ant. imp.',utilidad,  utilidad>=0?'#1D6F42':'#A32D2D', utilidad>=0?'#F0FDF4':'#FEF2F2', 'Margen '+margen+'% · 2026', (typeof FR_DATA!=='undefined'&&FR_DATA.length?'Fact. emitidas – Fact. radicadas':'Carga datos para ver utilidad'))
 
     + card('🏛','Gravamen 4x1000', gmf4x1000,'#6EA1BA','#EBF6FA', gmf_fuente,'GMF acumulado Ene–Mar 2026')
 

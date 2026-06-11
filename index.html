@@ -1644,7 +1644,7 @@ function alzakCambiarOrg(orgKey) {
     facTitle.style.color = org.color;
   }
   // Limpiar datos anteriores
-  FR_DATA = []; GASTOS_DATA = []; FACTURAS = []; FP_DATA = [];
+  FR_DATA = []; GASTOS_DATA = []; FACTURAS = []; FP_DATA = []; GP_DATA = [];
   // Recargar
   mostrarToast('Cargando ' + org.nombre + '...', org.color, 3000);
   alzakCargarDatosSheets();
@@ -2227,6 +2227,12 @@ function alzakCargarDatosSheets(callback) {
         cargados.push('Programadas maestro: ' + FP_DATA.length);
       } else if (FP_DATA.length > 0) {
         cargados.push('Programadas: ' + FP_DATA.length);
+      }
+
+      // ── Gastos Programados → GP_DATA ────────────────
+      if (data.gastos_programados && data.gastos_programados.length) {
+        GP_DATA = data.gastos_programados;
+        cargados.push('Gastos prog.: ' + GP_DATA.length);
       }
 
       } catch(procErr) {
@@ -7099,6 +7105,7 @@ var GASTO_EST_SEL = 'pendiente';
 
 var GASTOS_DATA = [];
 var FP_DATA = []; // Facturación Programada — sincroniza con Sheets
+var GP_DATA = []; // Gastos Programados — costos proyectados del equipo desde Sheets
 
 var CAT_COLS_G = {'Alimentacion y bienestar':'#C8DABB','Educacion y capacitacion':'#5DC3DA','Gastos administrativos':'#633806','Gastos de representacion':'#6EA1BA','Mantenimiento y reparaciones':'#993C1D','Materiales y suministros':'#854F0B','Salud ocupacional':'#085041','Seguridad y vigilancia':'#5F5E5A','Tecnologia y software':'#0C447C','Transporte y movilidad':'#7C4A00','Otro':'#888'};
 
@@ -10967,7 +10974,41 @@ function calcMesData(mes) {
     gas = gfOp.reduce(function(a,r){return a+parseFloat(r['Total_COP']||0);},0);
   }
 
-  return {mes:mes,label:mes.replace(' 2026','').replace(' 2025','').substring(0,3),ing:ing,gas:gas,util:ing-gas,ff:ff,gf:gf};
+  // ── Proyecciones ──────────────────────────────────────────────────────
+  // Determinar número de mes (1-12) para esta etiqueta
+  var mesNum = MN.indexOf(mes.split(' ')[0]) + 1;
+  var mesAnio = mes.split(' ')[1] || '2026';
+
+  // Ingresos proyectados: FP_DATA con fecha en este mes
+  var ingProy = 0;
+  if (typeof FP_DATA !== 'undefined' && FP_DATA.length) {
+    for (var _fp=0; _fp<FP_DATA.length; _fp++) {
+      var fpd = FP_DATA[_fp];
+      var fpFecha = fpd.fecha || '';
+      // formato yyyy-mm-dd
+      if (fpFecha.indexOf('-') > 0) {
+        var fpp = fpFecha.split('-');
+        if (parseInt(fpp[1]) === mesNum && fpp[0] === mesAnio) {
+          ingProy += parseFloat(fpd.monto || 0);
+        }
+      }
+      // formato por columnas m1-m12
+      var colVal = parseFloat(fpd['m'+mesNum] || 0);
+      if (colVal > 0 && fpFecha.indexOf('-') < 0) ingProy += colVal;
+    }
+  }
+
+  // Gastos proyectados: GP_DATA columna m{mesNum}
+  var gasProy = 0;
+  if (typeof GP_DATA !== 'undefined' && GP_DATA.length) {
+    for (var _gp=0; _gp<GP_DATA.length; _gp++) {
+      gasProy += parseFloat(GP_DATA[_gp]['m'+mesNum] || 0);
+    }
+  }
+
+  var utilProy = (ing + ingProy) - (gas + gasProy);
+
+  return {mes:mes,label:mes.replace(' 2026','').replace(' 2025','').substring(0,3),ing:ing,gas:gas,util:ing-gas,ingProy:ingProy,gasProy:gasProy,utilProy:utilProy,ff:ff,gf:gf};
 
 }
 
@@ -10996,6 +11037,29 @@ function getMeses() {
       }
     }
   }
+  // Incluir meses con facturación programada (FP_DATA)
+  if (typeof FP_DATA !== 'undefined') {
+    for(var i=0;i<FP_DATA.length;i++){
+      var fpd=FP_DATA[i];
+      var fFecha = fpd.fecha || '';
+      // Formato yyyy-mm-dd
+      if (fFecha.indexOf('-')>0) {
+        var pp=fFecha.split('-');
+        var mm2=parseInt(pp[1])-1;
+        var aa2=pp[0];
+        if(mm2>=0&&mm2<12 && (!anioFil || aa2===anioFil)) disp[MN[mm2]+' '+aa2]=1;
+      }
+    }
+  }
+  // Incluir meses con gastos programados (GP_DATA) — columnas m1..m12
+  if (typeof GP_DATA !== 'undefined') {
+    for(var i=0;i<GP_DATA.length;i++){
+      for(var gm=1;gm<=12;gm++){
+        var val=parseFloat(GP_DATA[i]['m'+gm]||0);
+        if(val>0 && (!anioFil || anioFil==='2026')) disp[MN[gm-1]+' '+anioFil]=1;
+      }
+    }
+  }
   return MESES_ORD.filter(function(m){return disp[m];});
 }
 
@@ -11005,12 +11069,12 @@ function renderErGrafico() {
 
   var meses=getMeses();
 
-  // Solo mostrar si hay FACTURAS cargadas
   var hayFacturas = FACTURAS.length > 0;
   var hayFR       = typeof FR_DATA !== 'undefined' && FR_DATA.length > 0;
   var hayEgresos  = GASTOS_DATA.length > 0;
+  var hayProy     = (typeof FP_DATA !== 'undefined' && FP_DATA.length > 0) || (typeof GP_DATA !== 'undefined' && GP_DATA.length > 0);
 
-  if (!hayFacturas && !hayFR && !hayEgresos) {
+  if (!hayFacturas && !hayFR && !hayEgresos && !hayProy) {
     el.innerHTML = '<div style="text-align:center;padding:32px 20px;">'
       +'<div style="font-size:28px;margin-bottom:10px;">📊</div>'
       +'<div style="font-size:13px;font-weight:600;color:#888;margin-bottom:6px;">Sin datos para el análisis financiero</div>'
@@ -11023,53 +11087,94 @@ function renderErGrafico() {
 
   var data=meses.map(calcMesData);
 
+  // maxV incluye proyecciones
   var maxV=0;
-
-  for(var i=0;i<data.length;i++)maxV=Math.max(maxV,data[i].ing,data[i].gas,Math.abs(data[i].util));
-
+  for(var i=0;i<data.length;i++){
+    var d=data[i];
+    maxV=Math.max(maxV, d.ing + (d.ingProy||0), d.gas + (d.gasProy||0), Math.abs(d.util), Math.abs(d.utilProy||0));
+  }
   maxV=maxV*1.2||1;
 
-  var W=500,H=130,PL=54,PR=12,PT=16,PB=26,CW=W-PL-PR,CH=H-PT-PB,y0=PT+CH;
+  var W=500,H=150,PL=54,PR=12,PT=16,PB=36,CW=W-PL-PR,CH=H-PT-PB,y0=PT+CH;
 
   var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px">';
 
-  var steps=[0,maxV*0.33,maxV*0.67,maxV];
+  // Patrones de rayas diagonales para proyecciones
+  svg+='<defs>';
+  svg+='<pattern id="stripe-ing" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">';
+  svg+='<line x1="0" y1="0" x2="0" y2="6" stroke="#5DC3DA" stroke-width="2.5" stroke-opacity="0.5"/></pattern>';
+  svg+='<pattern id="stripe-gas" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">';
+  svg+='<line x1="0" y1="0" x2="0" y2="6" stroke="#993C1D" stroke-width="2.5" stroke-opacity="0.5"/></pattern>';
+  svg+='</defs>';
 
+  var steps=[0,maxV*0.33,maxV*0.67,maxV];
   for(var t=0;t<steps.length;t++){var yv=PT+CH-(steps[t]/maxV)*CH;svg+='<line x1="'+PL+'" y1="'+yv+'" x2="'+(W-PR)+'" y2="'+yv+'" stroke="#f0ede8" stroke-width="1"/><text x="'+(PL-4)+'" y="'+(yv+3)+'" text-anchor="end" font-size="9" fill="#bbb">$'+Math.round(steps[t]/1000000*10)/10+'M</text>';}
 
   svg+='<line x1="'+PL+'" y1="'+y0+'" x2="'+(W-PR)+'" y2="'+y0+'" stroke="#ccc" stroke-width="1.5"/>';
 
   var bw=Math.max(12,Math.min(32,CW/data.length*0.28));
 
+  var tieneAlgoProy = false;
+  for(var i=0;i<data.length;i++){if((data[i].ingProy||0)>0||(data[i].gasProy||0)>0){tieneAlgoProy=true;break;}}
+
   if(ER_VISTA==='bar'){
 
-    var ptsU=[];
+    var ptsU=[], ptsUP=[];
 
     for(var i=0;i<data.length;i++){
 
       var d=data[i],cx=PL+(i+0.5)*(CW/data.length),act=ER_MES_SEL===''||ER_MES_SEL===d.mes,op=act?'1':'0.3';
 
-      var hI=(d.ing/maxV)*CH,hG=(d.gas/maxV)*CH;
+      var hI=(d.ing/maxV)*CH, hG=(d.gas/maxV)*CH;
+      var hIP=((d.ingProy||0)/maxV)*CH, hGP=((d.gasProy||0)/maxV)*CH;
 
+      // Barra real ingresos (sólida)
       svg+='<rect x="'+(cx-bw-2)+'" y="'+(y0-hI)+'" width="'+bw+'" height="'+hI+'" fill="#5DC3DA" rx="3" opacity="'+op+'"/>';
+      // Barra proyectada ingresos (rayada, apilada arriba)
+      if(hIP>0) svg+='<rect x="'+(cx-bw-2)+'" y="'+(y0-hI-hIP)+'" width="'+bw+'" height="'+hIP+'" fill="url(#stripe-ing)" stroke="#5DC3DA" stroke-width="0.5" stroke-opacity="0.4" rx="3" opacity="'+op+'"/>';
 
-      svg+='<text x="'+(cx-bw/2-1)+'" y="'+(y0-hI-4)+'" text-anchor="middle" font-size="9" font-weight="bold" fill="#5DC3DA" opacity="'+op+'">$'+Math.round(d.ing/1000000*10)/10+'M</text>';
+      // Label ingresos (total = real + proy)
+      var ingTotal = d.ing + (d.ingProy||0);
+      var labelY = y0 - hI - hIP - 4;
+      if(d.ingProy>0) {
+        svg+='<text x="'+(cx-bw/2-1)+'" y="'+labelY+'" text-anchor="middle" font-size="8" font-weight="bold" fill="#5DC3DA" opacity="'+op+'">$'+Math.round(ingTotal/1000000*10)/10+'M</text>';
+      } else {
+        svg+='<text x="'+(cx-bw/2-1)+'" y="'+(y0-hI-4)+'" text-anchor="middle" font-size="9" font-weight="bold" fill="#5DC3DA" opacity="'+op+'">$'+Math.round(d.ing/1000000*10)/10+'M</text>';
+      }
 
+      // Barra real gastos (sólida)
       svg+='<rect x="'+(cx+2)+'" y="'+(y0-hG)+'" width="'+bw+'" height="'+hG+'" fill="#993C1D" rx="3" opacity="'+op+'"/>';
+      // Barra proyectada gastos (rayada, apilada arriba)
+      if(hGP>0) svg+='<rect x="'+(cx+2)+'" y="'+(y0-hG-hGP)+'" width="'+bw+'" height="'+hGP+'" fill="url(#stripe-gas)" stroke="#993C1D" stroke-width="0.5" stroke-opacity="0.4" rx="3" opacity="'+op+'"/>';
 
-      svg+='<text x="'+(cx+bw/2+2)+'" y="'+(y0-hG-4)+'" text-anchor="middle" font-size="9" font-weight="bold" fill="#993C1D" opacity="'+op+'">$'+Math.round(d.gas/1000000*10)/10+'M</text>';
+      // Label gastos
+      var gasTotal = d.gas + (d.gasProy||0);
+      var labelYG = y0 - hG - hGP - 4;
+      if(d.gasProy>0) {
+        svg+='<text x="'+(cx+bw/2+2)+'" y="'+labelYG+'" text-anchor="middle" font-size="8" font-weight="bold" fill="#993C1D" opacity="'+op+'">$'+Math.round(gasTotal/1000000*10)/10+'M</text>';
+      } else {
+        svg+='<text x="'+(cx+bw/2+2)+'" y="'+(y0-hG-4)+'" text-anchor="middle" font-size="9" font-weight="bold" fill="#993C1D" opacity="'+op+'">$'+Math.round(d.gas/1000000*10)/10+'M</text>';
+      }
 
+      // Puntos utilidad (real y proyectada)
       var yU=y0-(d.util/maxV)*CH;
-
       ptsU.push({x:cx,y:yU,util:d.util,act:act});
+      if(tieneAlgoProy){
+        var yUP=y0-((d.utilProy||d.util)/maxV)*CH;
+        ptsUP.push({x:cx,y:yUP,util:d.utilProy||d.util,act:act});
+      }
 
-      svg+='<text x="'+cx+'" y="'+(H-8)+'" text-anchor="middle" font-size="10" fill="'+(act?'#444':'#bbb')+'">'+d.label+'</text>';
+      svg+='<text x="'+cx+'" y="'+(H-18)+'" text-anchor="middle" font-size="10" fill="'+(act?'#444':'#bbb')+'">'+d.label+'</text>';
 
     }
 
+    // Línea utilidad real
     if(ptsU.length>1)svg+='<polyline points="'+ptsU.map(function(p){return p.x+','+p.y;}).join(' ')+'" fill="none" stroke="#C8DABB" stroke-width="2.5"/>';
+    // Línea utilidad proyectada (punteada)
+    if(ptsUP.length>1)svg+='<polyline points="'+ptsUP.map(function(p){return p.x+','+p.y;}).join(' ')+'" fill="none" stroke="#7C3AED" stroke-width="2" stroke-dasharray="5,3"/>';
 
     for(var i=0;i<ptsU.length;i++){var p=ptsU[i],uc=p.util>=0?'#C8DABB':'#A32D2D';svg+='<circle cx="'+p.x+'" cy="'+p.y+'" r="4" fill="'+uc+'" opacity="'+(p.act?1:0.3)+'"/>';if(p.act&&p.util!==0)svg+='<text x="'+p.x+'" y="'+(p.y+(p.util>=0?-8:14))+'" text-anchor="middle" font-size="9" font-weight="bold" fill="'+uc+'">'+(p.util>=0?'+':'')+Math.round(p.util/1000000*10)/10+'M</text>';}
+    if(tieneAlgoProy){for(var i=0;i<ptsUP.length;i++){var p2=ptsUP[i];svg+='<circle cx="'+p2.x+'" cy="'+p2.y+'" r="3" fill="#7C3AED" opacity="'+(p2.act?0.7:0.2)+'"/>';}}
 
   } else {
 
@@ -11083,8 +11188,18 @@ function renderErGrafico() {
 
     if(pU2.length>1)svg+='<polyline points="'+pU2.map(function(p){return p[0]+','+p[1];}).join(' ')+'" fill="none" stroke="#C8DABB" stroke-width="2" stroke-dasharray="6,3"/>';
 
-    for(var i=0;i<data.length;i++){var d=data[i];svg+='<circle cx="'+pI[i][0]+'" cy="'+pI[i][1]+'" r="4" fill="#5DC3DA"/>';svg+='<circle cx="'+pG[i][0]+'" cy="'+pG[i][1]+'" r="4" fill="#993C1D"/>';svg+='<circle cx="'+pU2[i][0]+'" cy="'+pU2[i][1]+'" r="4" fill="'+(d.util>=0?'#C8DABB':'#A32D2D')+'"/>';svg+='<text x="'+pI[i][0]+'" y="'+(H-8)+'" text-anchor="middle" font-size="10" fill="#555">'+d.label+'</text>';}
+    for(var i=0;i<data.length;i++){var d=data[i];svg+='<circle cx="'+pI[i][0]+'" cy="'+pI[i][1]+'" r="4" fill="#5DC3DA"/>';svg+='<circle cx="'+pG[i][0]+'" cy="'+pG[i][1]+'" r="4" fill="#993C1D"/>';svg+='<circle cx="'+pU2[i][0]+'" cy="'+pU2[i][1]+'" r="4" fill="'+(d.util>=0?'#C8DABB':'#A32D2D')+'"/>';svg+='<text x="'+pI[i][0]+'" y="'+(H-18)+'" text-anchor="middle" font-size="10" fill="#555">'+d.label+'</text>';}
 
+  }
+
+  // Leyenda si hay proyecciones
+  if(tieneAlgoProy){
+    svg+='<rect x="'+PL+'" y="'+(H-12)+'" width="8" height="8" fill="#5DC3DA" rx="1"/>';
+    svg+='<text x="'+(PL+11)+'" y="'+(H-5)+'" font-size="7" fill="#888">Real</text>';
+    svg+='<rect x="'+(PL+35)+'" y="'+(H-12)+'" width="8" height="8" fill="url(#stripe-ing)" stroke="#5DC3DA" stroke-width="0.5" rx="1"/>';
+    svg+='<text x="'+(PL+46)+'" y="'+(H-5)+'" font-size="7" fill="#888">Proyectado</text>';
+    svg+='<line x1="'+(PL+95)+'" y1="'+(H-8)+'" x2="'+(PL+110)+'" y2="'+(H-8)+'" stroke="#7C3AED" stroke-width="2" stroke-dasharray="4,2"/>';
+    svg+='<text x="'+(PL+113)+'" y="'+(H-5)+'" font-size="7" fill="#888">Utilidad proy.</text>';
   }
 
   svg+='</svg>';
@@ -11714,11 +11829,12 @@ function renderEstadoResultados() {
 
   if(kpEl){
 
-    var ingT,gasT,utilT,per;
+    var ingT,gasT,utilT,per,ingProyT=0,gasProyT=0;
 
     if(ER_MES_SEL){
 
       var md=calcMesData(ER_MES_SEL);ingT=md.ing;gasT=md.gas;utilT=md.util;per=ER_MES_SEL;
+      ingProyT=md.ingProy||0; gasProyT=md.gasProy||0;
 
     } else {
 
@@ -11751,6 +11867,14 @@ function renderEstadoResultados() {
 
       utilT=ingT-gasT; per='Acumulado '+anioFil2;
 
+      // Proyecciones acumuladas
+      var mesesAll = getMeses();
+      var dataAll = mesesAll.map(calcMesData);
+      for(var _da=0;_da<dataAll.length;_da++){
+        ingProyT += (dataAll[_da].ingProy||0);
+        gasProyT += (dataAll[_da].gasProy||0);
+      }
+
     }
 
     var mg=ingT?Math.round(utilT/ingT*100):0;
@@ -11759,7 +11883,14 @@ function renderEstadoResultados() {
       +'<div class="met"><div class="met-l">Ingresos · '+per+'</div><div class="met-v tb">'+F(ingT)+'</div><div class="met-s">Facturas emitidas</div></div>'
       +'<div class="met"><div class="met-l">Costos · '+per+'</div><div class="met-v tr">'+F(gasT)+'</div><div class="met-s">'+(typeof FR_DATA!=='undefined'&&FR_DATA.length?'Facturas radicadas':'Egresos op.')+'</div></div>'
       +'<div class="met"><div class="met-l">Utilidad · Margen '+mg+'%</div><div class="met-v '+(utilT>=0?'tg':'tr')+'">'+F(utilT)+'</div><div class="met-s">'+(utilT>=0?'Positiva ✅':'⚠️ Negativa')+'</div></div>'
-      +'</div>';
+      +'</div>'
+      + ((ingProyT>0||gasProyT>0) ?
+        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">'
+        +'<div class="met" style="border-left:3px solid #7C3AED;"><div class="met-l" style="color:#7C3AED;">📈 Ing. proyectados</div><div class="met-v" style="color:#7C3AED;">'+F(ingProyT)+'</div><div class="met-s">Fact. programada</div></div>'
+        +'<div class="met" style="border-left:3px solid #7C3AED;"><div class="met-l" style="color:#7C3AED;">📉 Gastos proyectados</div><div class="met-v" style="color:#7C3AED;">'+F(gasProyT)+'</div><div class="met-s">Gastos prog. equipo</div></div>'
+        +'<div class="met" style="border-left:3px solid #7C3AED;"><div class="met-l" style="color:#7C3AED;">🔮 Escenario total</div><div class="met-v" style="color:'+(((ingT+ingProyT)-(gasT+gasProyT))>=0?'#1D6F42':'#A32D2D')+';">'+F((ingT+ingProyT)-(gasT+gasProyT))+'</div><div class="met-s">Real + Proyectado</div></div>'
+        +'</div>'
+        : '');
 
   }
 

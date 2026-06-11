@@ -18517,13 +18517,10 @@ function frFuentePago(r) {
   }
 
     // ── FUENTE 2: Extractos bancarios P[] — cruce ESTRICTO con pool ────────
-  // Usa frConsumir() que marca cada movimiento como usado — evita que el mismo
-  // movimiento bancario pague múltiples facturas del mismo monto
-  var poolMatch = frConsumir(total);
-  // MODO C: si frConsumir no encontró match, buscar en pool por monto+descripción
-  // Esto cubre casos donde el proveedor en extracto difiere del de la factura
-  // Ej: Atrium Food ↔ "ATRIUM ZONA NORTE", Padel One ↔ "Mucho Padel Col"
-  if (!poolMatch) {
+  // REGLA: SIEMPRE se requiere match de proveedor + monto. Nunca match solo por monto.
+  // Esto evita falsos positivos donde un pago a tercero se asigna a otra factura.
+  var poolMatch = null;
+  {
     var SKIP2 = {S:1,A:1,SAS:1,DE:1,LA:1,EL:1,LOS:1,Y:1,DEL:1,LTDA:1,COL:1};
     var provW2 = proveedor.split(/[\s.,()+*]+/).filter(function(w){ return w.length>3 && !SKIP2[w]; });
     if (!_FR_MOVS_POOL) frBuildPool();
@@ -18532,7 +18529,6 @@ function frFuentePago(r) {
       if (_mv2.usado || Math.abs(_mv2.v - total) > 100) continue;
       var _desc2 = (_mv2.d||'').toUpperCase();
       // Verificar que alguna palabra clave del proveedor aparece en la descripción del extracto
-      // O que alguna entrada de FR_TC_MAP conecte la descripción con el proveedor
       var _descMatch = provW2.some(function(w){ return _desc2.indexOf(w) >= 0; });
       if (!_descMatch) {
         // Intentar vía FR_TC_MAP
@@ -18541,6 +18537,11 @@ function frFuentePago(r) {
             _descMatch = true; break;
           }
         }
+      }
+      // Intentar match por N° comprobante en la descripción del extracto
+      if (!_descMatch && ncomp.length > 3) {
+        var ncompUp = ncomp.toUpperCase();
+        if (_desc2.indexOf(ncompUp) >= 0) _descMatch = true;
       }
       if (_descMatch) { _mv2.usado = true; poolMatch = _mv2; break; }
     }

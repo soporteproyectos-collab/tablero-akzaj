@@ -16107,8 +16107,25 @@ var CLASE_A_TIPO = {
   gmf:'impto', interes:'interes', rendimiento:'interes',
   comision:'comision', egreso_externo:'egreso', retencion:'impto'
 };
-function convMovGAS(mv) {
-  return { f: mv.f || '', d: mv.desc || '', t: CLASE_A_TIPO[mv.clase] || 'egreso', v: mv.v || 0, doc: '' };
+// renderCaja y renderBold suman 'traslado' (no 'interno') — mapping por banco
+function convMovGAS(mv, banco) {
+  var t = CLASE_A_TIPO[mv.clase] || 'egreso';
+  if ((banco === 'BCS' || banco === 'Bold') && t === 'interno') t = 'traslado';
+  return { f: mv.f || '', d: mv.desc || '', t: t, v: mv.v || 0, doc: '' };
+}
+// Verificación de cuadre: solo aceptamos movimientos de Drive si suman exacto
+function extractoCuadra(row) {
+  var movs = row.movs || [];
+  if (!movs.length) return false;
+  var sA = parseFloat(row.sA) || 0, sF = parseFloat(row.sF) || 0;
+  var suma = movs.reduce(function(a, m){ return a + (parseFloat(m.v) || 0); }, 0);
+  return Math.abs(sA + suma - sF) < 2;
+}
+function fiducuentaCuadra(row) {
+  var sA = parseFloat(row.sA)||0, sF = parseFloat(row.sF)||0;
+  var calc = sA + (parseFloat(row.adiciones)||0) - (parseFloat(row.retiros)||0)
+    + (parseFloat(row.rendNetos)||0) - (parseFloat(row.retencion)||0);
+  return Math.abs(calc - sF) < 2;
 }
 function alzakActualizarSelPeriodo() {
   var sel = document.getElementById('sel-periodo');
@@ -16135,7 +16152,7 @@ function alzakConstruirPDesdeConc(rows) {
     if (!porMes[r.mesNum]) porMes[r.mesNum] = {};
     porMes[r.mesNum][r.banco] = r;
   }
-  var agregados = 0, actualizados = 0;
+  var agregados = 0, actualizados = 0, rechazados = [];
   var mesesNums = Object.keys(porMes).sort(function(a,b){ return a - b; });
   for (var k = 0; k < mesesNums.length; k++) {
     var mn = parseInt(mesesNums[k]);
@@ -16150,18 +16167,29 @@ function alzakConstruirPDesdeConc(rows) {
     var diasMes = new Date(anio, mn, 0).getDate();
     var fid = mes['Fiducuenta'], bcs = mes['BCS'], bold = mes['Bold'];
 
-    var fidObj = fid ? {
+    // ── Validar cuadre por banco: solo datos que cuadran al centavo entran ──
+    var bcOK   = bc   && extractoCuadra(bc);
+    var bcsOK  = bcs  && extractoCuadra(bcs);
+    var boldOK = bold && extractoCuadra(bold);
+    var fidOK  = fid  && fiducuentaCuadra(fid);
+    if (bc && !bcOK)     rechazados.push(label + ' Bancolombia (no cuadra)');
+    if (bcs && !bcsOK)   rechazados.push(label + ' BCS (no cuadra)');
+    if (bold && !boldOK) rechazados.push(label + ' Bold (no cuadra)');
+    if (fid && !fidOK)   rechazados.push(label + ' Fiducuenta (no cuadra)');
+
+    var fidObj = fidOK ? {
       sA: parseFloat(fid.sA)||0, sF: parseFloat(fid.sF)||0,
       rendNetos: parseFloat(fid.rendNetos)||0, retencion: parseFloat(fid.retencion)||0,
-      adiciones: parseFloat(fid.adiciones)||0, retiros: parseFloat(fid.retiros)||0
+      adiciones: parseFloat(fid.adiciones)||0, retiros: parseFloat(fid.retiros)||0,
+      movs: (fid.movs||[]).map(function(m){ return convMovGAS(m, 'Fiducuenta'); })
     } : null;
-    var cajaObj = bcs ? {
+    var cajaObj = bcsOK ? {
       sA: parseFloat(bcs.sA)||0, sF: parseFloat(bcs.sF)||0,
-      movs: (bcs.movs||[]).map(convMovGAS), label: label
+      movs: (bcs.movs||[]).map(function(m){ return convMovGAS(m, 'BCS'); }), label: label
     } : null;
-    var boldObj = bold ? {
+    var boldObj = boldOK ? {
       sA: parseFloat(bold.sA)||0, sF: parseFloat(bold.sF)||0,
-      movs: (bold.movs||[]).map(convMovGAS),
+      movs: (bold.movs||[]).map(function(m){ return convMovGAS(m, 'Bold'); }),
       intereses: (bold.movs||[]).filter(function(m){return m.clase==='interes'||m.clase==='rendimiento';}).reduce(function(a,m){return a+(m.v||0);},0)
     } : null;
 
@@ -16169,31 +16197,37 @@ function alzakConstruirPDesdeConc(rows) {
     for (var pj = 0; pj < P.length; pj++) { if (P[pj].label === label) { exIdx = pj; break; } }
 
     if (exIdx >= 0) {
-      // MERGE: Drive es fuente de verdad — actualizar cada banco que venga parseado OK
+      // MERGE: actualizar solo bancos cuyo extracto de Drive CUADRA
       var ex = P[exIdx];
-      if (bc && bc.movs && bc.movs.length) {
+      if (bcOK) {
         ex.sA = parseFloat(bc.sA)||ex.sA; ex.sF = parseFloat(bc.sF)||ex.sF;
         ex.tAb = parseFloat(bc.tAb)||ex.tAb; ex.tCar = parseFloat(bc.tCar)||ex.tCar;
-        ex.movs = bc.movs.map(convMovGAS);
+        ex.movs = bc.movs.map(function(m){ return convMovGAS(m, 'Bancolombia'); });
       }
-      if (fidObj && (fidObj.sA > 0 || fidObj.sF > 0)) ex.fid = fidObj;
-      if (cajaObj && (cajaObj.sA > 0 || cajaObj.sF > 0 || cajaObj.movs.length)) ex.caja = cajaObj;
-      if (boldObj && (boldObj.sA > 0 || boldObj.sF > 0 || boldObj.movs.length)) ex.bold = boldObj;
-      actualizados++;
+      if (fidObj)  ex.fid  = fidObj;
+      if (cajaObj) ex.caja = cajaObj;
+      if (boldObj) ex.bold = boldObj;
+      if (bcOK || fidObj || cajaObj || boldObj) actualizados++;
     } else {
-      if (!bc) continue; // mes nuevo requiere Bancolombia como base
+      if (!bcOK) continue; // mes nuevo requiere Bancolombia cuadrado como base
       P.push({
         label: label,
         desde: '01/' + ('0'+mn).slice(-2) + '/' + anio,
         hasta: diasMes + '/' + ('0'+mn).slice(-2) + '/' + anio,
         sA: parseFloat(bc.sA)||0, sF: parseFloat(bc.sF)||0,
         tAb: parseFloat(bc.tAb)||0, tCar: parseFloat(bc.tCar)||0,
-        movs: (bc.movs||[]).map(convMovGAS),
-        fid: fidObj || {sA:0,sF:0,rendNetos:0,retencion:0,adiciones:0,retiros:0},
+        movs: (bc.movs||[]).map(function(m){ return convMovGAS(m, 'Bancolombia'); }),
+        fid: fidObj || {sA:0,sF:0,rendNetos:0,retencion:0,adiciones:0,retiros:0,movs:[]},
         caja: cajaObj || {sA:0,sF:0,movs:[],label:label},
         bold: boldObj || {sA:0,sF:0,movs:[],intereses:0}
       });
       agregados++;
+    }
+  }
+  if (rechazados.length) {
+    console.warn('⚠️ Extractos de Drive RECHAZADOS por descuadre (se conservan datos previos):\n' + rechazados.join('\n'));
+    if (typeof mostrarToast === 'function') {
+      setTimeout(function(){ mostrarToast('⚠️ ' + rechazados.length + ' extracto(s) con descuadre no aplicados — ver consola (Cmd+Option+J)', '#B7791F', 6000); }, 4000);
     }
   }
   if (agregados > 0 || actualizados > 0) {
@@ -16674,7 +16708,7 @@ function renderFondo(p){
     </div>
     <div class="result-bar rb-purple"><span class="rb-label">Saldo Fiducuenta al cierre · ${p.hasta}</span><span class="rb-val">${fc(fid.sF)}</span></div>
     <button class="toggle-btn tb-purple" onclick="toggleFidMovsConc()">
-      <span class="tb-cnt"><span class="tb-bar"></span>Movimientos del fondo<span class="tb-badge">${fid.movs.length} mov.</span></span>
+      <span class="tb-cnt"><span class="tb-bar"></span>Movimientos del fondo<span class="tb-badge">${(fid.movs||[]).length} mov.</span></span>
       <span class="tb-arrow" id="fid-arrow">▼</span>
     </button>
     <div id="fid-panel" style="display:none;margin-top:10px">
@@ -16689,8 +16723,8 @@ function renderCaja(p){
   const cj=p.caja;
   const ing=st(cj.movs,'ingreso'),eg=st(cj.movs,'egreso'),imp=st(cj.movs,'impto');
   const devol=st(cj.movs,'devol'),trasl=st(cj.movs,'traslado');
-  const sc=cj.sA+ing+eg+imp+devol+trasl;
-  const ok=Math.abs(sc-cj.sF)<1;
+  const sc=cj.sA+st(cj.movs);
+  const ok=cj.movs.length===0?true:Math.abs(sc-cj.sF)<1;
   document.getElementById('cj-per').textContent=p.desde+' al '+p.hasta;
   const rows=cj.movs.filter(mv=>{const q=fBc.toLowerCase(),ft=fTc;if(q&&!mv.d.toLowerCase().includes(q)&&!mv.f.includes(q))return false;if(ft&&mv.t!==ft)return false;return true;});
   const tbody=rows.map(mv=>{const meta=TM[mv.t]||{l:mv.t,c:'pz'};return`<tr><td style="color:var(--gray-mid);font-weight:500;white-space:nowrap">${mv.f}</td><td>${mv.d}</td><td><span class="pill ${meta.c}">${meta.l}</span></td><td style="text-align:right"><span class="${mv.v>=0?'ap':'an'}">${mv.v>=0?'+':'-'}${fc(mv.v)}</span></td></tr>`;}).join('')||`<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--gray-mid)">Sin resultados</td></tr>`;
@@ -16751,7 +16785,7 @@ function renderCaja(p){
 function renderBold(p){
   const bl=p.bold;
   const trasl=st(bl.movs,'traslado'),eg=st(bl.movs,'egreso'),imp=st(bl.movs,'impto'),int_=bl.intereses;
-  const sc=bl.sA+trasl+eg+imp+int_;
+  const sc=bl.sA+st(bl.movs);
   const ok=bl.movs.length===0?true:Math.abs(sc-bl.sF)<1;
   document.getElementById('bl-per').textContent=p.desde+' al '+p.hasta;
   const rows=bl.movs.filter(mv=>{const q=fBb.toLowerCase(),ft=fTb;if(q&&!mv.d.toLowerCase().includes(q)&&!mv.f.includes(q))return false;if(ft&&mv.t!==ft)return false;return true;});
@@ -16835,7 +16869,12 @@ function renderConc(){
   fB='';fT='';fBc='';fTc='';fBb='';fTb='';
   _movsOpen=false;_fidOpen=false;_cajaOpen=false;_boldOpen=false;
   const p=P[pi()];
-  renderGlobal(p);renderAhorros(p);renderFondo(p);renderCaja(p);renderBold(p);
+  if(!p) return;
+  try{renderGlobal(p);}catch(e){console.error('renderGlobal:',e);}
+  try{renderAhorros(p);}catch(e){console.error('renderAhorros:',e);}
+  try{renderFondo(p);}catch(e){console.error('renderFondo:',e);}
+  try{renderCaja(p);}catch(e){console.error('renderCaja:',e);}
+  try{renderBold(p);}catch(e){console.error('renderBold:',e);}
   // Re-renderizar facturas radicadas si hay datos cargados (cruce automático)
   if (typeof FR_DATA !== 'undefined' && FR_DATA.length > 0) {
     setTimeout(function(){ if(typeof frRender==='function') frRender(); }, 100);

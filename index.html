@@ -16029,7 +16029,8 @@ var P=[];
   };
 
   function convMov(mov) {
-    var t = (mov.tipo||'').toLowerCase();
+    var t = (mov.tipo||'').toLowerCase()
+      .replace(/á/g,'a').replace(/é/g,'e').replace(/í/g,'i').replace(/ó/g,'o').replace(/ú/g,'u');
     var tipo = 'egreso';
     if (t.indexOf('interes')>=0 && t.indexOf('retencion')<0) tipo = 'interes';
     else if (t.indexOf('rendimiento')>=0) tipo = 'interes';
@@ -16112,10 +16113,18 @@ function convMovGAS(mv) {
 function alzakActualizarSelPeriodo() {
   var sel = document.getElementById('sel-periodo');
   if (!sel || !P.length) return;
+  // Conservar la selección actual por label si existe
+  var labelActual = '';
+  try {
+    var opAct = sel.options[sel.selectedIndex];
+    if (opAct) labelActual = opAct.text;
+  } catch(e) {}
   sel.innerHTML = P.map(function(p, i) {
     return '<option value="' + i + '">' + p.label + '</option>';
   }).join('');
-  sel.value = String(P.length - 1); // seleccionar el mes más reciente
+  var idxLabel = -1;
+  for (var i = 0; i < P.length; i++) { if (P[i].label === labelActual) { idxLabel = i; break; } }
+  sel.value = String(idxLabel >= 0 ? idxLabel : P.length - 1);
 }
 function alzakConstruirPDesdeConc(rows) {
   var MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -16126,48 +16135,68 @@ function alzakConstruirPDesdeConc(rows) {
     if (!porMes[r.mesNum]) porMes[r.mesNum] = {};
     porMes[r.mesNum][r.banco] = r;
   }
-  var agregados = 0;
+  var agregados = 0, actualizados = 0;
   var mesesNums = Object.keys(porMes).sort(function(a,b){ return a - b; });
   for (var k = 0; k < mesesNums.length; k++) {
     var mn = parseInt(mesesNums[k]);
     var mes = porMes[mn];
     var bc = mes['Bancolombia'];
-    if (!bc) continue; // Bancolombia es la cuenta base del período
     var label = MESES[mn-1] + ' 2026';
-    var existe = P.some(function(p){ return p.label === label; });
-    if (existe) continue; // Ene-Abr ya vienen hardcodeados — no duplicar
     var anio = 2026;
-    if (bc.movs && bc.movs.length && bc.movs[0].f) {
+    if (bc && bc.movs && bc.movs.length && bc.movs[0].f) {
       var fp = String(bc.movs[0].f).split('/');
       if (fp.length === 3) anio = parseInt(fp[2]) || 2026;
     }
     var diasMes = new Date(anio, mn, 0).getDate();
     var fid = mes['Fiducuenta'], bcs = mes['BCS'], bold = mes['Bold'];
-    P.push({
-      label: label,
-      desde: '01/' + ('0'+mn).slice(-2) + '/' + anio,
-      hasta: diasMes + '/' + ('0'+mn).slice(-2) + '/' + anio,
-      sA: parseFloat(bc.sA)||0, sF: parseFloat(bc.sF)||0,
-      tAb: parseFloat(bc.tAb)||0, tCar: parseFloat(bc.tCar)||0,
-      movs: (bc.movs||[]).map(convMovGAS),
-      fid: fid ? {
-        sA: parseFloat(fid.sA)||0, sF: parseFloat(fid.sF)||0,
-        rendNetos: parseFloat(fid.rendNetos)||0, retencion: parseFloat(fid.retencion)||0,
-        adiciones: parseFloat(fid.adiciones)||0, retiros: parseFloat(fid.retiros)||0
-      } : {sA:0,sF:0,rendNetos:0,retencion:0,adiciones:0,retiros:0},
-      caja: bcs ? {
-        sA: parseFloat(bcs.sA)||0, sF: parseFloat(bcs.sF)||0,
-        movs: (bcs.movs||[]).map(convMovGAS), label: label
-      } : {sA:0,sF:0,movs:[],label:label},
-      bold: bold ? {
-        sA: parseFloat(bold.sA)||0, sF: parseFloat(bold.sF)||0,
-        movs: (bold.movs||[]).map(convMovGAS),
-        intereses: (bold.movs||[]).filter(function(m){return m.clase==='interes'||m.clase==='rendimiento';}).reduce(function(a,m){return a+(m.v||0);},0)
-      } : {sA:0,sF:0,movs:[],intereses:0}
-    });
-    agregados++;
+
+    var fidObj = fid ? {
+      sA: parseFloat(fid.sA)||0, sF: parseFloat(fid.sF)||0,
+      rendNetos: parseFloat(fid.rendNetos)||0, retencion: parseFloat(fid.retencion)||0,
+      adiciones: parseFloat(fid.adiciones)||0, retiros: parseFloat(fid.retiros)||0
+    } : null;
+    var cajaObj = bcs ? {
+      sA: parseFloat(bcs.sA)||0, sF: parseFloat(bcs.sF)||0,
+      movs: (bcs.movs||[]).map(convMovGAS), label: label
+    } : null;
+    var boldObj = bold ? {
+      sA: parseFloat(bold.sA)||0, sF: parseFloat(bold.sF)||0,
+      movs: (bold.movs||[]).map(convMovGAS),
+      intereses: (bold.movs||[]).filter(function(m){return m.clase==='interes'||m.clase==='rendimiento';}).reduce(function(a,m){return a+(m.v||0);},0)
+    } : null;
+
+    var exIdx = -1;
+    for (var pj = 0; pj < P.length; pj++) { if (P[pj].label === label) { exIdx = pj; break; } }
+
+    if (exIdx >= 0) {
+      // MERGE: Drive es fuente de verdad — actualizar cada banco que venga parseado OK
+      var ex = P[exIdx];
+      if (bc && bc.movs && bc.movs.length) {
+        ex.sA = parseFloat(bc.sA)||ex.sA; ex.sF = parseFloat(bc.sF)||ex.sF;
+        ex.tAb = parseFloat(bc.tAb)||ex.tAb; ex.tCar = parseFloat(bc.tCar)||ex.tCar;
+        ex.movs = bc.movs.map(convMovGAS);
+      }
+      if (fidObj && (fidObj.sA > 0 || fidObj.sF > 0)) ex.fid = fidObj;
+      if (cajaObj && (cajaObj.sA > 0 || cajaObj.sF > 0 || cajaObj.movs.length)) ex.caja = cajaObj;
+      if (boldObj && (boldObj.sA > 0 || boldObj.sF > 0 || boldObj.movs.length)) ex.bold = boldObj;
+      actualizados++;
+    } else {
+      if (!bc) continue; // mes nuevo requiere Bancolombia como base
+      P.push({
+        label: label,
+        desde: '01/' + ('0'+mn).slice(-2) + '/' + anio,
+        hasta: diasMes + '/' + ('0'+mn).slice(-2) + '/' + anio,
+        sA: parseFloat(bc.sA)||0, sF: parseFloat(bc.sF)||0,
+        tAb: parseFloat(bc.tAb)||0, tCar: parseFloat(bc.tCar)||0,
+        movs: (bc.movs||[]).map(convMovGAS),
+        fid: fidObj || {sA:0,sF:0,rendNetos:0,retencion:0,adiciones:0,retiros:0},
+        caja: cajaObj || {sA:0,sF:0,movs:[],label:label},
+        bold: boldObj || {sA:0,sF:0,movs:[],intereses:0}
+      });
+      agregados++;
+    }
   }
-  if (agregados > 0) {
+  if (agregados > 0 || actualizados > 0) {
     var MK = MESES;
     P.sort(function(a,b){
       var pa = a.label.split(' '), pb = b.label.split(' ');
@@ -16177,7 +16206,7 @@ function alzakConstruirPDesdeConc(rows) {
     });
     alzakActualizarSelPeriodo();
   }
-  return agregados;
+  return agregados + actualizados;
 }
 function alzakCargarConcGAS(callback) {
   if (typeof ALZAK_GS_URL === 'undefined') { if (callback) callback(0); return; }
@@ -16189,7 +16218,7 @@ function alzakCargarConcGAS(callback) {
         n = alzakConstruirPDesdeConc(data.data);
         if (n > 0) {
           if (typeof renderConc === 'function') { try { renderConc(); } catch(e){} }
-          if (typeof mostrarToast === 'function') mostrarToast('☁️ Conciliación Drive: +' + n + ' mes(es) nuevos', '#1D9E75', 3500);
+          if (typeof mostrarToast === 'function') mostrarToast('☁️ Conciliación Drive: ' + n + ' mes(es) sincronizados', '#1D9E75', 3500);
         }
       }
       if (callback) callback(n);

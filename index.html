@@ -284,10 +284,10 @@ select:focus{outline:none;border-color:var(--cyan);}
 .global-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:13px;}
 .gc{background:rgba(255,255,255,.11);border:1px solid rgba(255,255,255,.17);border-radius:6px;padding:10px 13px;}
 .gc-lbl{font-size:9px;font-weight:600;color:rgba(255,255,255,.62);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px;}
-.gc-val{font-size:14px;font-weight:700;color:var(--white);}
+.gc-val{font-size:13px;font-weight:700;color:var(--white);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .gc-val.dim{color:rgba(255,255,255,.35);}
 .gc.hl{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.4);}
-.gc.hl .gc-val{font-size:18px;}
+.gc.hl .gc-val{font-size:13px;}
 
 /* GLOBAL ROWS */
 .global-rows{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;}

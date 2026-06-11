@@ -16105,7 +16105,8 @@ var P=[];
 var CLASE_A_TIPO = {
   ingreso_externo:'ingreso', traslado_interno:'interno', fondo:'fondo',
   gmf:'impto', interes:'interes', rendimiento:'interes',
-  comision:'comision', egreso_externo:'egreso', retencion:'impto'
+  comision:'comision', egreso_externo:'egreso', retencion:'impto',
+  sin_clasificar:'transf'  // neutral: cuadra el saldo pero no contamina indicadores
 };
 // renderCaja y renderBold suman 'traslado' (no 'interno') — mapping por banco
 function convMovGAS(mv, banco) {

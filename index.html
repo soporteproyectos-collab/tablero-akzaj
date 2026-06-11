@@ -16631,10 +16631,8 @@ function renderAhorros(p){
       <div class="ac ${ing>0?'bt-green':''}"><div class="ac-lbl">Ingresos externos</div><div class="ac-val ${ing>0?'green':'dim'}">${ing>0?'+'+fc(ing):'$0,00'}</div></div>
       <div class="ac"><div class="ac-lbl">Intereses</div><div class="ac-val green">+${fc(int_)}</div></div>
       <div class="ac"><div class="ac-lbl">Entradas Fiducuenta</div><div class="ac-val purple">+${fc(fE)}</div></div>
-      <div class="ac bt-red"><div class="ac-lbl">Total cargos (extracto)</div><div class="ac-val red">${fc(p.tCar)}</div></div>
-      <div class="ac" style="opacity:0;border:none;"></div>
-     <div class="ac" style="opacity:0;border:none;"></div>
-     <div class="ac bt-cyan"><div class="ac-lbl">Saldo cierre · ${p.hasta}</div><div class="ac-val cyan">${fc(p.sF)}</div></div>
+      <div class="ac bt-red"><div class="ac-lbl">Total cargos (extracto)</div><div class="ac-val red">-${fc(p.tCar)}</div></div>
+      <div class="ac bt-cyan"><div class="ac-lbl">Saldo cierre · ${p.hasta}</div><div class="ac-val cyan">${fc(p.sF)}</div></div>
     </div>
     <div class="two-col">
       <div class="inner-panel"><div class="inner-title bar-cyan">Entradas</div>
@@ -16801,11 +16799,8 @@ function renderBold(p){
       <div class="ac bt-navy"><div class="ac-lbl">Saldo apertura</div><div class="ac-val navy ${bl.sA===0?'dim':''}">${bl.sA>0?fc(bl.sA):'$0,00'}</div></div>
       <div class="ac"><div class="ac-lbl">Traslados desde Bancolombia</div><div class="ac-val ${trasl>0?'navy':'dim'}">${trasl>0?'+'+fc(trasl):'$0,00'}</div></div>
       <div class="ac ${int_>0?'bt-green':''}"><div class="ac-lbl">Intereses (Ahorro Bold)</div><div class="ac-val ${int_>0?'green':'dim'}">${int_>0?'+'+fc(int_):'$0,00'}</div></div>
-      <div class="ac bt-red"><div class="ac-lbl">Total cargos (extracto)</div><div class="ac-val ${Math.abs(bl.tCar)>0?'red':'dim'}">${Math.abs(bl.tCar)>0?fc(bl.tCar):'$0,00'}</div></div>
-      <div class="ac"><div class="ac-lbl">Egresos + GMF</div><div class="ac-val red">${fc(Math.abs(eg+imp))}</div></div>
-      <div class="ac" style="opacity:0;border:none;"></div>
-     <div class="ac" style="opacity:0;border:none;"></div>
-     <div class="ac bt-navy"><div class="ac-lbl">Saldo cierre · ${p.hasta}</div><div class="ac-val navy ${bl.sF===0?'dim':''}">${bl.sF>0?fc(bl.sF):'$0,00'}</div></div>
+      <div class="ac bt-red"><div class="ac-lbl">Total cargos (extracto)</div><div class="ac-val ${Math.abs(bl.tCar)>0?'red':'dim'}">${Math.abs(bl.tCar)>0?'-'+fc(bl.tCar):'$0,00'}</div></div>
+      <div class="ac bt-navy"><div class="ac-lbl">Saldo cierre · ${p.hasta}</div><div class="ac-val navy ${bl.sF===0?'dim':''}">${bl.sF>0?fc(bl.sF):'$0,00'}</div></div>
     </div>
     <div class="two-col">
       <div class="inner-panel"><div class="inner-title bar-navy">Entradas</div>

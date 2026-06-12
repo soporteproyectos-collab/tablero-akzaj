@@ -18289,14 +18289,16 @@ function frRender() {
   filtered.forEach(function(r){ frFuentePago(r); });
 
   var totalOblig = 0, totalPagado = 0, totalDeuda = 0, totalSinExtr = 0, nDIAN = 0;
+  // Contar proyectados desde FR_DATA completo (frGetFiltered ya los excluyó)
   var nProyectados = 0, totalProyectado = 0;
+  FR_DATA.forEach(function(r) {
+    if (frEsProyectado(r)) { nProyectados++; totalProyectado += frTotalVal(r); }
+  });
   filtered.forEach(function(r) {
     var tot    = frTotalVal(r);
     var est    = frEstadoReal(r);
     var ab     = frCalcularAbonado(r);
     var fuente = frFuentePago(r);
-    // Excluir proyectados de los KPIs
-    if (frEsProyectado(r)) { nProyectados++; totalProyectado += tot; return; }
     totalOblig += tot;
     if (est === 'PAGADO')       totalPagado  += (ab > 0 ? ab : tot);
     else if (est === 'ABONO')   totalPagado  += ab;
@@ -18428,6 +18430,8 @@ function frGetFiltered() {
   var est   = (document.getElementById('fr-fil-estado')||{}).value || '';
   var bus   = ((document.getElementById('fr-buscar')||{}).value || '').toLowerCase();
   var result = FR_DATA.filter(function(r) {
+    // Excluir radicadas de meses futuros (proyectadas)
+    if (frEsProyectado(r)) return false;
     var fecha = r['Fecha'] || '';
     // Extraer mes y año de la fecha (formato dd/MM/yyyy)
     var partes = fecha.split('/');

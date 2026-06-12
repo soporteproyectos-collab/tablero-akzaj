@@ -9527,6 +9527,8 @@ function renderResumenTablero() {
       var fp = (r['Fecha']||'').split('/');
       if (fp.length < 3) return false;
       if ((fp[2]||'').substring(0,4) !== '2026') return false;
+      // Excluir proyectados (meses futuros)
+      if (typeof frEsProyectado === 'function' && frEsProyectado(r)) return false;
       return frEsGastoOpPL(r);
     }).reduce(function(a,r){
       var v = r['Total (COP)'] || 0;
@@ -10979,8 +10981,10 @@ function calcMesData(mes) {
   var mesNum = MN.indexOf(mes.split(' ')[0]) + 1;
   var mesAnio = mes.split(' ')[1] || '2026';
 
-  // Ingresos proyectados: FP_DATA con fecha en este mes
-  var ingProy = 0;
+  // Ingresos proyectados: FP_DATA − lo ya facturado en FACTURAS
+  // Si FP_DATA programa $80M y FACTURAS ya tiene $50M → ingProy = $30M restante
+  // Si ya se facturó todo, ingProy = 0 automáticamente
+  var ingProyBruto = 0;
   if (typeof FP_DATA !== 'undefined' && FP_DATA.length) {
     for (var _fp=0; _fp<FP_DATA.length; _fp++) {
       var fpd = FP_DATA[_fp];
@@ -10989,22 +10993,26 @@ function calcMesData(mes) {
       if (fpFecha.indexOf('-') > 0) {
         var fpp = fpFecha.split('-');
         if (parseInt(fpp[1]) === mesNum && fpp[0] === mesAnio) {
-          ingProy += parseFloat(fpd.monto || 0);
+          ingProyBruto += parseFloat(fpd.monto || 0);
         }
       }
       // formato por columnas m1-m12
       var colVal = parseFloat(fpd['m'+mesNum] || 0);
-      if (colVal > 0 && fpFecha.indexOf('-') < 0) ingProy += colVal;
+      if (colVal > 0 && fpFecha.indexOf('-') < 0) ingProyBruto += colVal;
     }
   }
+  // Restar lo ya facturado — solo queda la diferencia como proyectado
+  var ingProy = Math.max(0, ingProyBruto - ing);
 
-  // Gastos proyectados: GP_DATA columna m{mesNum}
-  var gasProy = 0;
+  // Gastos proyectados: GP_DATA − lo ya radicado en FR_DATA
+  // Misma lógica: si GP_DATA programa $30M y FR_DATA ya tiene $30M → gasProy = 0
+  var gasProyBruto = 0;
   if (typeof GP_DATA !== 'undefined' && GP_DATA.length) {
     for (var _gp=0; _gp<GP_DATA.length; _gp++) {
-      gasProy += parseFloat(GP_DATA[_gp]['m'+mesNum] || 0);
+      gasProyBruto += parseFloat(GP_DATA[_gp]['m'+mesNum] || 0);
     }
   }
+  var gasProy = Math.max(0, gasProyBruto - gas);
 
   var utilProy = (ing + ingProy) - (gas + gasProy);
 
@@ -11268,11 +11276,51 @@ function renderErDetalle() {
   },0);
 
   // Todas las categorías de gasto y clientes de ingreso
-  var allCats={}, allClis={};
+  var allCats={}, allClis={}, allClisProy={};
 
   for(var i=0;i<meses.length;i++){
     getGastosMes(meses[i]).forEach(function(r){allCats[getCatGasto(r)]=1;});
     dataM[i].ff.forEach(function(f){allClis[f.cliente]=1;});
+  }
+
+  // Clientes con facturación programada (FP_DATA)
+  var MN_FP=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  function fpIngCliente(cli, mesNombre) {
+    if (typeof FP_DATA === 'undefined' || !FP_DATA.length) return 0;
+    var mIdx = MN_FP.indexOf(mesNombre.split(' ')[0]) + 1;
+    var mAnio = mesNombre.split(' ')[1] || '2026';
+    var sum = 0;
+    for (var fp=0; fp<FP_DATA.length; fp++) {
+      var fpd = FP_DATA[fp];
+      if ((fpd.cliente||'').trim() !== cli) continue;
+      var fFecha = fpd.fecha || '';
+      if (fFecha.indexOf('-') > 0) {
+        var pp = fFecha.split('-');
+        if (parseInt(pp[1]) === mIdx && pp[0] === mAnio) sum += parseFloat(fpd.monto || 0);
+      }
+      var colVal = parseFloat(fpd['m'+mIdx] || 0);
+      if (colVal > 0 && fFecha.indexOf('-') < 0) sum += colVal;
+    }
+    // Restar lo ya facturado por este cliente en este mes (FACTURAS reales)
+    var realCli = FACTURAS.filter(function(f) {
+      var dp = fFechaPartes(f.fecha_raw || f.fecha);
+      if (!dp[0] || !dp[1]) return false;
+      return MN_FP[parseInt(dp[1])-1]+' '+String(dp[0]) === mesNombre && f.cliente === cli;
+    }).reduce(function(a,f){ return a + (f.bruto||0); }, 0);
+    return Math.max(0, sum - realCli);
+  }
+  if (typeof FP_DATA !== 'undefined') {
+    for (var _fpi=0; _fpi<FP_DATA.length; _fpi++) {
+      var _fpc = (FP_DATA[_fpi].cliente||'').trim();
+      if (_fpc) allClisProy[_fpc] = 1;
+    }
+  }
+  // Incluir clientes de GP_DATA en categorías de gasto
+  if (typeof GP_DATA !== 'undefined') {
+    for (var _gpi=0; _gpi<GP_DATA.length; _gpi++) {
+      var gpCat = (GP_DATA[_gpi].concepto || 'Nómina y Honorarios (Proy.)').trim();
+      allCats[gpCat] = 1;
+    }
   }
 
   // Ordenar categorías por total descendente
@@ -11314,21 +11362,25 @@ function renderErDetalle() {
 
   html+='</tr></thead><tbody>';
 
-  function tr(lbl, vals, tipo, indent) {
+  function tr(lbl, vals, tipo, indent, accentColor) {
 
     var bgMap={h:'background:#f5f4f0;font-weight:700;',st:'background:#eee;font-weight:700;border-top:1px solid #d0cec8;',res:'font-weight:700;font-size:13px;border-top:2px solid #54504F;',item:'',sub:'color:#888;font-size:10px;'};
 
     var bg=bgMap[tipo]||'';
+    if (accentColor && tipo==='h') bg='background:#F3F0FF;font-weight:700;';
+    if (accentColor && tipo==='st') bg='background:#EDE9FE;font-weight:700;border-top:1px solid #C4B5FD;';
 
     var pad='padding:5px 10px 5px '+(10+(indent||0)*12)+'px';
 
-    var row='<tr><td style="'+pad+';'+bg+'border-bottom:1px solid #f0ede8">'+lbl+'</td>';
+    var lblStyle = accentColor ? 'color:'+accentColor+';' : '';
+    var row='<tr><td style="'+pad+';'+bg+lblStyle+'border-bottom:1px solid #f0ede8">'+lbl+'</td>';
 
     for(var i=0;i<vals.length;i++){
 
       var v=vals[i];
 
       var col=v===null?'#54504F':v>0?'#54504F':v<0?'#A32D2D':'#aaa';
+      if (accentColor && v) col = accentColor;
 
       if(tipo==='res')col=v>=0?'#5DC3DA':'#A32D2D';
 
@@ -11369,6 +11421,34 @@ function renderErDetalle() {
   if(showAcc) ingVals.push(accIng);
 
   html+=tr('Total Ingresos', ingVals, 'st');
+
+  // ── INGRESOS PROYECTADOS (FP_DATA) ──────────────────────
+  var cliProyArr = Object.keys(allClisProy).sort();
+  var hayIngProy = false;
+  if (cliProyArr.length > 0) {
+    var ingProyVals = colMeses.map(function(d){ return d.ingProy||0; });
+    var accIngProy = ingProyVals.reduce(function(a,v){return a+v;},0);
+    if (accIngProy > 0) {
+      hayIngProy = true;
+      html+=tr('📈 INGRESOS PROYECTADOS', colMeses.map(function(){return null;}).concat(showAcc?[null]:[]), 'h', 0, '#7C3AED');
+      for (var cpi=0; cpi<cliProyArr.length; cpi++) {
+        var cpCli = cliProyArr[cpi];
+        var cpVals = colMeses.map(function(d){ return fpIngCliente(cpCli, d.mes)||0; });
+        var cpAcc = cpVals.reduce(function(a,v){return a+v;},0);
+        if (cpAcc > 0) {
+          if (showAcc) cpVals.push(cpAcc);
+          html+=tr(cpCli, cpVals, 'item', 1, '#7C3AED');
+        }
+      }
+      if (showAcc) ingProyVals.push(accIngProy);
+      html+=tr('Total Ing. Proyectados', ingProyVals, 'st', 0, '#7C3AED');
+      // Total combinado
+      var ingCombVals = colMeses.map(function(d,i){ return d.ing + (d.ingProy||0); });
+      var accIngComb = accIng + accIngProy;
+      if (showAcc) ingCombVals.push(accIngComb);
+      html+=tr('TOTAL INGRESOS + PROYECTADOS', ingCombVals, 'st');
+    }
+  }
 
   // ── GASTOS ────────────────────────────────────────────────
 
@@ -11451,6 +11531,42 @@ function renderErDetalle() {
 
   html+=tr('Total Gastos', gasVals, 'st');
 
+  // ── GASTOS PROYECTADOS (GP_DATA) ──────────────────────
+  var hayGasProy = false;
+  if (typeof GP_DATA !== 'undefined' && GP_DATA.length > 0) {
+    var MN_GP=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    var gasProyVals = colMeses.map(function(d){ return d.gasProy||0; });
+    var accGasProy = gasProyVals.reduce(function(a,v){return a+v;},0);
+    if (accGasProy > 0) {
+      hayGasProy = true;
+      html+=tr('📉 GASTOS PROYECTADOS', colMeses.map(function(){return null;}).concat(showAcc?[null]:[]), 'h', 0, '#7C3AED');
+      // Agrupar GP_DATA por proveedor
+      var gpProvs = {};
+      for (var _gpi2=0; _gpi2<GP_DATA.length; _gpi2++) {
+        var gpProv = (GP_DATA[_gpi2].proveedor||'Sin proveedor').trim();
+        if (!gpProvs[gpProv]) gpProvs[gpProv] = {};
+        for (var _gm2=1; _gm2<=12; _gm2++) {
+          gpProvs[gpProv]['m'+_gm2] = (gpProvs[gpProv]['m'+_gm2]||0) + (parseFloat(GP_DATA[_gpi2]['m'+_gm2]||0));
+        }
+      }
+      var gpProvArr = Object.keys(gpProvs).sort();
+      for (var _gpp=0; _gpp<gpProvArr.length; _gpp++) {
+        var gpNombre = gpProvArr[_gpp];
+        var gpVals = colMeses.map(function(d){
+          var mIdx = MN_GP.indexOf(d.mes.split(' ')[0]) + 1;
+          return gpProvs[gpNombre]['m'+mIdx] || 0;
+        });
+        var gpAcc = gpVals.reduce(function(a,v){return a+v;},0);
+        if (gpAcc > 0) {
+          if (showAcc) gpVals.push(gpAcc);
+          html+=tr(gpNombre, gpVals, 'item', 1, '#7C3AED');
+        }
+      }
+      if (showAcc) gasProyVals.push(accGasProy);
+      html+=tr('Total Gastos Proy.', gasProyVals, 'st', 0, '#7C3AED');
+    }
+  }
+
   // ── UTILIDAD ──────────────────────────────────────────────
 
   var utilVals=colMeses.map(function(d){return d.util;});
@@ -11462,6 +11578,15 @@ function renderErDetalle() {
   if(showAcc) margenVals.push(accIng?Math.round((accIng-accGas)/accIng*100):0);
 
   html+=tr('UTILIDAD ANTES DE IMPUESTOS', utilVals, 'res');
+
+  // ── ESCENARIO PROYECTADO (si hay datos) ──────────────────
+  if (hayIngProy || hayGasProy) {
+    var utilProyVals = colMeses.map(function(d){ return (d.utilProy !== undefined) ? d.utilProy : d.util; });
+    var accUtilProy = (accIng + (hayIngProy ? colMeses.reduce(function(a,d){return a+(d.ingProy||0);},0) : 0))
+                    - (accGas + (hayGasProy ? colMeses.reduce(function(a,d){return a+(d.gasProy||0);},0) : 0));
+    if (showAcc) utilProyVals.push(accUtilProy);
+    html+=tr('🔮 ESCENARIO TOTAL (Real + Proyectado)', utilProyVals, 'res');
+  }
 
   html+='<tr style="background:#fafafa"><td style="padding:4px 10px;font-size:10px;color:#888">Margen %</td>';
 
@@ -17919,6 +18044,22 @@ function alzakSplitDrag(e) {
 
 var FR_DATA = []; // loaded from CSV/Excel
 
+// Determina si una factura radicada es PROYECTADA (fecha posterior al mes en curso)
+// Las proyectadas NO se suman a los KPIs de obligaciones actuales
+function frEsProyectado(r) {
+  var hoy = new Date();
+  var mesActual = hoy.getMonth(); // 0-indexed (0=Ene, 5=Jun)
+  var anioActual = hoy.getFullYear();
+  var fecha = r['Fecha'] || '';
+  var partes = fecha.split('/');
+  if (partes.length < 3) return false;
+  var fMes  = parseInt(partes[1]) - 1; // 0-indexed
+  var fAnio = parseInt((partes[2]||'').substring(0,4));
+  if (fAnio > anioActual) return true;
+  if (fAnio === anioActual && fMes > mesActual) return true;
+  return false;
+}
+
 var FR_CATS_FACTURAS = [
   'Nomina y Honorarios',
   'Procesamiento Electronico de Datos',
@@ -18148,11 +18289,14 @@ function frRender() {
   filtered.forEach(function(r){ frFuentePago(r); });
 
   var totalOblig = 0, totalPagado = 0, totalDeuda = 0, totalSinExtr = 0, nDIAN = 0;
+  var nProyectados = 0, totalProyectado = 0;
   filtered.forEach(function(r) {
     var tot    = frTotalVal(r);
     var est    = frEstadoReal(r);
     var ab     = frCalcularAbonado(r);
     var fuente = frFuentePago(r);
+    // Excluir proyectados de los KPIs
+    if (frEsProyectado(r)) { nProyectados++; totalProyectado += tot; return; }
     totalOblig += tot;
     if (est === 'PAGADO')       totalPagado  += (ab > 0 ? ab : tot);
     else if (est === 'ABONO')   totalPagado  += ab;
@@ -18176,7 +18320,8 @@ function frRender() {
     kpiCard('Total obligaciones', totalOblig, filtered.length+' registros', '#EBF3FB', '#0C447C', "frFiltrarKPI('')")
     + kpiCard('✅ Pagado confirmado', totalPagado, 'Verificado en extractos', '#DCFCE7', '#166534', "frFiltrarKPI('PAGADO')")
     + kpiCard('🔴 Lo que debes hoy', totalDeuda, 'Extracto cargado, sin pago', '#FEE2E2', '#991B1B', "frFiltrarKPI('PENDIENTE')")
-    + kpiCard('⏳ Sin extracto', totalSinExtr, 'Cargar extracto del período', '#F8FAFC', '#64748B', "frFiltrarKPI('SIN-EXTRACTO')");
+    + kpiCard('⏳ Sin extracto', totalSinExtr, 'Cargar extracto del período', '#F8FAFC', '#64748B', "frFiltrarKPI('SIN-EXTRACTO')")
+    + (nProyectados > 0 ? '<div style="grid-column:1/-1;text-align:center;padding:6px 12px;background:#F3F0FF;border-radius:8px;margin-top:4px;font-size:11px;color:#7C3AED;font-weight:600;">📈 '+nProyectados+' registros proyectados ('+frFmt(totalProyectado)+') no incluidos en totales — solo aparecen en Estado de Resultados</div>' : '');
 
   // ── Tabla por categorías ─────────────────────────────────────────────
   if (!tablaEl) return;

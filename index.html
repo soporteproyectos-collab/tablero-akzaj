@@ -17736,6 +17736,9 @@ function fpRenderLista() {
   var MNL = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   var MNF = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
+  // Guardar índice original ANTES de ordenar
+  data.forEach(function(r, i) { r._origIdx = i; });
+
   // Ordenar por fecha programada ascendente
   data = data.slice().sort(function(a,b){
     return new Date(a.fecha||'2099-12-31') - new Date(b.fecha||'2099-12-31');
@@ -17750,7 +17753,7 @@ function fpRenderLista() {
     var cli = r.cliente||'Sin cliente';
     if (!grupos[cli]) grupos[cli] = {total:0, filas:[]};
     grupos[cli].total += parseFloat(r.monto)||0;
-    grupos[cli].filas.push({r:r, idx:idx});
+    grupos[cli].filas.push({r:r, idx: r._origIdx !== undefined ? r._origIdx : idx});
   });
   var clientesOrden = Object.keys(grupos).sort();
 

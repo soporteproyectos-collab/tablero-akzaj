@@ -10954,10 +10954,10 @@ function calcMesData(mes) {
 
   // Costo = Facturas radicadas a contratistas (FR_DATA) si están cargadas
   // sino fallback a GASTOS_DATA operativos
-  var gas = 0;
+  // CLAVE: separar costos REALES (hasta mes actual) de PROYECTADOS (meses futuros)
+  var gas = 0, gasProyFR = 0;
   var MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   if (typeof FR_DATA !== 'undefined' && FR_DATA.length) {
-    // Usar FR_DATA filtrando por mes
     var frMes = FR_DATA.filter(function(r){
       var fecha = r['Fecha']||'';
       var parts = fecha.split('/');
@@ -10965,13 +10965,19 @@ function calcMesData(mes) {
       var mm = parseInt(parts[1])-1;
       var aa = (parts[2]||'').substring(0,4);
       if (MN[mm]+' '+aa !== mes) return false;
-      return frEsGastoOpPL(r); // Excluir DIAN, préstamos, traslados
+      return frEsGastoOpPL(r);
     });
-    gas = frMes.reduce(function(a,r){
+    // Separar reales vs proyectados
+    frMes.forEach(function(r){
       var v = r['Total (COP)'] || r['Total(COP)'] || r['Total'] || 0;
       if (typeof v === 'string') v = v.replace(/[^0-9.]/g,'');
-      return a + (parseFloat(v)||0);
-    },0);
+      var monto = parseFloat(v)||0;
+      if (typeof frEsProyectado === 'function' && frEsProyectado(r)) {
+        gasProyFR += monto;
+      } else {
+        gas += monto;
+      }
+    });
   } else {
     gas = gfOp.reduce(function(a,r){return a+parseFloat(r['Total_COP']||0);},0);
   }
@@ -11004,15 +11010,15 @@ function calcMesData(mes) {
   // Restar lo ya facturado — solo queda la diferencia como proyectado
   var ingProy = Math.max(0, ingProyBruto - ing);
 
-  // Gastos proyectados: GP_DATA − lo ya radicado en FR_DATA
-  // Misma lógica: si GP_DATA programa $30M y FR_DATA ya tiene $30M → gasProy = 0
-  var gasProyBruto = 0;
+  // Gastos proyectados: tomar el MAYOR entre FR_DATA proyectado y GP_DATA
+  // para evitar doble conteo (ambos cubren los mismos costos)
+  var gasProyGP = 0;
   if (typeof GP_DATA !== 'undefined' && GP_DATA.length) {
     for (var _gp=0; _gp<GP_DATA.length; _gp++) {
-      gasProyBruto += parseFloat(GP_DATA[_gp]['m'+mesNum] || 0);
+      gasProyGP += parseFloat(GP_DATA[_gp]['m'+mesNum] || 0);
     }
   }
-  var gasProy = Math.max(0, gasProyBruto - gas);
+  var gasProy = Math.max(gasProyFR, gasProyGP);
 
   var utilProy = (ing + ingProy) - (gas + gasProy);
 
@@ -11978,6 +11984,7 @@ function renderEstadoResultados() {
           var fp=(r['Fecha']||'').split('/');
           if (fp.length<3) return false;
           if (anioFil2 && (fp[2]||'').substring(0,4)!==anioFil2) return false;
+          if (typeof frEsProyectado === 'function' && frEsProyectado(r)) return false;
           return frEsGastoOpPL(r); // Excluir DIAN, préstamos, traslados
         }).reduce(function(a,r){
           var v = r['Total (COP)'] || r['Total(COP)'] || r['Total'] || 0;

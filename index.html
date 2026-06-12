@@ -2241,7 +2241,7 @@ function alzakCargarDatosSheets(callback) {
       }
 
       // ── Invalidar caché de cruce ─────────────────────────
-      if (typeof _FR_FUENTE_CACHE !== 'undefined') _FR_FUENTE_CACHE = {};
+      if (typeof _FR_FUENTE_CACHE !== 'undefined') _FR_FUENTE_CACHE = {}; if(window._FR_EGRESOS_USADOS) window._FR_EGRESOS_USADOS = {};
       if (typeof _FR_MOVS_POOL   !== 'undefined') _FR_MOVS_POOL    = null;
 
       // ── Re-renderizar todo ───────────────────────────────
@@ -12138,7 +12138,7 @@ function gastoProcesarDatos(datos) {
   // GASTOS_DATA tiene Cuenta_Origen → mejora el cruce de fuente de pago
   if (typeof frRender === 'function' && typeof FR_DATA !== 'undefined' && FR_DATA.length > 0) {
     if (typeof frResetPool === 'function') frResetPool();
-    if (typeof _FR_FUENTE_CACHE !== 'undefined') _FR_FUENTE_CACHE = {};
+    if (typeof _FR_FUENTE_CACHE !== 'undefined') _FR_FUENTE_CACHE = {}; if(window._FR_EGRESOS_USADOS) window._FR_EGRESOS_USADOS = {};
     setTimeout(frRender, 150);
     if (typeof mostrarToast === 'function') mostrarToast('🔄 Cruzando egresos con facturas radicadas…');
   }
@@ -17653,27 +17653,65 @@ function fcToggleDet(m) {
 
 // ── Sincronizar FP_DATA con Google Sheets ────────────────
 function fpSyncSheets(data) {
-  // Guardar en localStorage (cache local)
-  try { localStorage.setItem('alzak_fp_2026', JSON.stringify(data)); } catch(e) {}
   FP_DATA = data;
-  // POST al Sheet — modo no-cors (fire and forget)
-  if (typeof ALZAK_GS_URL !== 'undefined') {
+  // Cache local como fallback
+  try { localStorage.setItem('alzak_fp_2026', JSON.stringify(data)); } catch(e) {}
+
+  // POST al GAS — guardar en pestaña _programadas del Sheet
+  if (typeof ALZAK_GS_URL === 'undefined') {
+    mostrarToast('⚠️ URL de GAS no configurada', '#993C1D');
+    fpRender();
+    return;
+  }
+
+  mostrarToast('💾 Guardando en Sheets...', '#7C3AED');
+
+  var payload = JSON.stringify({
+    tab: '_programadas',
+    rows: [['cliente','proyecto','monto','fecha','obs','m1','m2','m3','m4','m5','m6','m7','m8','m9','m10','m11','m12']].concat(
+      data.map(function(r) {
+        return [r.cliente||'',r.proyecto||'',r.monto||0,r.fecha||'',r.obs||'',
+          r.m1||0,r.m2||0,r.m3||0,r.m4||0,r.m5||0,r.m6||0,
+          r.m7||0,r.m8||0,r.m9||0,r.m10||0,r.m11||0,r.m12||0];
+      })
+    )
+  });
+
+  // Intentar con fetch normal (modo cors)
+  fetch(ALZAK_GS_URL, {
+    method: 'POST',
+    body: payload,
+    redirect: 'follow'
+  }).then(function(resp) {
+    if (resp.ok || resp.type === 'opaque') {
+      return resp.text().catch(function(){ return '{}'; });
+    }
+    throw new Error('HTTP ' + resp.status);
+  }).then(function(txt) {
+    try {
+      var res = JSON.parse(txt);
+      if (res.ok) {
+        mostrarToast('✅ Programadas guardadas en Sheets (' + (res.filas||data.length) + ' registros)', '#1D6F42');
+      } else {
+        mostrarToast('⚠️ GAS respondió: ' + (res.error||'sin detalle'), '#993C1D');
+      }
+    } catch(e) {
+      // Respuesta opaca (no-cors redirect) — asumir éxito
+      mostrarToast('✅ Datos enviados a Sheets', '#1D6F42');
+    }
+  }).catch(function(err) {
+    // Fallback: reintentar con no-cors (fire and forget)
     fetch(ALZAK_GS_URL, {
       method: 'POST', mode: 'no-cors',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({
-        tab: '_programadas',
-        action: 'set',
-        rows: [['cliente','proyecto','monto','fecha','obs','m1','m2','m3','m4','m5','m6','m7','m8','m9','m10','m11','m12']].concat(
-          data.map(function(r) {
-            return [r.cliente||'',r.proyecto||'',r.monto||0,r.fecha||'',r.obs||'',
-              r.m1||0,r.m2||0,r.m3||0,r.m4||0,r.m5||0,r.m6||0,
-              r.m7||0,r.m8||0,r.m9||0,r.m10||0,r.m11||0,r.m12||0];
-          })
-        )
-      })
-    }).catch(function(){});
-  }
+      body: payload
+    }).then(function(){
+      mostrarToast('📤 Datos enviados (sin confirmación)', '#B45309');
+    }).catch(function(){
+      mostrarToast('❌ Error guardando: ' + err.message, '#A32D2D');
+    });
+  });
+
+  fpRender();
 }
 
 // ── Leer FP_DATA (Sheets tiene prioridad sobre localStorage) ──
@@ -18276,7 +18314,7 @@ function frEstadoReal(r) {
 function frRender() {
   // Resetear pool y caché para cruce fresco
   frResetPool();
-  _FR_FUENTE_CACHE = {};
+  _FR_FUENTE_CACHE = {}; if(window._FR_EGRESOS_USADOS) window._FR_EGRESOS_USADOS = {};
 
   // FILTRAR PRIMERO — luego calcular fuentes solo para los filtrados
   var filtered = frGetFiltered();
@@ -18730,7 +18768,7 @@ function frConsumirUSD(total) {
   return null;
 }
 // Cache de resultados de frFuentePago para coherencia con frCalcularAbonado
-var _FR_FUENTE_CACHE = {};
+var _FR_FUENTE_CACHE = {}; if(window._FR_EGRESOS_USADOS) window._FR_EGRESOS_USADOS = {};
 
 // Retorna objeto {tipo, cuenta, label, color, fecha} o null
 // Cruce automático con extractos bancarios P[] — por monto exacto
@@ -18751,14 +18789,20 @@ function frFuentePago(r) {
 
   // ── FUENTE 1: GASTOS_DATA (CSV egresos = reporte de todos los pagos bancarios)
   // El CSV de egresos ES la fuente de verdad de pagos — cualquier registro ahí = PAGADO
+  // IMPORTANTE: cada egreso solo puede pagar UNA factura radicada (tracking de consumo)
   if (typeof GASTOS_DATA !== 'undefined' && GASTOS_DATA.length > 0) {
-    // Palabras clave del proveedor (evitar palabras genéricas)
+    // Inicializar tracking de egresos consumidos (una sola vez)
+    if (!window._FR_EGRESOS_USADOS) window._FR_EGRESOS_USADOS = {};
     var SKIP = {S:1,A:1,SAS:1,'S.A.S':1,'S.A':1,DE:1,LA:1,EL:1,LOS:1,Y:1,DEL:1,LTDA:1};
     var provWords = proveedor.split(/[\s.]+/).filter(function(w){
       return w.length > 3 && !SKIP[w];
     });
 
     for (var i = 0; i < GASTOS_DATA.length; i++) {
+      // Si este egreso ya fue consumido por otra radicada, saltar
+      var egresoId = i + '|' + (GASTOS_DATA[i]['N_Comprobante']||GASTOS_DATA[i]['N Comprobante']||i);
+      if (window._FR_EGRESOS_USADOS[egresoId]) continue;
+
       var gx   = GASTOS_DATA[i];
       var gComp = String(gx['N_Comprobante'] || gx['N Comprobante'] || gx['N_Factura'] || gx['Concepto'] || '').toLowerCase();
       var gProv = (gx['Beneficiario'] || gx['Proveedor / Beneficiario'] || gx['Proveedor_Beneficiario'] || '').toUpperCase();
@@ -18766,36 +18810,38 @@ function frFuentePago(r) {
       var cta   = (gx['Cuenta_Origen'] || '').trim();
 
       // MODO A: N° comprobante de la factura radicada aparece en el egreso
-      // Busca en N_Comprobante, Concepto Y Observaciones del egreso
       var gConcepto = String(gx['Concepto'] || '').toLowerCase();
       var gObs      = String(gx['Observaciones'] || '').toLowerCase();
       var gCompFull = gComp + ' ' + gConcepto + ' ' + gObs;
       if (ncomp.length > 2 && gCompFull.indexOf(ncomp.toLowerCase()) >= 0) {
+        window._FR_EGRESOS_USADOS[egresoId] = _ck;
         var _ra = frParseCuenta(cta, 'egreso');
         _FR_FUENTE_CACHE[_ck] = _ra; return _ra;
       }
 
-      // También: si alguna parte del N°comp de la factura (separado por / o espacio) aparece
+      // N°comp partido por separadores
       if (ncomp.length > 4) {
         var ncompParts = ncomp.split(/[\/\s\-]+/).filter(function(p){ return p.length > 3; });
         if (ncompParts.some(function(p){ return gCompFull.indexOf(p) >= 0; })) {
+          window._FR_EGRESOS_USADOS[egresoId] = _ck;
           var _ra2 = frParseCuenta(cta, 'egreso');
           _FR_FUENTE_CACHE[_ck] = _ra2; return _ra2;
         }
       }
 
-      // MODO A2: monto exacto + proveedor coincide (sin necesitar N° comprobante)
-      // Todo lo de egresos ya está pagado — si monto y proveedor coinciden = PAGADO
+      // MODO A2: monto exacto + proveedor coincide
       if (Math.abs(gTot - total) <= 500 && gProv.length > 3) {
         if (provWords.length > 0 && provWords.some(function(w){ return gProv.indexOf(w) >= 0; })) {
+          window._FR_EGRESOS_USADOS[egresoId] = _ck;
           var _ra3 = frParseCuenta(cta, 'egreso');
           _FR_FUENTE_CACHE[_ck] = _ra3; return _ra3;
         }
       }
 
-      // MODO B: monto exacto (±100) + al menos 1 palabra clave del proveedor
+      // MODO B: monto exacto (±100) + proveedor
       if (Math.abs(gTot - total) <= 100 && gProv.length > 3) {
         if (provWords.some(function(w){ return gProv.indexOf(w) >= 0; })) {
+          window._FR_EGRESOS_USADOS[egresoId] = _ck;
           var _rb = frParseCuenta(cta, 'egreso');
           _FR_FUENTE_CACHE[_ck] = _rb; return _rb;
         }

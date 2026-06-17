@@ -2042,29 +2042,34 @@ function alzakCargarDatosSheets(callback) {
     + '&sheetRad=' + encodeURIComponent(org.radicadas)
     + '&sheetEgr=' + encodeURIComponent(org.egresos);
 
-  // Paso 1: Sincronizar extractos bancarios desde Drive (si es GROUP)
+  // Cargar datos principales (rápido)
+  alzakCargarDatosPrincipal(url, callback);
+
+  // En paralelo: sincronizar extractos bancarios desde Drive (GROUP)
+  // No bloquea la carga — cuando termine, recarga conciliación
   if (ALZAK_ORG_ACTIVA === 'GROUP') {
-    mostrarToast('☁️ Sincronizando extractos desde Drive...', '#1565C0', 8000);
-    fetch(ALZAK_GS_URL + '?tab=_sync_extractos', { mode: 'cors' })
-      .then(function(r){ return r.json().catch(function(){ return {ok:false}; }); })
-      .then(function(syncRes){
-        if (syncRes && syncRes.ok) {
-          mostrarToast('✅ Extractos: ' + (syncRes.procesados||0) + ' archivos parseados', '#1D6F42', 3000);
-        }
-        // Paso 2: Cargar todos los datos (incluyendo conciliación ya parseada)
-        alzakCargarDatosPrincipal(url, callback);
-      })
-      .catch(function(){
-        // Si falla el sync de extractos, igual cargar datos
-        alzakCargarDatosPrincipal(url, callback);
-      });
-  } else {
-    alzakCargarDatosPrincipal(url, callback);
+    setTimeout(function() {
+      fetch(ALZAK_GS_URL + '?tab=_sync_extractos')
+        .then(function(r){ return r.json().catch(function(){ return {}; }); })
+        .then(function(syncRes){
+          if (syncRes && syncRes.ok && syncRes.procesados > 0) {
+            mostrarToast('☁️ Extractos actualizados: ' + syncRes.procesados + ' archivos', '#1565C0', 3000);
+            // Recargar solo conciliación
+            fetch(ALZAK_GS_URL + '?tab=_conciliacion')
+              .then(function(r2){ return r2.json().catch(function(){ return {}; }); })
+              .then(function(concRes){
+                if (concRes.ok && concRes.data && concRes.data.length) {
+                  mostrarToast('✅ Conciliación actualizada', '#1D6F42', 2000);
+                }
+              }).catch(function(){});
+          }
+        }).catch(function(){});
+    }, 500);
   }
 }
 
 function alzakCargarDatosPrincipal(url, callback) {
-  mostrarToast('🔄 Cargando datos desde Google Sheets...', '#0C447C', 4000);
+  mostrarToast('🔄 Sincronizando datos desde Google Sheets...', '#0C447C', 4000);
   fetch(url, { mode: 'cors' })
     .then(function(r){ return r.json(); })
     .then(function(data) {

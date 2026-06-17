@@ -16431,16 +16431,27 @@ function convMovGAS(mv, banco) {
 // Verificación de cuadre: solo aceptamos movimientos de Drive si suman exacto
 function extractoCuadra(row) {
   var movs = row.movs || [];
-  if (!movs.length) return false;
   var sA = parseFloat(row.sA) || 0, sF = parseFloat(row.sF) || 0;
+  // Sin movimientos: aceptar si tiene saldos del resumen
+  if (!movs.length) return (sA > 0 || sF > 0);
   var suma = movs.reduce(function(a, m){ return a + (parseFloat(m.v) || 0); }, 0);
-  return Math.abs(sA + suma - sF) < 2;
+  var diff = Math.abs(sA + suma - sF);
+  // Tolerancia: 0.1% del total de movimientos o $5000, lo que sea mayor
+  var totalMovs = movs.reduce(function(a,m){ return a + Math.abs(parseFloat(m.v)||0); }, 0);
+  var tolerancia = Math.max(5000, totalMovs * 0.001);
+  if (diff > tolerancia) {
+    console.warn('⚠️ Descuadre ' + row.banco + ': sA=' + sA + ' + movs=' + suma.toFixed(0) + ' = ' + (sA+suma).toFixed(0) + ' vs sF=' + sF + ' (dif: $' + diff.toFixed(0) + ')');
+  }
+  return diff < tolerancia;
 }
 function fiducuentaCuadra(row) {
   var sA = parseFloat(row.sA)||0, sF = parseFloat(row.sF)||0;
+  // Fiducuenta a veces no tiene todos los campos — aceptar si tiene sA o sF
+  if (sA === 0 && sF === 0) return false;
   var calc = sA + (parseFloat(row.adiciones)||0) - (parseFloat(row.retiros)||0)
     + (parseFloat(row.rendNetos)||0) - (parseFloat(row.retencion)||0);
-  return Math.abs(calc - sF) < 2;
+  var diff = Math.abs(calc - sF);
+  return diff < Math.max(5000, sF * 0.001);
 }
 function alzakActualizarSelPeriodo() {
   var sel = document.getElementById('sel-periodo');

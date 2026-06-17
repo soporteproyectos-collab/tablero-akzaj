@@ -2041,7 +2041,30 @@ function alzakCargarDatosSheets(callback) {
     + '&sheetFac=' + encodeURIComponent(org.facturacion)
     + '&sheetRad=' + encodeURIComponent(org.radicadas)
     + '&sheetEgr=' + encodeURIComponent(org.egresos);
-  mostrarToast('🔄 Sincronizando datos desde Google Sheets...', '#0C447C', 4000);
+
+  // Paso 1: Sincronizar extractos bancarios desde Drive (si es GROUP)
+  if (ALZAK_ORG_ACTIVA === 'GROUP') {
+    mostrarToast('☁️ Sincronizando extractos desde Drive...', '#1565C0', 8000);
+    fetch(ALZAK_GS_URL + '?tab=_sync_extractos', { mode: 'cors' })
+      .then(function(r){ return r.json().catch(function(){ return {ok:false}; }); })
+      .then(function(syncRes){
+        if (syncRes && syncRes.ok) {
+          mostrarToast('✅ Extractos: ' + (syncRes.procesados||0) + ' archivos parseados', '#1D6F42', 3000);
+        }
+        // Paso 2: Cargar todos los datos (incluyendo conciliación ya parseada)
+        alzakCargarDatosPrincipal(url, callback);
+      })
+      .catch(function(){
+        // Si falla el sync de extractos, igual cargar datos
+        alzakCargarDatosPrincipal(url, callback);
+      });
+  } else {
+    alzakCargarDatosPrincipal(url, callback);
+  }
+}
+
+function alzakCargarDatosPrincipal(url, callback) {
+  mostrarToast('🔄 Cargando datos desde Google Sheets...', '#0C447C', 4000);
   fetch(url, { mode: 'cors' })
     .then(function(r){ return r.json(); })
     .then(function(data) {
@@ -2246,40 +2269,63 @@ function alzakCargarDatosSheets(callback) {
 
       // ── Re-renderizar todo ───────────────────────────────
       // ── Cargar extractos de conciliación desde Sheets ────
-      if (data._conciliacion) {
+      if (data.conciliacion && Array.isArray(data.conciliacion) && data.conciliacion.length) {
         try {
-          var concData = typeof data._conciliacion === 'string'
-            ? JSON.parse(data._conciliacion) : data._conciliacion;
-          if (Array.isArray(concData) && concData.length) {
-            var MK = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
-              'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-            concData.forEach(function(sp) {
-              var ex = P.find(function(p){ return p.label === sp.label; });
-              if (!ex) {
-                P.push(sp);
-              } else {
-                // Actualizar saldos Bancolombia si vienen del Drive
-                if (sp.sA)   ex.sA   = sp.sA;
-                if (sp.sF)   ex.sF   = sp.sF;
-                if (sp.tAb)  ex.tAb  = sp.tAb;
-                if (sp.tCar) ex.tCar = sp.tCar;
-                if (sp.movs && sp.movs.length) ex.movs = sp.movs;
-                // Actualizar cuentas secundarias siempre
-                if (sp.fid)  ex.fid  = sp.fid;
-                if (sp.caja) ex.caja = sp.caja;
-                if (sp.bold) ex.bold = sp.bold;
-                if (sp.tc)   ex.tc   = sp.tc;
-              }
-            });
-            P.sort(function(a,b){
-              var pa=a.label.split(' '),pb=b.label.split(' ');
-              var ya=parseInt(pa[1]||0),yb=parseInt(pb[1]||0);
-              if(ya!==yb)return ya-yb;
-              return MK.indexOf(pa[0])-MK.indexOf(pb[0]);
-            });
-            cargados.push('Conciliación: ' + concData.length + ' períodos');
-          }
-        } catch(e) { console.warn('Error cargando conciliación:', e); }
+          var concData = data.conciliacion;
+          // Agrupar por mes y construir entradas para cada banco
+          var MK = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+            'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+          // Primero, agrupar por mesNum
+          var porMes = {};
+          concData.forEach(function(row) {
+            var mNum = parseInt(row.mesNum) || 0;
+            if (!porMes[mNum]) porMes[mNum] = {};
+            porMes[mNum][row.banco] = row;
+          });
+          // Construir DATA desde los extractos del GAS
+          Object.keys(porMes).forEach(function(mNum) {
+            var bancos = porMes[mNum];
+            var mesNombre = MK[parseInt(mNum)-1] || 'Mes'+mNum;
+            // Bancolombia → DATA principal
+            if (bancos['Bancolombia']) {
+              var bc = bancos['Bancolombia'];
+              var key = mNum === '1' || parseInt(mNum) === 1 ? 'Bancolombia' : 'Bancolombia ' + mesNombre + ' 2026';
+              if (!DATA[key]) DATA[key] = {info:{},movs:[]};
+              DATA[key].info = {banco:'Bancolombia',titular:'ALZAK GROUP SAS',cta:'78349636556',tipo:'Cuenta de Ahorros',
+                ini:'',fin:'',sant:parseFloat(bc.sA)||0,tab:parseFloat(bc.tAb)||0,tcar:parseFloat(bc.tCar)||0,sfin:parseFloat(bc.sF)||0};
+              if (bc.movs && bc.movs.length) DATA[key].movs = bc.movs;
+            }
+            // Fiducuenta
+            if (bancos['Fiducuenta']) {
+              var fi = bancos['Fiducuenta'];
+              var keyF = parseInt(mNum) === 1 ? 'Fiducia' : 'Fiducia ' + mesNombre + ' 2026';
+              if (!DATA[keyF]) DATA[keyF] = {info:{},movs:[]};
+              DATA[keyF].info = {banco:'Fiducuenta',titular:'ALZAK GROUP SAS',cta:'98000001771',tipo:'FIC',
+                sant:parseFloat(fi.sA)||0,tab:parseFloat(fi.adiciones)||0,tcar:parseFloat(fi.retiros)||0,sfin:parseFloat(fi.sF)||0,
+                rendNetos:parseFloat(fi.rendNetos)||0,retencion:parseFloat(fi.retencion)||0};
+            }
+            // BCS
+            if (bancos['BCS']) {
+              var bcs = bancos['BCS'];
+              var keyB = parseInt(mNum) === 1 ? 'BCS Enero 2026' : 'BCS ' + mesNombre + ' 2026';
+              if (!DATA[keyB]) DATA[keyB] = {info:{},movs:[]};
+              DATA[keyB].info = {banco:'BCS',titular:'ALZAK GROUP SAS',cta:'21003622970',tipo:'Cuenta Corriente',
+                sant:parseFloat(bcs.sA)||0,tab:parseFloat(bcs.tAb)||0,tcar:parseFloat(bcs.tCar)||0,sfin:parseFloat(bcs.sF)||0};
+              if (bcs.movs && bcs.movs.length) DATA[keyB].movs = bcs.movs;
+            }
+            // Bold
+            if (bancos['Bold']) {
+              var bo = bancos['Bold'];
+              var keyBo = parseInt(mNum) <= 1 ? 'BOLD' : 'BOLD ' + mesNombre + ' 2026';
+              if (!DATA[keyBo]) DATA[keyBo] = {info:{},movs:[]};
+              DATA[keyBo].info = {banco:'Bold',titular:'ALZAK GROUP SAS',cta:'1700-1155-2371',tipo:'Cuenta Fondeadora',
+                sant:parseFloat(bo.sA)||0,tab:parseFloat(bo.tAb)||0,tcar:parseFloat(bo.tCar)||0,sfin:parseFloat(bo.sF)||0};
+            }
+          });
+          // Reconstruir P[] desde DATA actualizado
+          if (typeof buildPFromDATA === 'function') buildPFromDATA();
+          cargados.push('Extractos: ' + concData.length);
+        } catch(concErr) { console.warn('Error procesando conciliación:', concErr); }
       }
 
       if (typeof renderFacturas         === 'function') setTimeout(renderFacturas, 50);

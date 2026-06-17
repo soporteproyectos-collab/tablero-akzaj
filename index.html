@@ -11427,7 +11427,7 @@ function renderErDetalle() {
 
   var html='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">';
 
-  html+='<thead><tr><th style="'+th1Style+'min-width:180px">Concepto</th>';
+  html+='<thead><tr><th style="'+th1Style+'min-width:180px;max-width:240px;position:sticky;left:0;z-index:3;border-right:1px solid #555;">Concepto</th>';
 
   for(var i=0;i<colMeses.length;i++) html+='<th style="'+thStyle+'min-width:100px">'+colMeses[i].mes+'</th>';
 
@@ -11443,10 +11443,17 @@ function renderErDetalle() {
     if (accentColor && tipo==='h') bg='background:#F3F0FF;font-weight:700;';
     if (accentColor && tipo==='st') bg='background:#EDE9FE;font-weight:700;border-top:1px solid #C4B5FD;';
 
+    // Background para sticky — necesita color sólido
+    var stickyBg = '#fff';
+    if (tipo==='h') stickyBg = accentColor ? '#F3F0FF' : '#f5f4f0';
+    if (tipo==='st') stickyBg = accentColor ? '#EDE9FE' : '#eee';
+    if (tipo==='res') stickyBg = '#fff';
+
     var pad='padding:5px 10px 5px '+(10+(indent||0)*12)+'px';
 
     var lblStyle = accentColor ? 'color:'+accentColor+';' : '';
-    var row='<tr><td style="'+pad+';'+bg+lblStyle+'border-bottom:1px solid #f0ede8">'+lbl+'</td>';
+    var sticky = 'position:sticky;left:0;z-index:2;background:'+stickyBg+';min-width:180px;max-width:240px;';
+    var row='<tr><td style="'+sticky+pad+';'+bg+lblStyle+'border-bottom:1px solid #f0ede8;border-right:1px solid #e0ddd8;">'+lbl+'</td>';
 
     for(var i=0;i<vals.length;i++){
 
@@ -11516,7 +11523,8 @@ function renderErDetalle() {
     if (accCli > 0 || !showAcc) {
       if (proyVal > 0 || esNuevoCliente) hayIngProy = true;
       var lblStyle = esNuevoCliente ? 'color:#7C3AED;' : '';
-      html += '<tr><td style="padding:5px 10px 5px 22px;border-bottom:1px solid #f0ede8;'+lblStyle+'">'+cli2+'</td>' + celdas + '</tr>';
+      var stickyIng = 'position:sticky;left:0;z-index:2;background:' + (esNuevoCliente ? '#FDFCFF' : '#fff') + ';min-width:180px;max-width:240px;border-right:1px solid #e0ddd8;';
+      html += '<tr><td style="'+stickyIng+'padding:5px 10px 5px 22px;border-bottom:1px solid #f0ede8;'+lblStyle+'">'+cli2+'</td>' + celdas + '</tr>';
     }
   }
 
@@ -11548,7 +11556,7 @@ function renderErDetalle() {
     var bgCat='background:#f9f8f5;';
 
     var rowCat='<tr style="cursor:pointer" onclick="erToggleCat(\''+encodeURIComponent(cat)+'\')">'
-      +'<td style="padding:5px 10px 5px 22px;'+bgCat+'font-weight:700;border-bottom:1px solid #f0ede8">'
+      +'<td style="position:sticky;left:0;z-index:2;background:#f9f8f5;min-width:180px;max-width:240px;border-right:1px solid #e0ddd8;padding:5px 10px 5px 22px;'+bgCat+'font-weight:700;border-bottom:1px solid #f0ede8">'
       +'<span style="font-size:10px;color:#aaa;margin-right:6px">'+arrow+'</span>'+cat+'</td>';
 
     for(var vi=0;vi<catVals.length;vi++){

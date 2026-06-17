@@ -426,6 +426,22 @@ tbody tr:hover td{background:var(--cyan-light);}
 ::-webkit-scrollbar-thumb{background:var(--cyan-mid);border-radius:10px;}
 @media print{.hdr-right{display:none!important;}.scroll-area{padding:10px;}}
 @media(max-width:700px){.header{padding:10px 14px;height:auto;}.scroll-area{padding:12px;}.two-col,.charts-grid{grid-template-columns:1fr;}.acct-cards{grid-template-columns:repeat(2,1fr);}.global-cards{grid-template-columns:repeat(2,1fr);}}
+
+/* Responsive tables and panels */
+#er-body { overflow-x: auto; }
+#er-body table { min-width: 700px; }
+#er-kpis { flex-wrap: wrap; }
+#fr-tabla, #prog-tabla { overflow-x: auto; }
+
+/* Responsive KPIs grid — wrap when squeezed */
+#er-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; }
+
+/* Conciliación responsive */
+#home-split-left, #home-split-right { min-width: 320px; }
+.global-cards, .acct-cards { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important; }
+
+/* Smooth resize when dragging divider */
+#home-split-left, #home-split-right { transition: flex 0.1s ease; }
 </style>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 <!-- pptxgenjs se carga dinámicamente -->
@@ -11451,61 +11467,61 @@ function renderErDetalle() {
 
   }
 
-  // ── INGRESOS ──────────────────────────────────────────────
-
+  // ── INGRESOS (reales + proyectados fusionados) ──────────────────
   html+=tr('4. INGRESOS', colMeses.map(function(){return null;}).concat(showAcc?[null]:[]), 'h');
 
-  for(var ci=0;ci<cliArr.length;ci++){
-
-    var cli=cliArr[ci];
-
-    var vals=colMeses.map(function(d){
-
-      var v=d.ff.filter(function(f){return f.cliente===cli;}).reduce(function(a,f){return a+(f.bruto||0);},0);
-
-      return v||0;
-
-    });
-
-    if(showAcc) vals.push(FACTURAS.filter(function(f){return f.cliente===cli;}).reduce(function(a,f){return a+(f.bruto||0);},0));
-
-    html+=tr(cli, vals, 'item', 1);
-
-  }
-
-  var ingVals=colMeses.map(function(d){return d.ing;});
-
-  if(showAcc) ingVals.push(accIng);
-
-  html+=tr('Total Ingresos', ingVals, 'st');
-
-  // ── INGRESOS PROYECTADOS (FP_DATA) ──────────────────────
+  // Unificar clientes reales y proyectados
+  var todosClientes = {};
+  for (var ci=0; ci<cliArr.length; ci++) todosClientes[cliArr[ci]] = 'real';
   var cliProyArr = Object.keys(allClisProy).sort();
+  for (var cpi=0; cpi<cliProyArr.length; cpi++) {
+    if (!todosClientes[cliProyArr[cpi]]) todosClientes[cliProyArr[cpi]] = 'proy';
+    // si ya existe como real, se queda como real
+  }
+  var clientesFinal = Object.keys(todosClientes).sort();
+
   var hayIngProy = false;
-  if (cliProyArr.length > 0) {
-    var ingProyVals = colMeses.map(function(d){ return d.ingProy||0; });
-    var accIngProy = ingProyVals.reduce(function(a,v){return a+v;},0);
-    if (accIngProy > 0) {
-      hayIngProy = true;
-      html+=tr('📈 INGRESOS PROYECTADOS', colMeses.map(function(){return null;}).concat(showAcc?[null]:[]), 'h', 0, '#7C3AED');
-      for (var cpi=0; cpi<cliProyArr.length; cpi++) {
-        var cpCli = cliProyArr[cpi];
-        var cpVals = colMeses.map(function(d){ return fpIngCliente(cpCli, d.mes)||0; });
-        var cpAcc = cpVals.reduce(function(a,v){return a+v;},0);
-        if (cpAcc > 0) {
-          if (showAcc) cpVals.push(cpAcc);
-          html+=tr(cpCli, cpVals, 'item', 1, '#7C3AED');
-        }
-      }
-      if (showAcc) ingProyVals.push(accIngProy);
-      html+=tr('Total Ing. Proyectados', ingProyVals, 'st', 0, '#7C3AED');
-      // Total combinado
-      var ingCombVals = colMeses.map(function(d,i){ return d.ing + (d.ingProy||0); });
-      var accIngComb = accIng + accIngProy;
-      if (showAcc) ingCombVals.push(accIngComb);
-      html+=tr('TOTAL INGRESOS + PROYECTADOS', ingCombVals, 'st');
+  var ingTotalVals = colMeses.map(function(){ return 0; });
+  var accIngTotal = 0;
+
+  for (var ci2=0; ci2<clientesFinal.length; ci2++) {
+    var cli2 = clientesFinal[ci2];
+    var esNuevoCliente = todosClientes[cli2] === 'proy'; // Solo proyectado
+
+    var celdas = '';
+    var accCli = 0;
+    for (var mi=0; mi<colMeses.length; mi++) {
+      var d = colMeses[mi];
+      var realVal = d.ff.filter(function(f){return f.cliente===cli2;}).reduce(function(a,f){return a+(f.bruto||0);},0);
+      var proyVal = fpIngCliente(cli2, d.mes) || 0;
+      var totalVal = realVal + proyVal;
+      ingTotalVals[mi] += totalVal;
+      accCli += totalVal;
+
+      var color = '#54504F';
+      if (proyVal > 0 && realVal === 0) color = '#7C3AED'; // Solo proyectado → morado
+      else if (proyVal > 0 && realVal > 0) color = '#7C3AED'; // Real + proyectado → morado
+      if (totalVal === 0) color = '#aaa';
+
+      celdas += '<td style="text-align:right;padding:5px 10px;border-bottom:1px solid #f0ede8;color:'+color+'">'
+        + (totalVal ? '<b>' + F(totalVal) + '</b>' : '') + '</td>';
+    }
+
+    if (showAcc) {
+      var accColor = accCli > 0 ? (esNuevoCliente ? '#7C3AED' : '#54504F') : '#aaa';
+      celdas += '<td style="text-align:right;padding:5px 10px;border-bottom:1px solid #f0ede8;color:'+accColor+'"><b>'+F(accCli)+'</b></td>';
+      accIngTotal += accCli;
+    }
+
+    if (accCli > 0 || !showAcc) {
+      if (proyVal > 0 || esNuevoCliente) hayIngProy = true;
+      var lblStyle = esNuevoCliente ? 'color:#7C3AED;' : '';
+      html += '<tr><td style="padding:5px 10px 5px 22px;border-bottom:1px solid #f0ede8;'+lblStyle+'">'+cli2+'</td>' + celdas + '</tr>';
     }
   }
+
+  if(showAcc) ingTotalVals.push(accIngTotal);
+  html+=tr('Total Ingresos' + (hayIngProy ? ' (incl. proyectados)' : ''), ingTotalVals, 'st');
 
   // ── GASTOS ────────────────────────────────────────────────
 

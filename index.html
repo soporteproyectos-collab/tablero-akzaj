@@ -20797,26 +20797,146 @@ function alzakGuardarParaEquipo() {
 // ── Informe Ejecutivo ─────────────────────────────────────
 function alzakGenerarInforme() {
   var hoy = new Date();
+  var mesActual = hoy.getMonth(); // 0-based (junio=5)
   var MN = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  var fechaStr = hoy.getDate() + ' de ' + MN[hoy.getMonth()] + ' de ' + hoy.getFullYear();
+  var fechaStr = hoy.getDate() + ' de ' + MN[mesActual] + ' de ' + hoy.getFullYear();
+  var hoyISO = hoy.getFullYear()+'-'+('0'+(mesActual+1)).slice(-2)+'-'+('0'+hoy.getDate()).slice(-2);
 
   function fm(n) { return '$' + Math.round(n||0).toLocaleString('es-CO'); }
   function pct(a,b) { return b ? Math.round(a/b*100) : 0; }
+  function parseFechaToMes(fecha) {
+    var fp = (fecha||'').split('/');
+    if (fp.length>=3) return parseInt(fp[1]); // dd/MM/yyyy → mes
+    return 0;
+  }
+  function parseFechaToISO(fecha) {
+    var fp = (fecha||'').split('/');
+    if (fp.length>=3) return fp[2]+'-'+fp[1]+'-'+fp[0];
+    return '';
+  }
 
-  var totalFacturado = (typeof FACTURAS!=='undefined') ? FACTURAS.reduce(function(a,f){return a+(f.bruto||0);},0) : 0;
-  var totalCobrado   = (typeof FACTURAS!=='undefined') ? FACTURAS.filter(function(f){return f.pagada;}).reduce(function(a,f){return a+(f.total||0);},0) : 0;
-  var totalPendiente = (typeof FACTURAS!=='undefined') ? FACTURAS.filter(function(f){return !f.pagada;}).reduce(function(a,f){return a+(f.total||0);},0) : 0;
-  var nFacturas      = (typeof FACTURAS!=='undefined') ? FACTURAS.length : 0;
-  var nPagadas       = (typeof FACTURAS!=='undefined') ? FACTURAS.filter(function(f){return f.pagada;}).length : 0;
-  var recaudo        = pct(totalCobrado, totalFacturado + totalPendiente);
+  // ── INGRESOS REALES (facturas emitidas, sin programadas) ──
+  var totalFacturado = 0, totalCobrado = 0, totalPendiente = 0, nFacturas = 0, nPagadas = 0;
+  var totalIVAFact = 0, totalRteF = 0, totalRteIVA = 0;
+  var clienteMap = {};
+  if (typeof FACTURAS!=='undefined') {
+    FACTURAS.forEach(function(f){
+      totalFacturado += (f.bruto||0);
+      totalIVAFact += (f.iva||0);
+      totalRteF += (f.retefuente||0);
+      totalRteIVA += (f.reteiva||0);
+      if (f.pagada) { totalCobrado += (f.total||0); nPagadas++; }
+      else totalPendiente += (f.total||0);
+      nFacturas++;
+      var cli = f.cliente||'N/A';
+      clienteMap[cli] = (clienteMap[cli]||0) + (f.bruto||0);
+    });
+  }
+  var totalNetoRecibir = totalFacturado + totalIVAFact - totalRteF - totalRteIVA;
+  var recaudo = pct(totalCobrado, totalNetoRecibir);
 
-  // Costos 2026 únicamente (FR_DATA filtrado por año)
-  var totalCostos = 0;
-  if (typeof FR_DATA!=='undefined' && FR_DATA.length)
-    totalCostos = FR_DATA.filter(function(r){
+  // ── INGRESOS PROYECTADOS (FP_DATA) ──
+  var baseProyectada = 0, nProgramadas = 0;
+  if (typeof FP_DATA!=='undefined') {
+    FP_DATA.forEach(function(fp){ baseProyectada += (parseFloat(fp.monto)||0); nProgramadas++; });
+  }
+  var totalBaseAnual = totalFacturado + baseProyectada;
+
+  // ── PROYECTOS VENDIDOS (PRES_DATA) ──
+  var totalVendido = 0, nProyectos = 0, nClientesPres = {};
+  if (typeof PRES_DATA!=='undefined') {
+    PRES_DATA.forEach(function(p){
+      totalVendido += (parseFloat(p['Total_COP'])||0);
+      nProyectos++;
+      nClientesPres[(p['Cliente']||'').trim()] = true;
+    });
+  }
+  var ejecucion = totalVendido > 0 ? pct(totalFacturado, totalVendido) : 0;
+
+  // ── COSTOS YTD (radicadas solo hasta mes actual, excluyendo futuro) ──
+  var costosYTD = 0, costosFuturo = 0, costosTotal = 0;
+  var costosCat = {};
+  if (typeof FR_DATA!=='undefined' && FR_DATA.length) {
+    FR_DATA.forEach(function(r){
       var fp = (r['Fecha']||'').split('/');
-      return fp.length >= 3 && parseInt(fp[2]) === 2026;
-    }).reduce(function(a,r){return a+parseFloat(r['Total (COP)']||r['Total_COP']||0);},0);
+      if (fp.length<3 || parseInt(fp[2])!==2026) return;
+      var mes = parseInt(fp[1]);
+      var val = parseFloat(r['Total (COP)']||r['Total_COP']||0);
+      var cat = r['Categoria']||r['Categoría']||'Otros';
+      costosTotal += val;
+      if (mes <= mesActual+1) { // hasta mes actual inclusive
+        costosYTD += val;
+      } else {
+        costosFuturo += val;
+      }
+      if (!costosCat[cat]) costosCat[cat] = {ytd:0,fut:0};
+      if (mes <= mesActual+1) costosCat[cat].ytd += val;
+      else costosCat[cat].fut += val;
+    });
+  }
+
+  // ── UTILIDAD YTD (comparación justa: ingresos reales vs costos reales YTD) ──
+  var utilidadYTD = totalFacturado - costosYTD;
+  var margenYTD = pct(utilidadYTD, totalFacturado);
+
+  // ── PROYECCIÓN AÑO COMPLETO ──
+  var ingresosProyAnual = totalFacturado + baseProyectada;
+  var costosProyAnual = costosTotal; // YTD + programados
+  var utilidadProyAnual = ingresosProyAnual - costosProyAnual;
+  var margenProyAnual = pct(utilidadProyAnual, ingresosProyAnual);
+
+  // ── CAJA (desde P — períodos de conciliación) ──
+  var cajaTotal = 0, cajaDet = [];
+  if (typeof P!=='undefined' && P.length) {
+    var ul = P[P.length-1]; // último período
+    var bcol = ul.sF||0;
+    var fidS = (ul.fid && ul.fid.sF)||0;
+    var bcsS = (ul.caja && ul.caja.sF)||0;
+    var boldS = (ul.bold && ul.bold.sF)||0;
+    cajaTotal = bcol + fidS + bcsS + boldS;
+    if (bcol) cajaDet.push({banco:'Bancolombia Ahorros', saldo:bcol, mes:ul.label||''});
+    if (fidS) cajaDet.push({banco:'Fiducuenta', saldo:fidS, mes:ul.label||''});
+    if (bcsS) cajaDet.push({banco:'BCS Corriente', saldo:bcsS, mes:ul.label||''});
+    if (boldS) cajaDet.push({banco:'Bold CF', saldo:boldS, mes:ul.label||''});
+    cajaDet.sort(function(a,b){return b.saldo-a.saldo;});
+  }
+
+  // ── EGRESOS (pagos reales de caja, excluyendo traslados) ──
+  var totalEgresos = 0;
+  if (typeof GASTOS_DATA!=='undefined')
+    totalEgresos = GASTOS_DATA.filter(function(r){
+      var t=(r['Tipo_Movimiento']||'').toLowerCase();
+      var c=(r['Categoria']||r['Categoría']||'').toLowerCase();
+      if (t==='traslado') return false;
+      if (c.indexOf('traslado')>=0||c.indexOf('inversion')>=0||c.indexOf('inversión')>=0) return false;
+      if (c.indexOf('obligaci')>=0) return false;
+      return true;
+    }).reduce(function(a,r){return a+parseFloat(r['Total_COP']||r['Total ($)']||0);},0);
+
+  var pruebaAcida = totalEgresos>0 ? (cajaTotal/(totalEgresos/(mesActual+1))).toFixed(1) : '—';
+
+  // ── CONCENTRACIÓN ──
+  var clientesTop = Object.keys(clienteMap).sort(function(a,b){return clienteMap[b]-clienteMap[a];}).slice(0,7);
+  var maxCli = clientesTop.length ? clienteMap[clientesTop[0]] : 0;
+  var concRiesgo = totalFacturado>0 && maxCli/totalFacturado > 0.5;
+
+  // ── TOP 5 COSTOS ──
+  var catArr = Object.keys(costosCat).map(function(k){ return {cat:k, ytd:costosCat[k].ytd, fut:costosCat[k].fut, total:costosCat[k].ytd+costosCat[k].fut}; });
+  catArr.sort(function(a,b){ return b.ytd - a.ytd; });
+  var topCostos = catArr.slice(0,8);
+
+  // ── SEMÁFORO GENERAL ──
+  var semaforo, semaforoColor, analisis;
+  if (margenYTD >= 20) {
+    semaforo = '🟢'; semaforoColor = '#1D9E75';
+    analisis = 'La compañía presenta una posición financiera <strong>sólida</strong> al cierre de '+MN[mesActual]+', con margen operacional YTD del '+margenYTD+'%.';
+  } else if (margenYTD >= 0) {
+    semaforo = '🟡'; semaforoColor = '#B7791F';
+    analisis = 'Margen operacional positivo pero ajustado ('+margenYTD+'%). Se recomienda acelerar facturación programada y gestionar cobros pendientes.';
+  } else {
+    semaforo = '🔴'; semaforoColor = '#C53030';
+    analisis = 'El acumulado Ene–'+MN[mesActual]+' muestra <strong>costos superiores a ingresos facturados</strong>. Sin embargo, hay <strong>'+fm(baseProyectada)+'</strong> en facturas programadas que revertirían esta posición.';
+  }
 
   // Egresos operativos 2026 (excluyendo traslados, inversiones y DIAN)
   var totalEgresos = 0;
@@ -20858,7 +20978,8 @@ function alzakGenerarInforme() {
     ? 'La compañía opera con margen positivo pero ajustado. Se recomienda acelerar el recaudo de cartera.'
     : 'La compañía presenta <strong>pérdida operacional</strong>. Acción inmediata requerida en costos y facturación.';
 
-  var colUtil = utilidadOp>=0?'#1D9E75':'#C53030';
+  var colUtil = utilidadYTD>=0?'#1D9E75':'#C53030';
+  var colProy = utilidadProyAnual>=0?'#1D9E75':'#C53030';
 
   var html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
     +'<title>Informe Ejecutivo ALZAK — '+fechaStr+'</title>'
@@ -20869,11 +20990,12 @@ function alzakGenerarInforme() {
     +'.header{background:linear-gradient(135deg,#1E3A5F,#0C447C 60%,#5BC8CD);color:#fff;padding:48px 64px;}'
     +'.header h1{font-size:28px;font-weight:800;margin:0 0 6px}'
     +'.header p{font-size:13px;opacity:.7;margin:0}'
-    +'.body{max-width:960px;margin:0 auto;padding:32px 20px}'
+    +'.body{max-width:1000px;margin:0 auto;padding:32px 20px}'
     +'.card{background:#fff;border-radius:12px;padding:24px 28px;margin-bottom:20px;box-shadow:0 2px 10px rgba(0,0,0,.06)}'
     +'.card h2{font-size:14px;font-weight:700;color:#1E3A5F;margin:0 0 16px;padding-bottom:10px;border-bottom:2px solid #e8f0fe}'
     +'.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}'
     +'.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}'
+    +'.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}'
     +'.kpi{background:#f8faff;border-radius:8px;padding:14px;text-align:center}'
     +'.kpi-l{font-size:9px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}'
     +'.kpi-v{font-size:18px;font-weight:800}'
@@ -20889,88 +21011,147 @@ function alzakGenerarInforme() {
     +'th{background:#1E3A5F;color:#fff;padding:8px 12px;text-align:left;font-weight:600}'
     +'td{padding:8px 12px;border-bottom:1px solid #f0ede8}'
     +'tr:nth-child(even) td{background:#f8faff}'
-    +'.alerta{background:#fff3e0;border:1px solid #FFB74D;border-radius:8px;padding:12px 16px;font-size:12px;color:#E65100;margin-top:10px}'
-    +'@media print{.no-print{display:none}.card{box-shadow:none;border:1px solid #eee}body{background:#fff}}'
+    +'.alerta{border-radius:8px;padding:12px 16px;font-size:12px;margin-top:10px}'
+    +'.alerta.warn{background:#fff3e0;border:1px solid #FFB74D;color:#E65100}'
+    +'.alerta.bad{background:#fdeaea;border:1px solid #f44336;color:#C53030}'
+    +'.alerta.ok{background:#f0fff4;border:1px solid #68D391;color:#276749}'
+    +'.alerta.info{background:#e8f4fd;border:1px solid #64B5F6;color:#1565C0}'
+    +'.sep{border:none;border-top:1px dashed #e0ddd8;margin:12px 0}'
+    +'@media print{.no-print{display:none}.card{box-shadow:none;border:1px solid #eee;page-break-inside:avoid}body{background:#fff}}'
     +'</style></head><body>'
+
+    // HEADER
     +'<div class="header">'
     +'<div style="display:flex;justify-content:space-between;align-items:flex-start">'
     +'<div><div style="font-size:10px;opacity:.5;letter-spacing:2px;margin-bottom:12px">INFORME EJECUTIVO FINANCIERO — CONFIDENCIAL</div>'
     +'<h1>ALZAK GROUP SAS</h1>'
-    +'<p>NIT 900.898.741-8 · Cartagena · Corte: '+fechaStr+' · Acumulado 2026</p></div>'
-    +'<div style="text-align:right;opacity:.6;font-size:12px">'+semaforo+' Estado general<br>'+MN[hoy.getMonth()]+' '+hoy.getFullYear()+'</div>'
+    +'<p>NIT 900.898.741-8 · Cartagena · Corte: '+fechaStr+' · Acumulado Enero–'+MN[mesActual]+' 2026</p></div>'
+    +'<div style="text-align:right;font-size:12px">'+semaforo+' Estado general<br><strong>'+MN[mesActual]+' '+hoy.getFullYear()+'</strong></div>'
     +'</div></div>'
     +'<div class="body">'
     +'<div class="no-print" style="text-align:right;margin-bottom:16px">'
     +'<button onclick="window.print()" style="background:#1E3A5F;color:#fff;border:none;border-radius:8px;padding:9px 22px;font-size:12px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif">🖨️ Imprimir / PDF</button>'
     +'</div>'
 
-    // Resumen
+    // 1. RESUMEN EJECUTIVO
     +'<div class="card">'
     +'<h2>📋 Resumen Ejecutivo</h2>'
-    +'<div style="font-size:13px;color:#444;line-height:1.7">'+semaforo+' '+analisis+'<br><br>'
-    +'ALZAK ha emitido <strong>'+nFacturas+' facturas</strong> por <strong>'+fm(totalFacturado)+'</strong>. '
-    +'Cobrado: <strong>'+fm(totalCobrado)+'</strong> ('+recaudo+'%). '
-    +'Costos radicados: <strong>'+fm(totalCostos)+'</strong>. '
-    +'Utilidad operacional: <strong style="color:'+colUtil+'">'+fm(utilidadOp)+'</strong>.'
+    +'<div style="font-size:13px;color:#444;line-height:1.8">'+semaforo+' '+analisis+'<br><br>'
+    +'<strong>Proyectos vendidos 2026:</strong> '+fm(totalVendido)+' ('+nProyectos+' proyectos, '+Object.keys(nClientesPres).length+' clientes). '
+    +'<strong>Ejecutado:</strong> '+fm(totalFacturado)+' ('+ejecucion+'%). '
+    +'<strong>Pipeline programado:</strong> '+fm(baseProyectada)+' ('+nProgramadas+' facturas). '
+    +'<strong>Cobrado a la fecha:</strong> '+fm(totalCobrado)+' ('+recaudo+'% del neto a recibir).'
     +'</div></div>'
 
-    // KPIs
-    +'<div class="card"><h2>💰 Indicadores Clave</h2>'
+    // 2. PIPELINE Y EJECUCIÓN
+    +'<div class="card"><h2>📊 Pipeline de Ingresos 2026</h2>'
     +'<div class="grid4">'
-    +'<div class="kpi"><div class="kpi-l">Total Facturado</div><div class="kpi-v" style="color:#0C447C">'+fm(totalFacturado)+'</div><div class="kpi-s">'+nFacturas+' facturas</div></div>'
-    +'<div class="kpi"><div class="kpi-l">Cobrado</div><div class="kpi-v" style="color:#1D9E75">'+fm(totalCobrado)+'</div><div class="kpi-s">'+recaudo+'% recaudo</div></div>'
-    +'<div class="kpi"><div class="kpi-l">Por Cobrar</div><div class="kpi-v" style="color:#B7791F">'+fm(totalPendiente)+'</div><div class="kpi-s">cartera activa</div></div>'
-    +'<div class="kpi"><div class="kpi-l">Utilidad Operacional</div><div class="kpi-v" style="color:'+colUtil+'">'+fm(utilidadOp)+'</div><div class="kpi-s">margen '+margenOp+'%</div></div>'
+    +'<div class="kpi" style="border-bottom:3px solid #7C3AED"><div class="kpi-l">Proyectos vendidos</div><div class="kpi-v" style="color:#7C3AED">'+fm(totalVendido)+'</div><div class="kpi-s">'+nProyectos+' proyectos · '+Object.keys(nClientesPres).length+' clientes</div></div>'
+    +'<div class="kpi" style="border-bottom:3px solid #1D9E75"><div class="kpi-l">Facturado (real)</div><div class="kpi-v" style="color:#1D9E75">'+fm(totalFacturado)+'</div><div class="kpi-s">'+nFacturas+' facturas emitidas</div></div>'
+    +'<div class="kpi" style="border-bottom:3px dashed #7C3AED"><div class="kpi-l">Programado (por facturar)</div><div class="kpi-v" style="color:#7C3AED">'+fm(baseProyectada)+'</div><div class="kpi-s">'+nProgramadas+' facturas pendientes</div></div>'
+    +'<div class="kpi" style="border-bottom:3px solid #0C447C"><div class="kpi-l">Total base gravable 2026</div><div class="kpi-v" style="color:#0C447C">'+fm(totalBaseAnual)+'</div><div class="kpi-s">Real + Programada</div></div>'
+    +'</div>'
+    +'<div style="margin-top:14px;background:#f0f5fa;border-radius:8px;padding:12px 16px;font-size:12px;color:#1E3A5F">'
+    +'<strong>Ejecución:</strong> Se ha facturado el <strong>'+ejecucion+'%</strong> del portafolio vendido. '
+    +'Restan <strong>'+fm(totalVendido - totalFacturado)+'</strong> por ejecutar en contratos vigentes.'
     +'</div></div>'
 
-    // Indicadores técnicos
-    +'<div class="card"><h2>📐 Indicadores Financieros</h2>'
+    // 3. CARTERA Y RECAUDO
+    +'<div class="card"><h2>💰 Cartera y Recaudo</h2>'
+    +'<div class="grid4">'
+    +'<div class="kpi"><div class="kpi-l">Neto a recibir</div><div class="kpi-v" style="color:#0C447C">'+fm(totalNetoRecibir)+'</div><div class="kpi-s">Base+IVA−Retenciones</div></div>'
+    +'<div class="kpi"><div class="kpi-l">Cobrado</div><div class="kpi-v" style="color:#1D9E75">'+fm(totalCobrado)+'</div><div class="kpi-s">'+nPagadas+' facturas pagadas</div></div>'
+    +'<div class="kpi"><div class="kpi-l">Por cobrar</div><div class="kpi-v" style="color:#B7791F">'+fm(totalPendiente)+'</div><div class="kpi-s">'+(nFacturas-nPagadas)+' pendientes</div></div>'
+    +'<div class="kpi"><div class="kpi-l">% Recaudo</div><div class="kpi-v" style="color:'+(recaudo>=70?'#1D9E75':recaudo>=50?'#B7791F':'#C53030')+'">'+recaudo+'%</div><div class="kpi-s">Óptimo: &gt;80%</div></div>'
+    +'</div></div>'
+
+    // 4. ESTADO DE RESULTADOS YTD
+    +'<div class="card"><h2>📐 Estado de Resultados — Acumulado Ene–'+MN[mesActual]+' 2026</h2>'
+    +'<div class="grid2" style="margin-bottom:16px">'
+    +'<div style="background:#f0fff4;border-radius:10px;padding:18px;text-align:center;border:1px solid #c6f6d5">'
+    +'<div style="font-size:10px;font-weight:700;color:#888;margin-bottom:6px">INGRESOS OPERACIONALES YTD</div>'
+    +'<div style="font-size:24px;font-weight:800;color:#1D9E75">'+fm(totalFacturado)+'</div>'
+    +'<div style="font-size:10px;color:#888;margin-top:4px">'+nFacturas+' facturas · '+MN[0]+'–'+MN[mesActual]+'</div></div>'
+    +'<div style="background:#fff5f5;border-radius:10px;padding:18px;text-align:center;border:1px solid #fed7d7">'
+    +'<div style="font-size:10px;font-weight:700;color:#888;margin-bottom:6px">COSTOS OPERACIONALES YTD</div>'
+    +'<div style="font-size:24px;font-weight:800;color:#C53030">'+fm(costosYTD)+'</div>'
+    +'<div style="font-size:10px;color:#888;margin-top:4px">Radicadas Ene–'+MN[mesActual]+'</div></div>'
+    +'</div>'
+    +'<div style="background:'+(utilidadYTD>=0?'#f0fff4':'#fff5f5')+';border-radius:10px;padding:18px;text-align:center;border:2px solid '+(utilidadYTD>=0?'#1D9E75':'#C53030')+'">'
+    +'<div style="font-size:10px;font-weight:700;color:#888;margin-bottom:6px">UTILIDAD OPERACIONAL YTD</div>'
+    +'<div style="font-size:28px;font-weight:800;color:'+colUtil+'">'+fm(utilidadYTD)+'</div>'
+    +'<div style="font-size:11px;color:#888;margin-top:4px">Margen: <strong>'+margenYTD+'%</strong></div></div>'
+    +'<hr class="sep">'
+    +'<div style="font-size:11px;color:#888;text-align:center;margin-top:8px">Nota: Utilidad YTD compara únicamente ingresos facturados vs costos radicados en el mismo período (Ene–'+MN[mesActual]+'). No incluye proyecciones.</div>'
+    +'</div>'
+
+    // 5. PROYECCIÓN AÑO COMPLETO
+    +'<div class="card"><h2>🔮 Proyección Año Completo 2026</h2>'
     +'<div class="grid3">'
-    +'<div class="ind '+(margenBruto>=30?'ok':margenBruto>=10?'warn':'bad')+'">'
-    +'<div class="ind-n">MARGEN BRUTO</div>'
-    +'<div class="ind-v" style="color:'+(margenBruto>=30?'#1D9E75':margenBruto>=10?'#B7791F':'#C53030')+'">'+margenBruto+'%</div>'
-    +'<div class="ind-d">Saludable: &gt;30% para consultoría</div></div>'
-    +'<div class="ind '+(margenOp>=15?'ok':margenOp>=0?'warn':'bad')+'">'
-    +'<div class="ind-n">MARGEN OPERACIONAL</div>'
-    +'<div class="ind-v" style="color:'+(margenOp>=15?'#1D9E75':margenOp>=0?'#B7791F':'#C53030')+'">'+margenOp+'%</div>'
-    +'<div class="ind-d">Eficiencia operativa neta</div></div>'
-    +'<div class="ind '+(recaudo>=80?'ok':recaudo>=50?'warn':'bad')+'">'
-    +'<div class="ind-n">ÍNDICE DE RECAUDO</div>'
-    +'<div class="ind-v" style="color:'+(recaudo>=80?'#1D9E75':recaudo>=50?'#B7791F':'#C53030')+'">'+recaudo+'%</div>'
-    +'<div class="ind-d">Óptimo: &gt;80%</div></div>'
-    +'<div class="ind '+(parseFloat(pruebaAcida)>=2?'ok':parseFloat(pruebaAcida)>=1?'warn':'bad')+'">'
-    +'<div class="ind-n">PRUEBA ÁCIDA (meses)</div>'
-    +'<div class="ind-v" style="color:'+(parseFloat(pruebaAcida)>=2?'#1D9E75':parseFloat(pruebaAcida)>=1?'#B7791F':'#C53030')+'">'+pruebaAcida+'</div>'
-    +'<div class="ind-d">Meses de caja disponible</div></div>'
-    +'<div class="ind '+(parseFloat(cobertura)>=1.5?'ok':parseFloat(cobertura)>=1?'warn':'bad')+'">'
-    +'<div class="ind-n">COBERTURA DE GASTOS</div>'
-    +'<div class="ind-v" style="color:'+(parseFloat(cobertura)>=1.5?'#1D9E75':parseFloat(cobertura)>=1?'#B7791F':'#C53030')+'">'+cobertura+'x</div>'
-    +'<div class="ind-d">Ingresos ÷ Gastos totales</div></div>'
-    +'<div class="ind '+(totalPendiente<totalFacturado*0.3?'ok':totalPendiente<totalFacturado*0.6?'warn':'bad')+'">'
-    +'<div class="ind-n">CARTERA / FACTURADO</div>'
-    +'<div class="ind-v" style="color:'+(totalPendiente<totalFacturado*0.3?'#1D9E75':totalPendiente<totalFacturado*0.6?'#B7791F':'#C53030')+'">'+pct(totalPendiente,totalFacturado)+'%</div>'
-    +'<div class="ind-d">% sin cobrar del total</div></div>'
-    +'</div></div>'
+    +'<div class="kpi" style="border-bottom:3px solid #1D9E75"><div class="kpi-l">Ingresos proyectados</div><div class="kpi-v" style="color:#1D9E75">'+fm(ingresosProyAnual)+'</div><div class="kpi-s">Real + Programadas</div></div>'
+    +'<div class="kpi" style="border-bottom:3px solid #C53030"><div class="kpi-l">Costos proyectados</div><div class="kpi-v" style="color:#C53030">'+fm(costosProyAnual)+'</div><div class="kpi-s">Radicadas + Programados</div></div>'
+    +'<div class="kpi" style="border-bottom:3px solid '+colProy+'"><div class="kpi-l">Utilidad proyectada</div><div class="kpi-v" style="color:'+colProy+'">'+fm(utilidadProyAnual)+'</div><div class="kpi-s">Margen: '+margenProyAnual+'%</div></div>'
+    +'</div>'
+    +(costosFuturo>0?'<div style="font-size:11px;color:#888;margin-top:10px">Costos futuros programados ('+MN[mesActual+1<12?mesActual+1:11]+'–Dic): <strong>'+fm(costosFuturo)+'</strong></div>':'')
+    +'</div>'
 
-    // Clientes
+    // 6. POSICIÓN DE CAJA
+    +'<div class="card"><h2>🏦 Posición de Caja</h2>'
+    +'<div class="grid4">'
+    +'<div class="kpi" style="border-bottom:3px solid #0C447C"><div class="kpi-l">Saldo total</div><div class="kpi-v" style="color:#0C447C">'+fm(cajaTotal)+'</div><div class="kpi-s">Todas las cuentas</div></div>'
+    +'<div class="kpi"><div class="kpi-l">Prueba ácida</div><div class="kpi-v" style="color:'+(parseFloat(pruebaAcida)>=2?'#1D9E75':parseFloat(pruebaAcida)>=1?'#B7791F':'#C53030')+'">'+pruebaAcida+' meses</div><div class="kpi-s">Caja ÷ gasto mensual</div></div>'
+    +'<div class="kpi"><div class="kpi-l">Cartera por cobrar</div><div class="kpi-v" style="color:#B7791F">'+fm(totalPendiente)+'</div><div class="kpi-s">Liquidez potencial</div></div>'
+    +'<div class="kpi"><div class="kpi-l">Disponible + cartera</div><div class="kpi-v" style="color:#1D9E75">'+fm(cajaTotal+totalPendiente)+'</div><div class="kpi-s">Posición total</div></div>'
+    +'</div>'
+    +(cajaDet.length?'<div style="margin-top:12px"><table><tr><th>Cuenta</th><th>Último mes</th><th style="text-align:right">Saldo</th></tr>'
+    +cajaDet.map(function(c){return '<tr><td>'+c.banco+'</td><td>'+c.mes+'</td><td style="text-align:right;font-weight:700">'+fm(c.saldo)+'</td></tr>';}).join('')
+    +'</table></div>':'')
+    +'</div>'
+
+    // 7. CONCENTRACIÓN POR CLIENTE
     +'<div class="card"><h2>🏢 Concentración por Cliente</h2>'
-    +'<table><tr><th>Cliente</th><th>Facturado</th><th>%</th></tr>'
+    +'<table><tr><th>Cliente</th><th style="text-align:right">Facturado</th><th>Peso</th></tr>'
     +clientesTop.map(function(c){
       var v=clienteMap[c], p=pct(v,totalFacturado);
-      return '<tr><td><strong>'+c+'</strong></td><td>'+fm(v)+'</td>'
+      return '<tr><td><strong>'+c+'</strong></td><td style="text-align:right">'+fm(v)+'</td>'
         +'<td><div style="display:flex;align-items:center;gap:6px">'
-        +'<div style="background:#e8f0fe;border-radius:3px;height:6px;width:80px">'
-        +'<div style="background:#0C447C;border-radius:3px;height:6px;width:'+Math.min(p,100)+'px"></div>'
-        +'</div>'+p+'%</div></td></tr>';
+        +'<div style="background:#e8f0fe;border-radius:3px;height:6px;width:100px">'
+        +'<div style="background:'+(p>50?'#C53030':p>30?'#B7791F':'#0C447C')+';border-radius:3px;height:6px;width:'+Math.min(p,100)+'px"></div>'
+        +'</div><strong>'+p+'%</strong></div></td></tr>';
     }).join('')
+    +'</table>'
+    +(concRiesgo?'<div class="alerta warn" style="margin-top:12px">⚠️ <strong>Riesgo de concentración:</strong> Un solo cliente representa más del 50% de la facturación. Diversificar la base de clientes reduce vulnerabilidad.</div>':'')
+    +'</div>'
+
+    // 8. ESTRUCTURA DE COSTOS
+    +'<div class="card"><h2>📉 Estructura de Costos — Top Categorías</h2>'
+    +'<table><tr><th>Categoría</th><th style="text-align:right">Acumulado YTD</th><th style="text-align:right">% del total</th></tr>'
+    +topCostos.map(function(c){
+      return '<tr><td>'+c.cat+'</td><td style="text-align:right;font-weight:600">'+fm(c.ytd)+'</td><td style="text-align:right">'+pct(c.ytd,costosYTD)+'%</td></tr>';
+    }).join('')
+    +'<tr style="border-top:2px solid #1E3A5F;font-weight:700"><td>TOTAL YTD</td><td style="text-align:right">'+fm(costosYTD)+'</td><td style="text-align:right">100%</td></tr>'
     +'</table></div>'
 
-    // Alertas
+    // 9. INDICADORES FINANCIEROS
+    +'<div class="card"><h2>📐 Indicadores Financieros</h2>'
+    +'<div class="grid3">'
+    +'<div class="ind '+(margenYTD>=30?'ok':margenYTD>=0?'warn':'bad')+'"><div class="ind-n">MARGEN OPERACIONAL YTD</div><div class="ind-v" style="color:'+(margenYTD>=30?'#1D9E75':margenYTD>=0?'#B7791F':'#C53030')+'">'+margenYTD+'%</div><div class="ind-d">Ene–'+MN[mesActual]+' · Saludable: &gt;30%</div></div>'
+    +'<div class="ind '+(margenProyAnual>=20?'ok':margenProyAnual>=0?'warn':'bad')+'"><div class="ind-n">MARGEN PROYECTADO 2026</div><div class="ind-v" style="color:'+(margenProyAnual>=20?'#1D9E75':margenProyAnual>=0?'#B7791F':'#C53030')+'">'+margenProyAnual+'%</div><div class="ind-d">Con facturas programadas</div></div>'
+    +'<div class="ind '+(recaudo>=80?'ok':recaudo>=50?'warn':'bad')+'"><div class="ind-n">ÍNDICE DE RECAUDO</div><div class="ind-v" style="color:'+(recaudo>=80?'#1D9E75':recaudo>=50?'#B7791F':'#C53030')+'">'+recaudo+'%</div><div class="ind-d">Óptimo: &gt;80%</div></div>'
+    +'<div class="ind '+(parseFloat(pruebaAcida)>=2?'ok':parseFloat(pruebaAcida)>=1?'warn':'bad')+'"><div class="ind-n">PRUEBA ÁCIDA</div><div class="ind-v" style="color:'+(parseFloat(pruebaAcida)>=2?'#1D9E75':parseFloat(pruebaAcida)>=1?'#B7791F':'#C53030')+'">'+pruebaAcida+' meses</div><div class="ind-d">Meses de operación con caja actual</div></div>'
+    +'<div class="ind '+(ejecucion>=40?'ok':ejecucion>=20?'warn':'bad')+'"><div class="ind-n">EJECUCIÓN PORTAFOLIO</div><div class="ind-v" style="color:'+(ejecucion>=40?'#1D9E75':ejecucion>=20?'#B7791F':'#C53030')+'">'+ejecucion+'%</div><div class="ind-d">Facturado vs Proyectos vendidos</div></div>'
+    +'<div class="ind '+(totalPendiente<totalFacturado*0.3?'ok':totalPendiente<totalFacturado*0.6?'warn':'bad')+'"><div class="ind-n">CARTERA / FACTURADO</div><div class="ind-v" style="color:'+(totalPendiente<totalFacturado*0.3?'#1D9E75':totalPendiente<totalFacturado*0.6?'#B7791F':'#C53030')+'">'+pct(totalPendiente,totalNetoRecibir)+'%</div><div class="ind-d">% pendiente de cobro</div></div>'
+    +'</div></div>'
+
+    // 10. ALERTAS Y RECOMENDACIONES
     +'<div class="card"><h2>🚨 Alertas y Recomendaciones</h2>'
-    +(totalPendiente>0?'<div class="alerta">💰 Cartera pendiente <strong>'+fm(totalPendiente)+'</strong> — gestionar cobro activo.</div>':'')
-    +(recaudo<70?'<div class="alerta" style="margin-top:8px">📉 Recaudo bajo 70%. Revisar política de cobro.</div>':'')
-    +(utilidadOp<0?'<div class="alerta" style="background:#fdeaea;border-color:#f44336;color:#C53030;margin-top:8px">🔴 Pérdida operacional — revisar estructura de costos.</div>':'')
-    +'<div style="background:#f0fff4;border:1px solid #68D391;border-radius:8px;padding:12px 16px;font-size:12px;color:#276749;margin-top:8px">✅ Portafolio de clientes de alto valor: farmacéuticas multinacionales con contratos recurrentes.</div>'
+    +(totalPendiente>0?'<div class="alerta warn">💰 <strong>Cartera pendiente '+fm(totalPendiente)+'</strong> — Gestionar cobro activo, especialmente facturas vencidas.</div>':'')
+    +(recaudo<70?'<div class="alerta warn">📉 <strong>Recaudo al '+recaudo+'%</strong> — Por debajo del óptimo (80%). Priorizar cobranza.</div>':'')
+    +(concRiesgo?'<div class="alerta warn">⚠️ <strong>Concentración en un cliente &gt;50%</strong> — Riesgo de dependencia. Plan de diversificación recomendado.</div>':'')
+    +(utilidadYTD<0?'<div class="alerta info">📊 <strong>Utilidad YTD negativa</strong> — Los costos superan los ingresos facturados al corte. Sin embargo, el pipeline programado de '+fm(baseProyectada)+' proyecta reversión al cierre del año.</div>':'')
+    +(baseProyectada>0?'<div class="alerta ok">✅ <strong>Pipeline sólido:</strong> '+fm(baseProyectada)+' en '+nProgramadas+' facturas programadas aseguran flujo de ingresos para el segundo semestre.</div>':'')
+    +'<div class="alerta ok">✅ <strong>Portafolio de alto valor:</strong> Clientes farmacéuticas multinacionales con contratos recurrentes (BAYER, SANOFI, MSD, JANSSEN).</div>'
+    +(totalVendido>0?'<div class="alerta ok">✅ <strong>Contratos vendidos por '+fm(totalVendido)+'</strong> — El backlog asegura operación sostenida durante 2026.</div>':'')
     +'</div>'
 
     +'<div style="text-align:center;padding:16px;font-size:10px;color:#bbb">Informe generado automáticamente · '+fechaStr+' · Confidencial ALZAK GROUP SAS</div>'

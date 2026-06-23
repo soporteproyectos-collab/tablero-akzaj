@@ -6816,13 +6816,18 @@ function renderFacturas() {
   var totalNeto    = totalBruto + totalIVA - totalRteF - totalRteIVA;
 
   var kp = g('fact-kpis');
+  var baseProyectada = 0;
+  if (typeof FP_DATA !== 'undefined') FP_DATA.forEach(function(fp){ baseProyectada += (parseFloat(fp.monto)||0); });
+  var totalBaseGravable = totalBruto + baseProyectada;
   if (kp) kp.innerHTML =
     '<div class="met"><div class="met-l" style="color:#888">Base gravable</div><div class="met-v tb">' + F(totalBruto) + '</div><div class="met-s">' + FACTURAS.length + ' facturas emitidas</div></div>' +
     '<div class="met"><div class="met-l" style="color:#0F6E56">IVA generado 19%</div><div class="met-v" style="color:#0F6E56;font-weight:700">+' + F(totalIVA) + '</div><div class="met-s">IVA en facturas</div></div>' +
     (ALZAK_ORG_ACTIVA !== 'FOUNDATION' ? '<div class="met"><div class="met-l" style="color:#854F0B">Rte. fuente 11%</div><div class="met-v" style="color:#854F0B;font-weight:700">−' + F(totalRteF) + '</div><div class="met-s">Retención aplicada</div></div>' : '') +
     '<div class="met"><div class="met-l" style="color:#3C3489">Rte. IVA 15%</div><div class="met-v" style="color:#3C3489;font-weight:700">−' + F(totalRteIVA) + '</div><div class="met-s">15% del IVA cobrado</div></div>' +
     '<div class="met" style="border:1.5px solid #993C1D22"><div class="met-l" style="color:#993C1D">Neto a cobrar</div><div class="met-v" style="color:#993C1D;font-weight:700">' + F(totalNeto) + '</div><div class="met-s">Base+IVA−Retenciones</div></div>' +
-    '<div class="met"><div class="met-l" style="color:#888">% Recaudo</div><div class="met-v ' + (pctCobro>70?'tg':pctCobro>30?'tw':'tr') + '">' + pctCobro + '%</div><div class="met-s">' + FACTURAS.filter(function(f){return f.pagada;}).length + ' pagadas · ' + FACTURAS.filter(function(f){return !f.pagada;}).length + ' pendientes</div></div>';
+    '<div class="met"><div class="met-l" style="color:#888">% Recaudo</div><div class="met-v ' + (pctCobro>70?'tg':pctCobro>30?'tw':'tr') + '">' + pctCobro + '%</div><div class="met-s">' + FACTURAS.filter(function(f){return f.pagada;}).length + ' pagadas · ' + FACTURAS.filter(function(f){return !f.pagada;}).length + ' pendientes</div></div>' +
+    '<div class="met" style="border:1.5px dashed #7C3AED44"><div class="met-l" style="color:#7C3AED">Base gravable proyectada</div><div class="met-v" style="color:#7C3AED">' + F(baseProyectada) + '</div><div class="met-s">' + (typeof FP_DATA!=='undefined'?FP_DATA.length:0) + ' facturas programadas</div></div>' +
+    '<div class="met" style="border:1.5px solid #0C447C44;background:#f0f5fa"><div class="met-l" style="color:#0C447C">Total base gravable 2026</div><div class="met-v" style="color:#0C447C;font-weight:700">' + F(totalBaseGravable) + '</div><div class="met-s">Real + Proyectada</div></div>';
 
   renderCalendarioCobros();
 

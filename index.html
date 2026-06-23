@@ -544,9 +544,10 @@ tbody tr:hover td{background:var(--cyan-light);}
     <div style="font-size:10px;font-weight:700;color:#7C3AED;text-transform:uppercase;letter-spacing:1px">📋 PROYECTOS VENDIDOS</div>
     <div style="font-size:15px;font-weight:700;color:#54504F">Proyectos Vendidos 2026</div>
   </div>
+  <button class="btn" onclick="presCardToggle()" id="pres-card-btn" style="font-size:11px;background:#7C3AED;color:#fff;border-color:#7C3AED;font-weight:600">▶ Ver detalle</button>
 </div>
 <div id="pres-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:12px"></div>
-<div id="pres-tabla" style="overflow-x:auto;max-height:500px;overflow-y:auto"></div>
+<div id="pres-tabla" style="overflow-x:auto;max-height:500px;overflow-y:auto;display:none"></div>
 </div>
 <!-- ═══ /CARTERA ═══ -->
 
@@ -17290,9 +17291,9 @@ function renderPresupuesto() {
 
   // KPIs
   kpiEl.innerHTML =
-    '<div class="met"><div class="met-l">Total Vendido</div><div class="met-v" style="color:#7C3AED">' + F(totalVendido) + '</div><div class="met-s">' + PRES_DATA.length + ' proyectos</div></div>'
-    + '<div class="met"><div class="met-l">Subtotal</div><div class="met-v" style="color:#54504F">' + F(totalSub) + '</div><div class="met-s">Base gravable</div></div>'
+    '<div class="met"><div class="met-l">Base Gravable</div><div class="met-v" style="color:#54504F">' + F(totalSub) + '</div><div class="met-s">' + PRES_DATA.length + ' proyectos</div></div>'
     + '<div class="met"><div class="met-l">IVA</div><div class="met-v" style="color:#B45309">' + F(totalIVA) + '</div><div class="met-s">19%</div></div>'
+    + '<div class="met"><div class="met-l">Total Vendido</div><div class="met-v" style="color:#7C3AED">' + F(totalVendido) + '</div><div class="met-s">Subtotal + IVA</div></div>'
     + '<div class="met"><div class="met-l">Clientes</div><div class="met-v" style="color:#0C447C">' + clienteKeys.length + '</div><div class="met-s">Con proyectos activos</div></div>';
 
   // Tabla
@@ -17347,6 +17348,15 @@ function presToggle(cliEnc) {
   var visible = rows[0].style.display !== 'none';
   for (var i = 0; i < rows.length; i++) rows[i].style.display = visible ? 'none' : 'table-row';
   if (ico) ico.textContent = visible ? '▶' : '▼';
+}
+
+function presCardToggle() {
+  var el = document.getElementById('pres-tabla');
+  var btn = document.getElementById('pres-card-btn');
+  if (!el) return;
+  var visible = el.style.display !== 'none';
+  el.style.display = visible ? 'none' : 'block';
+  if (btn) { btn.textContent = visible ? '▶ Ver detalle' : '▼ Ocultar detalle'; }
 }
 
 function devolverModulosAHome() {

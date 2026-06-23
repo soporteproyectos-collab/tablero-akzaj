@@ -78,7 +78,7 @@ body{background:#f5f4f0;color:#54504F;min-height:100vh}
 
 .conc-ico{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
 
-.conc-body{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;padding:12px 14px}
+.conc-body{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;padding:12px 14px}
 
 .ind{padding:9px 11px;border-radius:8px;background:#f9f8f5}
 
@@ -537,6 +537,19 @@ tbody tr:hover td{background:var(--cyan-light);}
     <div id="widget-resumen" style="margin-bottom:12px"></div>
     <div id="home-bancos-panel-mini" style="display:none"></div>
 
+<!-- ═══ CARTERA DE PROYECTOS VENDIDOS ═══ -->
+<div class="card" style="margin-bottom:12px;border:1.5px solid #7C3AED">
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+  <div>
+    <div style="font-size:10px;font-weight:700;color:#7C3AED;text-transform:uppercase;letter-spacing:1px">📋 PROYECTOS VENDIDOS</div>
+    <div style="font-size:15px;font-weight:700;color:#54504F">Proyectos Vendidos 2026</div>
+  </div>
+</div>
+<div id="pres-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:12px"></div>
+<div id="pres-tabla" style="overflow-x:auto;max-height:500px;overflow-y:auto"></div>
+</div>
+<!-- ═══ /CARTERA ═══ -->
+
 <div id="h-datos">
 
 <!-- ══════════════════════════════════════════════════════════
@@ -657,7 +670,7 @@ tbody tr:hover td{background:var(--cyan-light);}
 </div>
 
 <!-- KPIs simples -->
-<div id="fr-kpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;"></div>
+<div id="fr-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px;"></div>
 
 <!-- Filtros -->
 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;">
@@ -816,7 +829,7 @@ tbody tr:hover td{background:var(--cyan-light);}
     </div>
 
     <!-- KPIs del cruce -->
-    <div id="prog-kpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;"></div>
+    <div id="prog-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px;"></div>
 
     <!-- Tabla cruce -->
     <div id="prog-tabla" style="overflow-x:auto;"></div>
@@ -870,7 +883,7 @@ tbody tr:hover td{background:var(--cyan-light);}
   </div>
 
   <!-- KPIs -->
-  <div id="fr-iva-kpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;"></div>
+  <div id="fr-iva-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px;"></div>
 
   <!-- Simulador Declaración IVA -->
   <div id="fr-iva-decl" style="margin-bottom:16px;border-radius:10px;background:linear-gradient(135deg,#0C2340 0%,#0C447C 100%);padding:16px 18px;color:#fff;">
@@ -997,7 +1010,7 @@ tbody tr:hover td{background:var(--cyan-light);}
 
   <!-- KPIs resumen -->
 
-  <div id="er-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px"></div>
+  <div id="er-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:14px"></div>
 
   <!-- Filtros de período -->
 
@@ -1145,7 +1158,7 @@ tbody tr:hover td{background:var(--cyan-light);}
 
   <!-- KPIs resumen -->
 
-  <div id="bal-kpis" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px"></div>
+  <div id="bal-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:16px"></div>
 
   <!-- Tabla comparativa -->
 
@@ -1167,20 +1180,6 @@ tbody tr:hover td{background:var(--cyan-light);}
   </div>
 
 </div><!-- /home-split -->
-
-<div id="pg-presupuesto" class="pg">
-<div style="max-width:1200px;margin:0 auto;padding:20px">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-    <div>
-      <div style="font-size:10px;font-weight:700;color:#7C3AED;text-transform:uppercase;letter-spacing:1px">📋 CARTERA DE PROYECTOS</div>
-      <div style="font-size:18px;font-weight:700;color:#54504F;margin-top:2px">Proyectos Vendidos — Ejecución presupuestal</div>
-      <div style="font-size:11px;color:#888">Valor contrato vs facturado vs pendiente</div>
-    </div>
-  </div>
-  <div id="pres-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:18px"></div>
-  <div id="pres-tabla" style="overflow-x:auto"></div>
-</div>
-</div>
 
 <div id="pg-facturas" class="pg">
 
@@ -4516,6 +4515,7 @@ function renderHome() {
   buildPills();
 
   renderResumenTablero();
+  if (typeof renderPresupuesto === 'function') setTimeout(renderPresupuesto, 80);
   if (typeof renderHomeBancosPanel === 'function') setTimeout(renderHomeBancosPanel, 100);
   // Mover pg-conc al panel derecho del split
   setTimeout(function() {
@@ -5423,7 +5423,7 @@ function renderConcResumen() {
 
   el.innerHTML =
 
-    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">'
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:14px">'
 
     +kpi('Total disponible',F(totalSaldo),'tb',bancos.length+' extractos')
 
@@ -12109,13 +12109,13 @@ function renderEstadoResultados() {
 
     var mg=ingT?Math.round(utilT/ingT*100):0;
 
-    kpEl.innerHTML='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">'
+    kpEl.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:8px">'
       +'<div class="met"><div class="met-l">Ingresos · '+per+'</div><div class="met-v tb">'+F(ingT)+'</div><div class="met-s">Facturas emitidas</div></div>'
       +'<div class="met"><div class="met-l">Costos · '+per+'</div><div class="met-v tr">'+F(gasT)+'</div><div class="met-s">'+(typeof FR_DATA!=='undefined'&&FR_DATA.length?'Facturas radicadas':'Egresos op.')+'</div></div>'
       +'<div class="met"><div class="met-l">Utilidad · Margen '+mg+'%</div><div class="met-v '+(utilT>=0?'tg':'tr')+'">'+F(utilT)+'</div><div class="met-s">'+(utilT>=0?'Positiva ✅':'⚠️ Negativa')+'</div></div>'
       +'</div>'
       + ((ingProyT>0||gasProyT>0) ?
-        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px">'
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:8px">'
         +'<div class="met" style="border-left:3px solid #7C3AED;"><div class="met-l" style="color:#7C3AED;">📈 Ing. proyectados</div><div class="met-v" style="color:#7C3AED;">'+F(ingProyT)+'</div><div class="met-s">Fact. programada</div></div>'
         +'<div class="met" style="border-left:3px solid #7C3AED;"><div class="met-l" style="color:#7C3AED;">📉 Gastos proyectados</div><div class="met-v" style="color:#7C3AED;">'+F(gasProyT)+'</div><div class="met-s">Gastos prog. equipo</div></div>'
         +'<div class="met" style="border-left:3px solid #7C3AED;"><div class="met-l" style="color:#7C3AED;">🔮 Escenario total</div><div class="met-v" style="color:'+(((ingT+ingProyT)-(gasT+gasProyT))>=0?'#1D6F42':'#A32D2D')+';">'+F((ingT+ingProyT)-(gasT+gasProyT))+'</div><div class="met-s">Real + Proyectado</div></div>'
@@ -17261,120 +17261,82 @@ function renderPresupuesto() {
 
   if (!PRES_DATA || !PRES_DATA.length) {
     kpiEl.innerHTML = '';
-    tabEl.innerHTML = '<div style="text-align:center;padding:40px;color:#aaa;font-size:13px">Sin datos de proyectos. Sincroniza para cargar desde Sheets.</div>';
+    tabEl.innerHTML = '<div style="text-align:center;padding:30px;color:#aaa;font-size:12px">Sin datos. Sincroniza para cargar proyectos.</div>';
     return;
   }
 
-  // Calcular facturado y programado por cliente
-  function facturadoPorCliente(cli) {
-    if (!FACTURAS || !FACTURAS.length) return 0;
-    var cliUp = cli.toUpperCase();
-    return FACTURAS.filter(function(f){ return (f.cliente||'').toUpperCase().indexOf(cliUp) >= 0 || cliUp.indexOf((f.cliente||'').toUpperCase()) >= 0; })
-      .reduce(function(a,f){ return a + (parseFloat(f.bruto)||0); }, 0);
-  }
-  function programadoPorCliente(cli) {
-    if (!FP_DATA || !FP_DATA.length) return 0;
-    var cliUp = cli.toUpperCase();
-    return FP_DATA.filter(function(fp){ return (fp.cliente||'').toUpperCase().indexOf(cliUp) >= 0 || cliUp.indexOf((fp.cliente||'').toUpperCase()) >= 0; })
-      .reduce(function(a,fp){ return a + (parseFloat(fp.monto)||0); }, 0);
-  }
-
-  var totalVendido = 0, totalFacturado = 0, totalProgramado = 0;
+  var totalVendido = 0, totalSub = 0, totalIVA = 0;
   var clientesMap = {};
 
   PRES_DATA.forEach(function(p) {
     var cli = (p['Cliente'] || 'Sin cliente').trim();
     var nombre = p['Nombre de propuesta o proyectos'] || '';
     var noProp = p['No propuesta'] || '';
-    var totalCOP = parseFloat(p['Total_COP']) || 0;
+    var sub = parseFloat(p['Subtotal_COP']) || 0;
+    var iva = parseFloat(p['IVA_COP']) || 0;
+    var tot = parseFloat(p['Total_COP']) || 0;
 
-    if (!clientesMap[cli]) clientesMap[cli] = { total: 0, proyectos: [] };
-    clientesMap[cli].total += totalCOP;
-    clientesMap[cli].proyectos.push({ nombre: nombre, noProp: noProp, total: totalCOP });
-    totalVendido += totalCOP;
+    if (!clientesMap[cli]) clientesMap[cli] = { total: 0, subtotal: 0, iva: 0, proyectos: [] };
+    clientesMap[cli].total += tot;
+    clientesMap[cli].subtotal += sub;
+    clientesMap[cli].iva += iva;
+    clientesMap[cli].proyectos.push({ nombre: nombre, noProp: noProp, subtotal: sub, iva: iva, total: tot });
+    totalVendido += tot;
+    totalSub += sub;
+    totalIVA += iva;
   });
 
-  // Facturado y programado por cliente
   var clienteKeys = Object.keys(clientesMap).sort();
-  clienteKeys.forEach(function(cli) {
-    var fac = facturadoPorCliente(cli);
-    var prog = programadoPorCliente(cli);
-    clientesMap[cli].facturado = fac;
-    clientesMap[cli].programado = prog;
-    clientesMap[cli].pendiente = Math.max(0, clientesMap[cli].total - fac - prog);
-    totalFacturado += fac;
-    totalProgramado += prog;
-  });
-
-  var totalPendiente = Math.max(0, totalVendido - totalFacturado - totalProgramado);
-  var pctEjec = totalVendido > 0 ? Math.round(totalFacturado / totalVendido * 100) : 0;
 
   // KPIs
   kpiEl.innerHTML =
     '<div class="met"><div class="met-l">Total Vendido</div><div class="met-v" style="color:#7C3AED">' + F(totalVendido) + '</div><div class="met-s">' + PRES_DATA.length + ' proyectos</div></div>'
-    + '<div class="met"><div class="met-l">Facturado</div><div class="met-v tb">' + F(totalFacturado) + '</div><div class="met-s">' + pctEjec + '% ejecutado</div></div>'
-    + '<div class="met"><div class="met-l">Programado</div><div class="met-v" style="color:#B45309">' + F(totalProgramado) + '</div><div class="met-s">En fact. programada</div></div>'
-    + '<div class="met"><div class="met-l">Pendiente</div><div class="met-v tr">' + F(totalPendiente) + '</div><div class="met-s">Sin programar</div></div>';
+    + '<div class="met"><div class="met-l">Subtotal</div><div class="met-v" style="color:#54504F">' + F(totalSub) + '</div><div class="met-s">Base gravable</div></div>'
+    + '<div class="met"><div class="met-l">IVA</div><div class="met-v" style="color:#B45309">' + F(totalIVA) + '</div><div class="met-s">19%</div></div>'
+    + '<div class="met"><div class="met-l">Clientes</div><div class="met-v" style="color:#0C447C">' + clienteKeys.length + '</div><div class="met-s">Con proyectos activos</div></div>';
 
   // Tabla
   var html = '<table style="width:100%;border-collapse:collapse;font-size:12px">';
   html += '<thead><tr>'
-    + '<th style="background:#2B3E50;color:#fff;padding:8px 10px;text-align:left;position:sticky;left:0;z-index:3;min-width:200px;border-right:1px solid #555">Cliente / Proyecto</th>'
-    + '<th style="background:#2B3E50;color:#fff;padding:8px 10px;text-align:right;min-width:90px">Propuesta</th>'
-    + '<th style="background:#2B3E50;color:#fff;padding:8px 10px;text-align:right;min-width:110px">Valor Contrato</th>'
-    + '<th style="background:#2B3E50;color:#fff;padding:8px 10px;text-align:right;min-width:110px">Facturado</th>'
-    + '<th style="background:#2B3E50;color:#fff;padding:8px 10px;text-align:right;min-width:110px">Programado</th>'
-    + '<th style="background:#2B3E50;color:#fff;padding:8px 10px;text-align:right;min-width:110px">Pendiente</th>'
-    + '<th style="background:#2B3E50;color:#fff;padding:8px 10px;text-align:center;min-width:120px">Ejecución</th>'
+    + '<th style="background:#2B3E50;color:#fff;padding:8px 10px;text-align:left;position:sticky;left:0;z-index:3;min-width:220px;border-right:1px solid #555">Cliente / Proyecto</th>'
+    + '<th style="background:#2B3E50;color:#fff;padding:8px 10px;text-align:center;min-width:80px">N° Prop.</th>'
+    + '<th style="background:#2B3E50;color:#fff;padding:8px 10px;text-align:right;min-width:110px">Subtotal</th>'
+    + '<th style="background:#2B3E50;color:#fff;padding:8px 10px;text-align:right;min-width:100px">IVA</th>'
+    + '<th style="background:#2B3E50;color:#fff;padding:8px 10px;text-align:right;min-width:110px">Total</th>'
     + '</tr></thead><tbody>';
 
   clienteKeys.forEach(function(cli) {
     var c = clientesMap[cli];
-    var cliPct = c.total > 0 ? Math.round(c.facturado / c.total * 100) : 0;
-    var barColor = cliPct >= 80 ? '#1D6F42' : cliPct >= 50 ? '#B45309' : '#A32D2D';
 
-    // Fila cliente (header de grupo)
     html += '<tr style="background:#f5f4f0;cursor:pointer" onclick="presToggle(\'' + encodeURIComponent(cli) + '\')">'
       + '<td style="position:sticky;left:0;z-index:2;background:#f5f4f0;padding:8px 10px;font-weight:700;border-bottom:1px solid #e0ddd8;border-right:1px solid #e0ddd8">'
-      + '<span id="pres-ico-' + encodeURIComponent(cli) + '" style="font-size:10px;color:#aaa;margin-right:6px">▼</span>' + cli + '</td>'
-      + '<td style="text-align:right;padding:8px 10px;border-bottom:1px solid #e0ddd8;font-weight:600;color:#888">' + c.proyectos.length + ' proy.</td>'
+      + '<span id="pres-ico-' + encodeURIComponent(cli) + '" style="font-size:10px;color:#aaa;margin-right:6px">▼</span>' + cli
+      + ' <span style="font-size:10px;color:#888;font-weight:400">(' + c.proyectos.length + ')</span></td>'
+      + '<td style="text-align:center;padding:8px 10px;border-bottom:1px solid #e0ddd8;color:#888">—</td>'
+      + '<td style="text-align:right;padding:8px 10px;border-bottom:1px solid #e0ddd8;font-weight:700">' + F(c.subtotal) + '</td>'
+      + '<td style="text-align:right;padding:8px 10px;border-bottom:1px solid #e0ddd8;font-weight:600;color:#B45309">' + F(c.iva) + '</td>'
       + '<td style="text-align:right;padding:8px 10px;border-bottom:1px solid #e0ddd8;font-weight:700;color:#7C3AED">' + F(c.total) + '</td>'
-      + '<td style="text-align:right;padding:8px 10px;border-bottom:1px solid #e0ddd8;font-weight:600;color:#5DC3DA">' + F(c.facturado) + '</td>'
-      + '<td style="text-align:right;padding:8px 10px;border-bottom:1px solid #e0ddd8;font-weight:600;color:#B45309">' + F(c.programado) + '</td>'
-      + '<td style="text-align:right;padding:8px 10px;border-bottom:1px solid #e0ddd8;font-weight:600;color:#A32D2D">' + F(c.pendiente) + '</td>'
-      + '<td style="padding:8px 10px;border-bottom:1px solid #e0ddd8;text-align:center">'
-      + '<div style="display:flex;align-items:center;gap:6px;justify-content:center">'
-      + '<div style="flex:1;background:#e0ddd8;border-radius:4px;height:10px;max-width:80px;overflow:hidden">'
-      + '<div style="width:' + cliPct + '%;height:100%;background:' + barColor + ';border-radius:4px"></div></div>'
-      + '<span style="font-size:11px;font-weight:700;color:' + barColor + '">' + cliPct + '%</span>'
-      + '</div></td></tr>';
+      + '</tr>';
 
-    // Filas de proyectos (detalle)
     c.proyectos.forEach(function(p) {
-      html += '<tr class="pres-det-' + encodeURIComponent(cli) + '" style="display:table-row">'
+      html += '<tr class="pres-det-' + encodeURIComponent(cli) + '">'
         + '<td style="position:sticky;left:0;z-index:1;background:#fff;padding:6px 10px 6px 28px;border-bottom:1px solid #f0ede8;border-right:1px solid #e0ddd8;color:#555;font-size:11px">' + p.nombre + '</td>'
-        + '<td style="text-align:right;padding:6px 10px;border-bottom:1px solid #f0ede8;color:#888;font-size:11px">' + p.noProp + '</td>'
+        + '<td style="text-align:center;padding:6px 10px;border-bottom:1px solid #f0ede8;color:#888;font-size:11px">' + p.noProp + '</td>'
+        + '<td style="text-align:right;padding:6px 10px;border-bottom:1px solid #f0ede8">' + F(p.subtotal) + '</td>'
+        + '<td style="text-align:right;padding:6px 10px;border-bottom:1px solid #f0ede8;color:#B45309">' + F(p.iva) + '</td>'
         + '<td style="text-align:right;padding:6px 10px;border-bottom:1px solid #f0ede8;font-weight:600">' + F(p.total) + '</td>'
-        + '<td style="text-align:right;padding:6px 10px;border-bottom:1px solid #f0ede8;color:#aaa">—</td>'
-        + '<td style="text-align:right;padding:6px 10px;border-bottom:1px solid #f0ede8;color:#aaa">—</td>'
-        + '<td style="text-align:right;padding:6px 10px;border-bottom:1px solid #f0ede8;color:#aaa">—</td>'
-        + '<td style="padding:6px 10px;border-bottom:1px solid #f0ede8"></td>'
         + '</tr>';
     });
   });
 
-  // Fila total
   html += '<tr style="border-top:2px solid #54504F;font-weight:700;font-size:13px">'
-    + '<td style="position:sticky;left:0;z-index:2;background:#fff;padding:10px;border-right:1px solid #e0ddd8">TOTAL CARTERA</td>'
-    + '<td style="text-align:right;padding:10px">' + PRES_DATA.length + '</td>'
-    + '<td style="text-align:right;padding:10px;color:#7C3AED">' + F(totalVendido) + '</td>'
-    + '<td style="text-align:right;padding:10px;color:#5DC3DA">' + F(totalFacturado) + '</td>'
-    + '<td style="text-align:right;padding:10px;color:#B45309">' + F(totalProgramado) + '</td>'
-    + '<td style="text-align:right;padding:10px;color:#A32D2D">' + F(totalPendiente) + '</td>'
-    + '<td style="text-align:center;padding:10px"><span style="font-size:14px;color:' + (pctEjec >= 50 ? '#1D6F42' : '#A32D2D') + '">' + pctEjec + '%</span></td>'
-    + '</tr>';
+    + '<td style="position:sticky;left:0;z-index:2;background:#fff;padding:10px;border-right:1px solid #e0ddd8">TOTAL</td>'
+    + '<td style="text-align:center;padding:10px">' + PRES_DATA.length + '</td>'
+    + '<td style="text-align:right;padding:10px">' + F(totalSub) + '</td>'
+    + '<td style="text-align:right;padding:10px;color:#B45309">' + F(totalIVA) + '</td>'
+    + '<td style="text-align:right;padding:10px;color:#7C3AED;font-size:14px">' + F(totalVendido) + '</td>'
+    + '</tr></tbody></table>';
 
-  html += '</tbody></table>';
   tabEl.innerHTML = html;
 }
 
@@ -20329,7 +20291,7 @@ function concPdfShowModal(state, cfg, data) {
       + '<button onclick="alzakCerrarConcModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#999;">&#x2715;</button>'
       + '</div>'
       // KPIs
-      + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:14px;">'
       + '<div style="background:#F5F4F2;border-radius:8px;padding:10px;text-align:center;">'
       + '<div style="font-size:10px;color:#888;font-weight:700;">SALDO APERTURA</div>'
       + '<div style="font-size:13px;font-weight:700;color:#333;">' + fmt(r.saldoApertura) + '</div></div>'

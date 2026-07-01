@@ -10218,722 +10218,573 @@ function calcBalMes(mes) {
 
   var MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
-  // ── ACTIVOS CORRIENTES ────────────────────────────────────
-
-  // Caja y Bancos → Total Disponible ALZAK desde conciliación bancaria
-  var totalBancos = 0;
-  var bancosDetalle = {bcol:0, fid:0, caja:0, bold:0}; // desglose por cuenta
-  try {
-    if (typeof P !== 'undefined' && P.length) {
-      if (!mes) {
-        var lastSF=0, lastFid=0, lastCaja=0, lastBold=0;
-        for (var pi2=0; pi2<P.length; pi2++) {
-          var pe=P[pi2];
-          if (pe.sF!==undefined) lastSF=pe.sF;
-          if (pe.fid&&pe.fid.sF!==undefined) lastFid=pe.fid.sF;
-          if (pe.caja&&pe.caja.sF!==undefined) lastCaja=pe.caja.sF;
-          if (pe.bold&&pe.bold.sF!==undefined) lastBold=pe.bold.sF;
-        }
-        bancosDetalle={bcol:lastSF, fid:lastFid, caja:lastCaja, bold:lastBold};
-        totalBancos=lastSF+lastFid+lastCaja+lastBold;
-      } else {
-        for (var pi2=0; pi2<P.length; pi2++) {
-          var pe=P[pi2];
-          if (pe.label===mes) {
-            bancosDetalle.bcol=(pe.sF||0);
-            bancosDetalle.fid=(pe.fid&&pe.fid.sF!==undefined)?pe.fid.sF:0;
-            bancosDetalle.caja=(pe.caja&&pe.caja.sF!==undefined)?pe.caja.sF:0;
-            bancosDetalle.bold=(pe.bold&&pe.bold.sF!==undefined)?pe.bold.sF:0;
-            totalBancos=bancosDetalle.bcol+bancosDetalle.fid+bancosDetalle.caja+bancosDetalle.bold;
-            break;
-          }
-        }
-      }
-    }
-  } catch(e) { totalBancos=0; }
-
-  // 2. CxC clientes — arqueo mes a mes con saldo de apertura 2025
-  // Lógica: CxC(mes) = saldo apertura 2025 + facturas 2026 emitidas hasta el corte
-  //                    − cobros recibidos hasta el corte (tanto de cartera 2025 como 2026)
-  var MESES_ORD_NUM_CXC = {
-    'Enero':1,'Febrero':2,'Marzo':3,'Abril':4,'Mayo':5,'Junio':6,
-    'Julio':7,'Agosto':8,'Septiembre':9,'Octubre':10,'Noviembre':11,'Diciembre':12
-  };
-  var DIAS_MES = [0,31,28,31,30,31,30,31,31,30,31,30,31];
-  var corteAnio_cxc = 0, corteMes_cxc = 0, cierreTimestamp = Infinity;
-  if (mes) {
-    var mesParts_cxc = mes.split(' ');
-    corteMes_cxc  = MESES_ORD_NUM_CXC[mesParts_cxc[0]] || 0;
-    corteAnio_cxc = parseInt(mesParts_cxc[1]) || 0;
-    var diasCorte = DIAS_MES[corteMes_cxc] || 31;
-    cierreTimestamp = new Date(corteAnio_cxc, corteMes_cxc - 1, diasCorte, 23, 59, 59).getTime();
+  // Helper: parsea "Enero 2026" → {mes:1, anio:2026}
+  function parseMesLabel(m) {
+    if (!m) return {mes:0,anio:0};
+    var p=m.split(' ');
+    return {mes:MN.indexOf(p[0])+1, anio:parseInt(p[1])||0};
+  }
+  function fFechaPartes(f) {
+    var p=(f||'').split('/'); if(p.length<3) return [];
+    // dd/MM/yyyy → [yyyy, MM, dd]
+    return [p[2], p[1], p[0]];
   }
 
-  // Saldo apertura CxC del cierre 2025
-  var cxcApertura = (BAL_CONFIG.apertura2025 && BAL_CONFIG.apertura2025.cxc) ? BAL_CONFIG.apertura2025.cxc : 0;
+  var corteMes_cxc=0, corteAnio_cxc=0, cierreTimestamp=Infinity;
+  var DIAS_MES=[0,31,28,31,30,31,30,31,31,30,31,30,31];
+  if (mes) {
+    var mp=parseMesLabel(mes);
+    corteMes_cxc=mp.mes; corteAnio_cxc=mp.anio;
+    cierreTimestamp=new Date(corteAnio_cxc, corteMes_cxc-1, DIAS_MES[corteMes_cxc]||31, 23,59,59).getTime();
+  }
 
-  // Facturas 2026 emitidas hasta el corte
-  var factFil = FACTURAS.filter(function(f){
-    var dp = fFechaPartes(f.fecha_raw || f.fecha);
-    if (dp.length < 3) return false;
-    if (!mes) return true;
-    var fAnio = parseInt(dp[0]), fMes = parseInt(dp[1]);
-    if (fAnio > corteAnio_cxc) return false;
-    if (fAnio === corteAnio_cxc && fMes > corteMes_cxc) return false;
-    return true;
-  });
+  // ═══════════════════════════════════════════════════════════
+  // ── 1. ACTIVOS CORRIENTES ─────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
 
-  // Facturas 2026 pendientes al corte (emitidas pero no cobradas a la fecha)
-  var cxcArr = factFil.filter(function(f){
-    if (!mes) return !f.pagada;
-    if (!f.pagada) return true;
-    if (f.fecha_pago) {
-      var dp2 = fFechaPartes(f.fecha_pago);
-      if (dp2.length >= 3) {
-        var pagoTs = new Date(parseInt(dp2[0]), parseInt(dp2[1])-1, parseInt(dp2[2])).getTime();
-        return pagoTs > cierreTimestamp;
-      }
+  // 1a. Bancos (desde conciliación P[])
+  var totalBancos=0, bancosDetalle={bcol:0,fid:0,caja:0,bold:0};
+  if (typeof P!=='undefined' && P.length) {
+    var pIdx=-1;
+    if (mes) {
+      for (var pi=0;pi<P.length;pi++) if (P[pi].label===mes) { pIdx=pi; break; }
     }
-    return false;
-  });
-  var cxc2026Pendiente = cxcArr.reduce(function(a,f){return a+(f.total||0);},0);
+    if (pIdx<0) pIdx=P.length-1;
+    var pp=P[pIdx];
+    bancosDetalle.bcol = pp.sF||0;
+    bancosDetalle.fid  = (pp.fid&&pp.fid.sF)||0;
+    bancosDetalle.caja = (pp.caja&&pp.caja.sF)||0;
+    bancosDetalle.bold = (pp.bold&&pp.bold.sF)||0;
+    totalBancos = bancosDetalle.bcol + bancosDetalle.fid + bancosDetalle.caja + bancosDetalle.bold;
+  }
 
-  // CxC final:
-  // - Si hay mes seleccionado: apertura 2025 pendiente + facturas 2026 sin cobrar al corte
-  // - Acumulado: solo facturas pendientes actuales (no sumar apertura — ya está en las facturas)
-  var cxcAperturaPendiente = 0;
-  if (mes && cxcApertura > 0) {
-    // Cobros de cartera 2025 recibidos hasta el corte del mes
-    var totalCobrado2025calc = 0;
-    FACTURAS.forEach(function(f) {
-      var dp0 = fFechaPartes(f.fecha_raw || f.fecha || '');
-      if (dp0.length < 3) return;
-      if (parseInt(dp0[0]) >= 2026) return; // solo facturas 2025
+  // Apertura 2025
+  var cxcApertura = (BAL_CONFIG.apertura2025&&BAL_CONFIG.apertura2025.cxc)||0;
+  var reteApertura = (BAL_CONFIG.apertura2025&&BAL_CONFIG.apertura2025.rete)||0;
+  var afBruto2025 = (BAL_CONFIG.apertura2025&&BAL_CONFIG.apertura2025.equiposBruto)||0;
+  var afDeprec2025 = (BAL_CONFIG.apertura2025&&BAL_CONFIG.apertura2025.depreciacion)||0;
+  var afNeto2025 = (BAL_CONFIG.apertura2025&&BAL_CONFIG.apertura2025.equiposNeto)||0;
+
+  // 1b. CxC — facturas pendientes de cobro al corte
+  var factFil = FACTURAS;
+  var cxc2026Pendiente=0, cxcArr=[];
+  factFil.forEach(function(f){
+    var dp=fFechaPartes(f.fecha_raw||f.fecha||'');
+    if (dp.length<3) return;
+    var fAnio=parseInt(dp[0]), fMes=parseInt(dp[1]);
+    if (fAnio<2026) return; // Facturas 2025 van aparte con cxcApertura
+    if (mes && (fAnio>corteAnio_cxc||(fAnio===corteAnio_cxc&&fMes>corteMes_cxc))) return;
+    // ¿Pagada al corte?
+    if (f.pagada) {
+      if (!mes) return; // Acumulado: ya cobrada, no es CxC
+      if (f.fecha_pago) {
+        var dp3=fFechaPartes(f.fecha_pago);
+        if (dp3.length>=3) {
+          var pTs=new Date(parseInt(dp3[0]),parseInt(dp3[1])-1,parseInt(dp3[2])).getTime();
+          if (pTs<=cierreTimestamp) return; // cobrada antes del cierre
+        }
+      } else return; // pagada sin fecha → asumimos ya cobrada
+    }
+    cxc2026Pendiente+=(f.total||0);
+    cxcArr.push(f);
+  });
+
+  // CxC 2025 pendiente al corte
+  var cxcAperturaPendiente=0;
+  if (mes && cxcApertura>0) {
+    var cobrado2025=0;
+    FACTURAS.forEach(function(f){
+      var dp0=fFechaPartes(f.fecha_raw||f.fecha||'');
+      if (dp0.length<3||parseInt(dp0[0])>=2026) return;
       if (!f.pagada) return;
       if (f.fecha_pago) {
-        var dp3 = fFechaPartes(f.fecha_pago);
-        if (dp3.length >= 3) {
-          var pTs = new Date(parseInt(dp3[0]),parseInt(dp3[1])-1,parseInt(dp3[2])).getTime();
-          if (pTs <= cierreTimestamp) totalCobrado2025calc += (f.total||0);
+        var dp3=fFechaPartes(f.fecha_pago);
+        if (dp3.length>=3) {
+          var pTs=new Date(parseInt(dp3[0]),parseInt(dp3[1])-1,parseInt(dp3[2])).getTime();
+          if (pTs<=cierreTimestamp) cobrado2025+=(f.total||0);
         }
       }
-      // Si pagada sin fecha_pago: NO asumir — mejor dejar el saldo íntegro
-      // hasta que se registre la fecha real de cobro
     });
-    cxcAperturaPendiente = Math.max(0, cxcApertura - totalCobrado2025calc);
+    cxcAperturaPendiente=Math.max(0,cxcApertura-cobrado2025);
   }
-  var cxc = cxcAperturaPendiente + cxc2026Pendiente;
+  var cxc=cxcAperturaPendiente+cxc2026Pendiente;
 
-  // 3. Retefuente = apertura 2025 + acumulado 2026 hasta el corte
-  var reteApertura = (BAL_CONFIG.apertura2025 && BAL_CONFIG.apertura2025.rete) ? BAL_CONFIG.apertura2025.rete : 0;
-  var rete2026 = factFil.filter(function(f){
-    var dp = fFechaPartes(f.fecha_raw || f.fecha);
-    return dp[0] && parseInt(dp[0]) >= 2026;
+  // 1c. Retefuente (impuestos anticipados)
+  var rete2026=factFil.filter(function(f){
+    var dp=fFechaPartes(f.fecha_raw||f.fecha); return dp[0]&&parseInt(dp[0])>=2026;
   }).reduce(function(a,f){return a+(parseFloat(f.retefuente)||0);},0);
-  // Para el mes acumulado: apertura + 2026 acumulado
-  // Para un mes específico: apertura + facturas hasta ese mes
-  var rete = reteApertura + rete2026;
+  var rete=reteApertura+rete2026;
 
-  var totalActCorr = totalBancos + cxc + rete;
+  var totalActCorr=totalBancos+cxc+rete;
 
-  // ── ACTIVOS NO CORRIENTES (Propiedades, Planta y Equipo) ──
+  // ═══════════════════════════════════════════════════════════
+  // ── 2. ACTIVOS NO CORRIENTES (PP&E) ──────────────────────
+  // ═══════════════════════════════════════════════════════════
 
-  // Tomar gastos de categorías de activos fijos que estén pagados
-
-  // ── Activos No Corrientes ─────────────────────────────
-  // Apertura 2025 (cierre oficial Kevin Díaz)
-  var afApertura2025 = (BAL_CONFIG.apertura2025 && BAL_CONFIG.apertura2025.equiposNeto) ? BAL_CONFIG.apertura2025.equiposNeto : 0;
-  var afBruto2025    = (BAL_CONFIG.apertura2025 && BAL_CONFIG.apertura2025.equiposBruto) ? BAL_CONFIG.apertura2025.equiposBruto : 0;
-  var afDeprec2025   = (BAL_CONFIG.apertura2025 && BAL_CONFIG.apertura2025.depreciacion) ? BAL_CONFIG.apertura2025.depreciacion : 0;
-
-  // Equipos adquiridos en 2026 desde FR_DATA (facturas radicadas de proveedores de equipos)
-  // Categorías de activos en FR_DATA
-  // Activos fijos reales — excluye Studio14 (ajuste 2025) e ítems menores
   var CATS_ACTIVOS_FR = [
     'Equipos de Oficina','Equipos de oficina',
     'Equipos y Tecnología','Equipos y tecnologia',
     'Mobiliario y Enseres','Mobiliario y enseres'
-    // Materiales y Construcción se excluye — son gastos de mantenimiento/remodelación
   ];
-  // Comprobantes a EXCLUIR de activos (Studio14 y menores)
-  var EXCLUIR_ACTIVOS = ['ST-130','F591344584']; // Studio14, IKEO tapete/manta
+  var EXCLUIR_ACTIVOS = ['ST-130','F591344584'];
 
-  var activosPorCat = {};
-  var totalActivosGastos2026 = 0;
-
-  if (typeof FR_DATA !== 'undefined' && FR_DATA.length) {
+  var activosPorCat={}, totalActivosGastos2026=0;
+  if (typeof FR_DATA!=='undefined' && FR_DATA.length) {
     FR_DATA.filter(function(r){
-      if (CATS_ACTIVOS_FR.indexOf(r['Categoria']||'') < 0) return false;
-      // Excluir comprobantes específicos (Studio14, ítems no activos)
-      var ncomp = String(r['N Comprobante']||r['N_Comprobante']||'').trim();
-      if (EXCLUIR_ACTIVOS.indexOf(ncomp) >= 0) return false;
-      // Excluir montos menores a $200.000 (no se capitalizan)
-      var v = parseFloat(r['Total (COP)']||r['Total_COP']||0);
-      if (v < 200000) return false;
-      // Filtrar hasta el corte del mes
-      var fp = (r['Fecha']||'').split('/');
-      if (fp.length < 3) return true;
+      if (CATS_ACTIVOS_FR.indexOf(r['Categoria']||'')<0) return false;
+      var ncomp=String(r['N Comprobante']||r['N_Comprobante']||'').trim();
+      if (EXCLUIR_ACTIVOS.indexOf(ncomp)>=0) return false;
+      var v=parseFloat(r['Total (COP)']||r['Total_COP']||0);
+      if (v<200000) return false;
+      var fp=(r['Fecha']||'').split('/');
+      if (fp.length<3) return true;
       if (!mes) return true;
-      var fAnio = parseInt(fp[2]), fMes = parseInt(fp[1]);
-      if (fAnio > corteAnio_cxc) return false;
-      if (fAnio === corteAnio_cxc && fMes > corteMes_cxc) return false;
+      var fAnio=parseInt(fp[2]),fMes=parseInt(fp[1]);
+      if (fAnio>corteAnio_cxc) return false;
+      if (fAnio===corteAnio_cxc&&fMes>corteMes_cxc) return false;
       return true;
     }).forEach(function(r){
-      var cat = r['Categoria']||'Equipos';
-      var v = parseFloat(r['Total (COP)']||r['Total_COP']||0);
-      activosPorCat[cat] = (activosPorCat[cat]||0) + v;
-      totalActivosGastos2026 += v;
+      var cat=r['Categoria']||'Equipos';
+      var v=parseFloat(r['Total (COP)']||r['Total_COP']||0);
+      activosPorCat[cat]=(activosPorCat[cat]||0)+v;
+      totalActivosGastos2026+=v;
     });
   }
 
-  var totalActivosGastos = totalActivosGastos2026; // 2026 additions
+  // ── DEPRECIACIÓN 2026 ──
+  // Equipos de cómputo: 33.3%/año (vida útil 3 años) → 2.78%/mes
+  // Mobiliario: 10%/año (vida útil 10 años) → 0.83%/mes
+  var mesesTranscurridos = mes ? corteMes_cxc : (new Date().getMonth()+1);
+  var deprecEquipos2026=0, deprecMobiliario2026=0;
+  Object.keys(activosPorCat).forEach(function(cat){
+    var v=activosPorCat[cat];
+    var cl=cat.toLowerCase();
+    if (cl.indexOf('mobiliario')>=0 || cl.indexOf('enseres')>=0) {
+      deprecMobiliario2026 += v * (0.10/12) * mesesTranscurridos; // 10% anual
+    } else {
+      deprecEquipos2026 += v * (0.333/12) * mesesTranscurridos; // 33.3% anual
+    }
+  });
+  // Depreciación 2025 base también avanza en 2026
+  var deprec2025en2026 = afBruto2025 * (0.20/12) * mesesTranscurridos; // 20% promedio para PP&E mixto
+  var deprecTotal2026 = deprecEquipos2026 + deprecMobiliario2026 + deprec2025en2026;
 
-  // Sumar con activos fijos manuales configurados
+  var afManual=(BAL_CONFIG.activosFijos.equiposComputo||0)+(BAL_CONFIG.activosFijos.vehiculos||0)+(BAL_CONFIG.activosFijos.muebles||0)+(BAL_CONFIG.activosFijos.otrosActivos||0);
+  var ppeBrutoTotal = afBruto2025 + totalActivosGastos2026 + afManual;
+  var deprecAcumTotal = afDeprec2025 + deprecTotal2026;
+  var totalAF = ppeBrutoTotal - deprecAcumTotal;
 
-  var af = BAL_CONFIG.activosFijos;
-  var afManual = (af.equiposComputo||0)+(af.vehiculos||0)+(af.muebles||0)+(af.otrosActivos||0);
-  // Total PP&E = Apertura 2025 (neto) + Adquisiciones 2026 (FR_DATA) + Manual
-  var totalAF = afApertura2025 + totalActivosGastos + afManual;
-  // Guardar desglose para el render
   var afDesglose = {
-    apertura2025: afApertura2025,
-    bruto2025:    afBruto2025,
-    deprec2025:   afDeprec2025,
-    adquisiciones2026: totalActivosGastos,
-    manual: afManual
+    apertura2025:afNeto2025, bruto2025:afBruto2025, deprec2025:afDeprec2025,
+    adquisiciones2026:totalActivosGastos2026, manual:afManual,
+    deprec2026:deprecTotal2026, deprecEquipos2026:deprecEquipos2026,
+    deprecMobiliario2026:deprecMobiliario2026, deprec2025en2026:deprec2025en2026,
+    ppeBrutoTotal:ppeBrutoTotal, deprecAcumTotal:deprecAcumTotal
   };
 
-  var totalAct = totalActCorr + totalAF;
+  var totalAct=totalActCorr+totalAF;
 
-  // ── PASIVOS CORRIENTES ────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  // ── 3. PASIVOS — TODO desde FR_DATA ──────────────────────
+  // ═══════════════════════════════════════════════════════════
 
-  var gfPas = GASTOS_DATA.filter(function(r){
+  // Categorías de agrupación para pasivos
+  var GRUPO_PAS = {
+    'Nómina y Honorarios': 'CxP Honorarios y Contratistas',
+    'Nomina y Honorarios': 'CxP Honorarios y Contratistas',
+    'Nómina y honorarios': 'CxP Honorarios y Contratistas',
+    'Nomina y honorarios': 'CxP Honorarios y Contratistas',
+    'Capacitación e Investigación': 'CxP Proveedores y Servicios',
+    'Capacitacion e Investigacion': 'CxP Proveedores y Servicios',
+    'Procesamiento Electrónico de Datos': 'CxP Proveedores y Servicios',
+    'Procesamiento Electronico de Datos': 'CxP Proveedores y Servicios',
+    'Servicios Generales': 'CxP Proveedores y Servicios',
+    'Arrendamientos y Administración': 'CxP Proveedores y Servicios',
+    'Arrendamientos y Administracion': 'CxP Proveedores y Servicios',
+    'Mantenimiento y Reparaciones': 'CxP Proveedores y Servicios',
+    'Servicios Públicos': 'CxP Proveedores y Servicios',
+    'Servicios Publicos': 'CxP Proveedores y Servicios',
+    'Compras de Oficina': 'CxP Proveedores y Servicios',
+    'Materiales y Construcción': 'CxP Proveedores y Servicios',
+    'Materiales y Construccion': 'CxP Proveedores y Servicios',
+    'Gastos de Representación': 'CxP Gastos Operacionales',
+    'Gastos de Representacion': 'CxP Gastos Operacionales',
+    'Gastos de Viaje': 'CxP Gastos Operacionales',
+    'Gastos de Personal y Dotaciones': 'CxP Gastos Operacionales',
+    'Gastos Legales y Notariales': 'CxP Gastos Operacionales',
+    'Equipos de Oficina': 'CxP Equipos (capitalizable)',
+    'Mobiliario y Enseres': 'CxP Equipos (capitalizable)',
+    'Obligación Tributaria DIAN': 'Obligaciones Tributarias',
+    'Obligacion Tributaria DIAN': 'Obligaciones Tributarias',
+    'Obligaciones Tributarias DIAN': 'Obligaciones Tributarias',
+    'Obligacion Tributaria': 'Obligaciones Tributarias',
+    'Obligaciones Tributarias': 'Obligaciones Tributarias',
+    'Obligación Tributaria Distrital': 'Obligaciones Tributarias',
+    'Obligacion Tributaria Distrital': 'Obligaciones Tributarias'
+  };
 
-    return !mes || (r['Mes']||'')===mes;
-
-  });
-
-  function sumPend(cats){
-
-    var arr = Array.isArray(cats)?cats:[cats];
-
-    return gfPas.filter(function(r){
-
-      return !r._pagada && arr.indexOf(r['Categoria']||'')>=0;
-
-    }).reduce(function(a,r){return a+parseFloat(r['Total_COP']||0);},0);
-
+  // ¿Fue pagada esta radicada al corte del mes?
+  function frPagadaAlCorte(r) {
+    if (!mes) {
+      return typeof frEstadoReal==='function' ? frEstadoReal(r)==='PAGADO' : false;
+    }
+    var total=parseFloat(r['Total (COP)']||r['Total']||0);
+    var ncomp=String(r['N Comprobante']||r['N_Comprobante']||'').trim().toLowerCase();
+    var prov=(r['Proveedor / Beneficiario']||'').trim().toUpperCase();
+    var SKIP={S:1,A:1,SAS:1,DE:1,LA:1,EL:1,LOS:1,Y:1,DEL:1,LTDA:1};
+    var provWords=prov.split(/[\s.]+/).filter(function(w){return w.length>3&&!SKIP[w];});
+    if (typeof GASTOS_DATA!=='undefined') {
+      for (var gi=0;gi<GASTOS_DATA.length;gi++) {
+        var gx=GASTOS_DATA[gi];
+        var gComp=String(gx['N_Comprobante']||gx['N Comprobante']||gx['Concepto']||'').toLowerCase();
+        var gProv=(gx['Beneficiario']||gx['Proveedor / Beneficiario']||'').toUpperCase();
+        var gTot=parseFloat(gx['Total_COP']||gx['Total ($)']||0);
+        var gFecha=String(gx['Fecha']||'');
+        var gTs=0;
+        var gfp=gFecha.split('/');
+        if (gfp.length>=3) gTs=new Date(parseInt(gfp[2]),parseInt(gfp[1])-1,parseInt(gfp[0])).getTime();
+        var coincide=false;
+        if (ncomp.length>2&&gComp.indexOf(ncomp)>=0) coincide=true;
+        if (!coincide&&Math.abs(gTot-total)<=500&&provWords.length>0) {
+          coincide=provWords.some(function(w){return gProv.indexOf(w)>=0;});
+        }
+        if (coincide&&gTs>0) return gTs<=cierreTimestamp;
+      }
+    }
+    if (typeof frEstadoReal==='function') return frEstadoReal(r)==='PAGADO';
+    return false;
   }
 
-  // CxP Honorarios — incluye todas las variantes de nómina/honorarios pendientes
+  // Calcular CxP desde FR_DATA agrupado por categoría
+  var pasivosCorrientes = {}; // grupo → monto
+  var pasivosDetalle = {};    // grupo → {cat → monto}
+  var totalPasCorrFR = 0;
 
-  var CATS_HON = [
+  if (typeof FR_DATA!=='undefined' && FR_DATA.length) {
+    FR_DATA.forEach(function(r){
+      var fp=(r['Fecha']||'').split('/');
+      if (fp.length<3) return;
+      var fMes=parseInt(fp[1]),fAnio=parseInt(fp[2]);
+      if (!fMes||!fAnio) return;
+      if (mes && (fAnio>corteAnio_cxc||(fAnio===corteAnio_cxc&&fMes>corteMes_cxc))) return;
+      if (frPagadaAlCorte(r)) return;
+      var val=parseFloat(r['Total (COP)']||r['Total_COP']||0);
+      if (val<=0) return;
+      var cat=(r['Categoria']||r['Categoría']||'Sin categoría').trim();
+      var grupo=GRUPO_PAS[cat]||'Otros Pasivos Corrientes'; // CATCH-ALL dinámico
+      pasivosCorrientes[grupo]=(pasivosCorrientes[grupo]||0)+val;
+      if (!pasivosDetalle[grupo]) pasivosDetalle[grupo]={};
+      pasivosDetalle[grupo][cat]=(pasivosDetalle[grupo][cat]||0)+val;
+      totalPasCorrFR+=val;
+    });
+  }
 
-    'Nomina y honorarios','Nómina y Honorarios',
-
-    'Nómina y honorarios','Nomina y Honorarios'
-
-  ];
-
-  var cxpHon = sumPend(CATS_HON);
-
-  // Obligaciones financieras
-
-  var oblFin = sumPend(['Obligaciones financieras','Gastos Financieros']);
-
-  // Impuestos por pagar (incluye obligaciones tributarias DIAN pendientes)
-
-  var CATS_DIAN = ['Obligacion Tributaria DIAN','Obligaciones Tributarias DIAN','Obligacion Tributaria','Obligaciones Tributarias'];
-
-  var oblTrib = sumPend(CATS_DIAN);
-
-  var imptos = sumPend(['Impuestos y gravamenes','Impuestos y Gravámenes']) + oblTrib;
-
-  // Tarjeta de crédito
-
-  var tc = sumPend(['Pago tarjeta credito','Pago Tarjeta Credito']);
-
-  // Otros pasivos (gastos pendientes de otras categorías)
-
-  var CATS_OTROS_PAS = [
-
-    'Arrendamiento y administracion','Arrendamientos y Administración',
-
-    'Seguridad y vigilancia','Servicios publicos','Servicios Públicos',
-
-    'Servicios Generales','Mantenimiento y reparaciones','Materiales y Construcción',
-
-    'Gastos administrativos','Bienestar','Bienestar y Educación','Bienestar y Recreación',
-
-    'Gastos Médicos y Bienestar','Gastos de Representación','Gastos de Viaje y Representación',
-
-    'Gastos Legales y Notariales','Capacitación e Investigación',
-
-    'Por clasificar','Otro','Otros'
-
-  ];
-
-  var otrosPas = sumPend(CATS_OTROS_PAS);
-
-  var totalPas = cxpHon + oblFin + imptos + tc + otrosPas;
-
-  // ── CxP Contratistas (FR_DATA pendientes al corte del mes) ──────────
-  // Facturas radicadas que a la fecha del corte del mes AÚN no habían sido pagadas.
-  // "Pagada al corte" = el egreso que la cruzó tiene fecha <= cierre del mes.
-  var cxpContratistas = 0;
-  var cxpContratistasDetalle = {};
-  if (typeof FR_DATA !== 'undefined' && FR_DATA.length) {
-    var MESES_ORD_NUM = {
-      'Enero':1,'Febrero':2,'Marzo':3,'Abril':4,'Mayo':5,'Junio':6,
-      'Julio':7,'Agosto':8,'Septiembre':9,'Octubre':10,'Noviembre':11,'Diciembre':12
-    };
-    var DIAS_MES_FR = [0,31,28,31,30,31,30,31,31,30,31,30,31];
-    var cxpCierreTs = Infinity; // timestamp del último día del mes de corte
-    var cxpCorteMes = 0, cxpCorteAnio = 0;
-    if (mes) {
-      var mpFR = mes.split(' ');
-      cxpCorteMes  = MESES_ORD_NUM[mpFR[0]] || 0;
-      cxpCorteAnio = parseInt(mpFR[1]) || 0;
-      cxpCierreTs  = new Date(cxpCorteAnio, cxpCorteMes - 1, DIAS_MES_FR[cxpCorteMes]||31, 23, 59, 59).getTime();
-    }
-
-    // Helper: ¿fue pagada esta FR antes del cierre del mes?
-    // Si el egreso que la cruzó tiene fecha <= cierre → estaba pagada
-    function frPagadaAlCorte(r) {
-      if (!mes) {
-        // Acumulado: usar estado actual
-        return typeof frEstadoReal === 'function' ? frEstadoReal(r) === 'PAGADO' : false;
-      }
-      // Intentar obtener la fecha del egreso que pagó esta FR
-      // GASTOS_DATA tiene columna 'Fecha' en dd/MM/yyyy
-      var total = parseFloat(r['Total (COP)']||r['Total']||0);
-      var ncomp = String(r['N Comprobante']||r['N_Comprobante']||'').trim().toLowerCase();
-      var prov  = (r['Proveedor / Beneficiario']||'').trim().toUpperCase();
-      var SKIP3 = {S:1,A:1,SAS:1,DE:1,LA:1,EL:1,LOS:1,Y:1,DEL:1,LTDA:1};
-      var provWords3 = prov.split(/[\s.]+/).filter(function(w){ return w.length>3 && !SKIP3[w]; });
-
-      if (typeof GASTOS_DATA !== 'undefined') {
-        for (var gi=0; gi<GASTOS_DATA.length; gi++) {
-          var gx = GASTOS_DATA[gi];
-          var gComp = String(gx['N_Comprobante']||gx['N Comprobante']||gx['Concepto']||'').toLowerCase();
-          var gProv = (gx['Beneficiario']||gx['Proveedor / Beneficiario']||'').toUpperCase();
-          var gTot  = parseFloat(gx['Total_COP']||gx['Total ($)']||0);
-          var gFecha= String(gx['Fecha']||'');
-          // Calcular timestamp del egreso
-          var gTs = 0;
-          var gfp = gFecha.split('/');
-          if (gfp.length >= 3) {
-            gTs = new Date(parseInt(gfp[2]), parseInt(gfp[1])-1, parseInt(gfp[0])).getTime();
-          }
-          // ¿Este egreso coincide con la FR?
-          var coincide = false;
-          if (ncomp.length > 2 && (gComp.indexOf(ncomp) >= 0)) coincide = true;
-          if (!coincide && Math.abs(gTot - total) <= 500 && provWords3.length > 0) {
-            coincide = provWords3.some(function(w){ return gProv.indexOf(w) >= 0; });
-          }
-          if (coincide && gTs > 0) {
-            return gTs <= cxpCierreTs; // pagada si el egreso ocurrió antes del cierre
-          }
+  // ── Pasivos No Corrientes (préstamos a largo plazo) ──
+  // Calculados desde GASTOS_DATA: saldo = total prestado - pagos realizados
+  var prestamosTotal=0, prestamosDetalle=[];
+  if (typeof GASTOS_DATA!=='undefined') {
+    var prestamosPagados={};
+    GASTOS_DATA.forEach(function(r){
+      var cat=(r['Categoria']||r['Categoría']||'').trim().toLowerCase();
+      if (cat.indexOf('pr'+'\u00e9stamo')<0 && cat.indexOf('prestamo')<0) return;
+      if (mes && (r['Mes']||'')!==mes && mes) {
+        // Para acumulado: tomar todos. Para mes: solo ese mes
+        // Pero préstamos son acumulativos — siempre tomar todos hasta el corte
+        var fp=(r['Fecha']||'').split('/');
+        if (fp.length>=3) {
+          var fMes=parseInt(fp[1]),fAnio=parseInt(fp[2]);
+          if (fAnio>corteAnio_cxc||(fAnio===corteAnio_cxc&&fMes>corteMes_cxc)) return;
         }
       }
-      // Sin cruce con GASTOS_DATA: usar frEstadoReal (estado actual sin corte de fecha)
-      if (typeof frEstadoReal === 'function') return frEstadoReal(r) === 'PAGADO';
-      return false;
-    }
-
-    FR_DATA.forEach(function(r) {
-      var fp = (r['Fecha']||'').split('/');
-      if (fp.length < 3) return;
-      var fMes = parseInt(fp[1]), fAnio = parseInt(fp[2]);
-      if (!fMes || !fAnio) return;
-      // Solo facturas emitidas hasta el mes de corte
-      if (mes) {
-        if (fAnio > cxpCorteAnio || (fAnio === cxpCorteAnio && fMes > cxpCorteMes)) return;
+      var benef=(r['Beneficiario']||'').trim();
+      var val=parseFloat(r['Total_COP']||r['Total ($)']||0);
+      prestamosPagados[benef]=(prestamosPagados[benef]||0)+val;
+    });
+    // Préstamos conocidos (configurar saldos iniciales aquí)
+    var PRESTAMOS_SALDO_INICIAL = {
+      'Scotiabank NJAZ': 24000000,   // Saldo inicial estimado
+      'ITAU NJAZ': 8000000,          // Saldo inicial estimado
+      'Jannina Alvis': 31100000      // Préstamo personal documentado
+    };
+    Object.keys(PRESTAMOS_SALDO_INICIAL).forEach(function(key){
+      var pagado=0;
+      Object.keys(prestamosPagados).forEach(function(b){
+        if (b.toUpperCase().indexOf(key.split(' ')[0].toUpperCase())>=0) pagado+=prestamosPagados[b];
+      });
+      var saldo=Math.max(0,PRESTAMOS_SALDO_INICIAL[key]-pagado);
+      if (saldo>0) {
+        prestamosTotal+=saldo;
+        prestamosDetalle.push({nombre:key, saldoInicial:PRESTAMOS_SALDO_INICIAL[key], pagado:pagado, saldo:saldo});
       }
-      // Si ya fue pagada al corte, no es pasivo en ese mes
-      if (frPagadaAlCorte(r)) return;
-      var val = parseFloat(r['Total (COP)']||r['Total']||0);
-      if (val <= 0) return;
-      var cat = r['Categoria']||'Sin categoría';
-      cxpContratistasDetalle[cat] = (cxpContratistasDetalle[cat]||0) + val;
-      cxpContratistas += val;
     });
   }
 
-  totalPas += cxpContratistas;
+  var totalPas=totalPasCorrFR+prestamosTotal;
 
-  // ── PATRIMONIO ────────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
+  // ── 4. PATRIMONIO ─────────────────────────────────────────
+  // ═══════════════════════════════════════════════════════════
 
-  var capSoc  = BAL_CONFIG.patrimonio.capitalSocial||0;
+  var capSoc=BAL_CONFIG.patrimonio.capitalSocial||0;
+  var utilAnt=BAL_CONFIG.patrimonio.utilidadesAnt||0;
 
-  var utilAnt = BAL_CONFIG.patrimonio.utilidadesAnt||0;
+  // Utilidad del ejercicio — SINCRONIZADA con el ER (usa FR_DATA, no GASTOS_DATA)
+  var ingT=factFil.filter(function(f){
+    if (!mes) return true;
+    var dp=fFechaPartes(f.fecha_raw||f.fecha||'');
+    if (dp.length<3) return true;
+    var fAnio=parseInt(dp[0]),fMes=parseInt(dp[1]);
+    return fAnio<corteAnio_cxc||(fAnio===corteAnio_cxc&&fMes<=corteMes_cxc);
+  }).reduce(function(a,f){return a+(f.bruto||0);},0);
 
-  // Utilidad del ejercicio = ingresos - gastos del período seleccionado
+  // Costos desde FR_DATA (misma fuente que el ER) filtrados por frEsGastoOpPL
+  var gasT=0;
+  if (typeof FR_DATA!=='undefined' && FR_DATA.length) {
+    gasT=FR_DATA.filter(function(r){
+      var fp=(r['Fecha']||'').split('/');
+      if (fp.length<3) return false;
+      var fAnio=parseInt(fp[2]),fMes=parseInt(fp[1]);
+      if (fAnio!==2026) return false;
+      if (mes && (fAnio>corteAnio_cxc||(fAnio===corteAnio_cxc&&fMes>corteMes_cxc))) return false;
+      if (typeof frEsGastoOpPL==='function' && !frEsGastoOpPL(r)) return false;
+      return true;
+    }).reduce(function(a,r){return a+parseFloat(r['Total (COP)']||r['Total_COP']||0);},0);
+  }
 
-  var ingT = factFil.reduce(function(a,f){return a+(f.bruto||0);},0);
-
-  // Excluir Obligaciones Tributarias DIAN del cálculo de utilidad del ejercicio
-
-  var CATS_DIAN_BAL = ['Obligacion Tributaria DIAN','Obligaciones Tributarias DIAN','Obligacion Tributaria','Obligaciones Tributarias'];
-
-  var gasT = GASTOS_DATA.filter(function(r){
-
-    var cat = (r['Categoria']||'').trim();
-
-    if(CATS_DIAN_BAL.indexOf(cat)>=0) return false;
-
-    if(cat.indexOf('Obligaci')>=0 && cat.indexOf('DIAN')>=0) return false;
-
-    return !mes||(r['Mes']||'')===mes;
-
-  }).reduce(function(a,r){return a+parseFloat(r['Total_COP']||0);},0);
-
-  var utilEj = ingT - gasT;
-
-  var totalPat = capSoc + utilAnt + utilEj;
-
-  var totalPP  = totalPas + totalPat;
+  var utilEj=ingT-gasT;
+  var totalPat=capSoc+utilAnt+utilEj;
+  var totalPP=totalPas+totalPat;
 
   return {
-
-    bancos:totalBancos, bancosDetalle:bancosDetalle, cxc:cxc, cxcCount:cxcArr.length, cxcArr:cxcArr, cxc2026Pendiente:cxc2026Pendiente, cxcApertura:cxcAperturaPendiente, cxcCierreTs:cierreTimestamp, rete:rete,
-
+    bancos:totalBancos, bancosDetalle:bancosDetalle,
+    cxc:cxc, cxcCount:cxcArr.length, cxcArr:cxcArr, cxc2026Pendiente:cxc2026Pendiente,
+    cxcApertura:cxcAperturaPendiente, cxcCierreTs:cierreTimestamp, rete:rete,
     totalActCorr:totalActCorr,
-
-    af:af, totalActivosGastos:totalActivosGastos, totalAF:totalAF, activosPorCat:activosPorCat, afDesglose:afDesglose,
-
+    af:BAL_CONFIG.activosFijos, totalActivosGastos:totalActivosGastos2026, totalAF:totalAF,
+    activosPorCat:activosPorCat, afDesglose:afDesglose,
     totalAct:totalAct,
-
-    cxpHon:cxpHon, oblFin:oblFin, imptos:imptos, oblTrib:oblTrib, tc:tc,
-
-    otrosPas:otrosPas, totalPas:totalPas,
-    cxpContratistas:cxpContratistas, cxpContratistasDetalle:cxpContratistasDetalle,
-
-    capSoc:capSoc, utilAnt:utilAnt, utilEj:utilEj,
-
+    pasivosCorrientes:pasivosCorrientes, pasivosDetalle:pasivosDetalle, totalPasCorrFR:totalPasCorrFR,
+    prestamosTotal:prestamosTotal, prestamosDetalle:prestamosDetalle,
+    totalPas:totalPas,
+    capSoc:capSoc, utilAnt:utilAnt, utilEj:utilEj, ingT:ingT, gasT:gasT,
     totalPat:totalPat, totalPP:totalPP,
-
     cuadra:Math.abs(totalAct-totalPP)<1
-
   };
-
 }
 
 function renderBalance() {
 
   var elPills = g('bal-pills');
-
   var elKpis  = g('bal-kpis');
-
   var elTabla = g('bal-tabla');
-
   if (!elTabla) return;
 
   var MESES_ORD = ['Enero 2025','Febrero 2025','Marzo 2025','Abril 2025','Mayo 2025','Junio 2025','Julio 2025','Agosto 2025','Septiembre 2025','Octubre 2025','Noviembre 2025','Diciembre 2025',
-
     'Enero 2026','Febrero 2026','Marzo 2026','Abril 2026','Mayo 2026','Junio 2026','Julio 2026','Agosto 2026','Septiembre 2026','Octubre 2026','Noviembre 2026','Diciembre 2026'];
-
   var MN = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
+  function fFechaPartes(f) { var p=(f||'').split('/'); if(p.length<3) return []; return [p[2],p[1],p[0]]; }
+
   var disp = {};
-
   for (var i=0;i<FACTURAS.length;i++) { var dp=fFechaPartes(FACTURAS[i].fecha_raw || FACTURAS[i].fecha); if(dp.length===3) disp[MN[parseInt(dp[1])-1]+' '+dp[0]]=1; }
-
   for (var i=0;i<GASTOS_DATA.length;i++) { if(GASTOS_DATA[i]['Mes']) disp[GASTOS_DATA[i]['Mes']]=1; }
-
-  // También mostrar meses de conciliación bancaria (P[])
   if (typeof P !== 'undefined') { for (var i=0;i<P.length;i++) { if(P[i].label) disp[P[i].label]=1; } }
-
   var meses = MESES_ORD.filter(function(m){return disp[m];});
 
-  // Pills período
-
   if (elPills) {
-
-    // Meses en orden cronológico, Acumulado al final
     var ph = '';
     for (var i=0;i<meses.length;i++)
       ph += '<button class="pill'+(BAL_MES_SEL===meses[i]?' on':'')+'" onclick="BAL_MES_SEL=\''+meses[i]+'\';renderBalance()" style="font-size:11px">'+meses[i].replace(' 2026','').replace(' 2025','')+'</button>';
     ph += '<button class="pill'+(BAL_MES_SEL===''?' on':'')+'" onclick="BAL_MES_SEL=\'\';renderBalance()" style="font-size:11px">Acumulado</button>';
-
     elPills.innerHTML = ph;
-
   }
 
   var mes = BAL_MES_SEL;
   var d = calcBalMes(BAL_MES_SEL);
-
   var per = BAL_MES_SEL || 'Acumulado';
 
-  // KPIs
-
   if (elKpis) elKpis.innerHTML =
-
     kpi('Total Activos',   F(d.totalAct),  'tb', per) +
-
-    kpi('Total Pasivos',   F(d.totalPas),  'tr', 'Obligaciones corrientes') +
-
+    kpi('Total Pasivos',   F(d.totalPas),  'tr', 'Corrientes + No Corrientes') +
     kpi('Patrimonio Neto', F(d.totalPat),  d.totalPat>=0?'tg':'tr', d.cuadra?'✅ Balance cuadra':'⚠️ Dif: '+F(Math.abs(d.totalAct-d.totalPP)));
 
-  // Helper fila
-
   function fila(label, valor, tipo, indent, nota) {
-
     var pl = 14 + (indent||0)*16;
-
     var pad = 'padding:5px 14px 5px '+pl+'px';
-
     var esTotal = tipo==='total'||tipo==='st';
-
     var bg = tipo==='h' ? 'background:#F5F4F2;' :
-
              tipo==='st' ? 'background:#EBF6FA;border-top:1px solid #d0e4f0;' :
-
              tipo==='total' ? 'background:#e8f4e8;border-top:2px solid #5DC3DA;' :
-
              tipo==='total-pas' ? 'background:#fff0f0;border-top:2px solid #A32D2D;' :
-
              tipo==='total-pat' ? 'background:#f0f4ff;border-top:2px solid #6EA1BA;' :
-
              tipo==='cuadra' ? 'background:'+(d.cuadra?'#F0F6EC':'#FCEBEB')+';border-top:2px solid '+(d.cuadra?'#5DC3DA':'#A32D2D')+';' : '';
-
     var fw = esTotal||tipo==='h'||tipo==='cuadra' ? 'font-weight:700;' : '';
-
     var fs = tipo==='total'||tipo==='total-pas'||tipo==='total-pat'||tipo==='cuadra' ? 'font-size:13px;' : 'font-size:11px;';
-
     var lblCol = tipo==='h' ? '#5DC3DA' : tipo==='cuadra' ? (d.cuadra?'#5DC3DA':'#A32D2D') : '#444';
-
     var valCol = valor===null ? '' :
-
                  tipo==='total'||tipo==='st' ? '#5DC3DA' :
-
                  tipo==='total-pas' ? '#A32D2D' :
-
                  tipo==='total-pat' ? '#6EA1BA' :
-
                  tipo==='cuadra' ? (d.cuadra?'#5DC3DA':'#A32D2D') :
-
                  valor>0 ? '#54504F' : valor<0 ? '#A32D2D' : '#aaa';
-
     return '<div style="display:flex;justify-content:space-between;align-items:center;'+pad+';'+bg+fw+fs+';border-bottom:1px solid #f0ede8">'
-
       + '<span style="color:'+lblCol+'">'+label+(nota?'<span style="font-size:9px;color:#aaa;margin-left:6px">'+nota+'</span>':'')+'</span>'
-
       + (valor!==null ? '<span style="color:'+valCol+'">'+F(valor)+'</span>' : '<span></span>')
-
       + '</div>';
-
   }
 
   var html = '<div style="border:1px solid #e0ddd8;border-radius:12px;overflow:hidden">';
-
   html += '<div style="padding:8px 14px;background:#54504F;font-size:11px;font-weight:700;color:#fff">ALZAK GROUP SAS · NIT 900.898.741-8 · Balance General · '+per+'</div>';
 
-  // ── ACTIVOS ───────────────────────────────────────────────
-
+  // ── ACTIVOS ─────────────────────────────────────────────
   html += fila('ACTIVOS', null, 'h');
-
   html += fila('Activos Corrientes', null, 'h', 0);
 
-  // ── Caja y Bancos con desglose colapsable por cuenta ──
-  var bd = d.bancosDetalle || {bcol:0,fid:0,caja:0,bold:0};
+  // Bancos con desglose
+  var bd = d.bancosDetalle||{};
   var tieneDetBancos = !!(bd.bcol||bd.fid||bd.caja||bd.bold);
-  var _balUID = 'bal-bancos-det-' + (BAL_MES_SEL||'acum').replace(/ /g,'-');
-  var _bancosNota = d.bancos===0 ? '(pendiente conciliación bancaria)' : '';
+  var _balUID = 'bal-bancos-det-'+(BAL_MES_SEL||'acum').replace(/ /g,'-');
   html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 14px 5px 30px;font-size:11px;border-bottom:1px solid #f0ede8">'
     + '<span style="color:#444">Caja y Bancos'
     + (tieneDetBancos ? ' <span id="'+_balUID+'-btn" onclick="balToggleDetalle(this.dataset.uid)" data-uid="'+_balUID+'" style="cursor:pointer;color:#5DC3DA;font-size:10px;font-weight:600">&#9658; ver por cuenta</span>' : '')
-    + '<span style="font-size:9px;color:#aaa;margin-left:6px">'+_bancosNota+'</span></span>'
-    + '<span style="color:#54504F">'+F(d.bancos)+'</span>'
-    + '</div>';
+    + (d.bancos===0?'<span style="font-size:9px;color:#aaa;margin-left:6px">(pendiente conciliación)</span>':'')
+    + '</span><span style="color:#54504F">'+F(d.bancos)+'</span></div>';
   if (tieneDetBancos) {
     html += '<div id="'+_balUID+'" style="display:none">';
-    if (bd.bcol)  html += fila('Bancolombia Ahorros *6556', bd.bcol,  'item', 2);
-    if (bd.fid)   html += fila('Fiducuenta *1771',          bd.fid,   'item', 2);
-    if (bd.caja)  html += fila('Caja Social *2970',         bd.caja,  'item', 2);
-    if (bd.bold)  html += fila('Bold CF *2371',             bd.bold,  'item', 2);
+    if (bd.bcol) html += fila('Bancolombia Ahorros *6556', bd.bcol, 'item', 2);
+    if (bd.fid)  html += fila('Fiducuenta *1771', bd.fid, 'item', 2);
+    if (bd.caja) html += fila('Caja Social *2970', bd.caja, 'item', 2);
+    if (bd.bold) html += fila('Bold CF *2371', bd.bold, 'item', 2);
     html += '</div>';
   }
 
-  // ── Cuentas por Cobrar — colapsable con desglose completo ──
-  var _cxcUID = 'bal-cxc-det-' + (BAL_MES_SEL||'acum').replace(/ /g,'_');
-  var _cxcToggleBtn = d.cxc > 0
-    ? ' <span id="'+_cxcUID+'-btn" onclick="balToggleDetalle(this.dataset.uid)" data-uid="'+_cxcUID+'" style="cursor:pointer;color:#5DC3DA;font-size:10px;font-weight:600">&#9658; ver detalle</span>'
-    : '';
+  // CxC con desglose
+  var _cxcUID = 'bal-cxc-det-'+(BAL_MES_SEL||'acum').replace(/ /g,'_');
   html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 14px 5px 30px;font-size:11px;border-bottom:1px solid #f0ede8">'
-    + '<span style="color:#444">Cuentas por Cobrar — Clientes'+_cxcToggleBtn
-    + '<span style="font-size:9px;color:#aaa;margin-left:6px">cartera al corte</span></span>'
-    + '<span style="color:' + (d.cxc>0?'#54504F':'#aaa') + '">' + F(d.cxc) + '</span>'
-    + '</div>';
-  if (d.cxc > 0) {
-    var aperCxC = (BAL_CONFIG.apertura2025 && BAL_CONFIG.apertura2025.cxc) ? BAL_CONFIG.apertura2025.cxc : 0;
+    + '<span style="color:#444">Cuentas por Cobrar — Clientes'
+    + (d.cxc>0?' <span id="'+_cxcUID+'-btn" onclick="balToggleDetalle(this.dataset.uid)" data-uid="'+_cxcUID+'" style="cursor:pointer;color:#5DC3DA;font-size:10px;font-weight:600">&#9658; ver detalle</span>':'')
+    + '</span><span style="color:'+(d.cxc>0?'#54504F':'#aaa')+'">'+F(d.cxc)+'</span></div>';
+  if (d.cxc>0) {
     html += '<div id="'+_cxcUID+'" style="display:none">';
-    if (aperCxC && mes) {
-      // Cartera 2025 pendiente al corte = apertura − cobros de 2025 recibidos hasta el mes
-      html += fila('Cartera 2025 (apertura 01-Ene-2026)', aperCxC, 'item', 2, 'cierre oficial Kevin Díaz T.P. 103960-T');
-      // Cobros de cartera 2025 recibidos hasta el corte (facturas 2025 pagadas con fecha_pago en 2026)
-      var _cierreTs = d.cxcCierreTs || Infinity;
-      var cobrados2025 = FACTURAS.filter(function(f){
-        var dp0 = fFechaPartes(f.fecha_raw || f.fecha || '');
-        if (dp0.length<3) return false;
-        if (parseInt(dp0[0]) >= 2026) return false;
-        if (!f.pagada || !f.fecha_pago) return false;
-        var dp3 = fFechaPartes(f.fecha_pago);
-        if (dp3.length<3) return false;
-        var pTs = new Date(parseInt(dp3[0]),parseInt(dp3[1])-1,parseInt(dp3[2])).getTime();
-        return pTs <= _cierreTs;
-      });
-      var totalCobrado2025 = cobrados2025.reduce(function(a,f){return a+(f.total||0);},0);
-      if (totalCobrado2025>0) {
-        html += fila('(−) Cobros de cartera 2025 recibidos', -totalCobrado2025, 'item', 2, cobrados2025.length+' facturas cobradas antes del corte');
-        cobrados2025.forEach(function(f){
-          html += fila((f.num||'—')+' · '+(f.cliente||''), -(f.total||0), 'item', 3, 'cobrado '+f.fecha_pago);
-        });
-      }
-    }
-    if (d.cxcArr && d.cxcArr.length) {
-      html += fila('Facturas 2026 pendientes ('+d.cxcArr.length+')', d.cxc2026Pendiente||0, 'item', 2, 'emitidas en 2026 sin cobro al corte');
+    if (d.cxcApertura>0) html += fila('Cartera 2025 pendiente al corte', d.cxcApertura, 'item', 2);
+    if (d.cxcArr&&d.cxcArr.length) {
+      html += fila('Facturas 2026 pendientes ('+d.cxcArr.length+')', d.cxc2026Pendiente, 'item', 2);
       d.cxcArr.forEach(function(f){
         html += fila((f.num||'—')+' · '+(f.cliente||''), f.total||0, 'item', 3, f.fecha?'emit. '+f.fecha:'');
       });
-    } else if (!aperCxC) {
-      html += fila('Sin facturas pendientes al corte', 0, 'item', 2);
     }
     html += '</div>';
   }
 
   html += fila('Anticipo Rte.Fte. (11% s/honorarios)', d.rete, 'item', 1, 'activo fiscal');
-
   html += fila('Total Activos Corrientes', d.totalActCorr, 'st');
 
-  html += fila('Activos No Corrientes — Propiedades, Planta y Equipo', null, 'h', 0);
-
-  var dsg = d.afDesglose || {};
-
-  // Apertura 2025 (cierre oficial)
+  // PP&E
+  html += fila('Activos No Corrientes — PP&E', null, 'h', 0);
+  var dsg = d.afDesglose||{};
   if (dsg.bruto2025) {
-    html += fila('PP&E apertura 31-Dic-2025 (bruto)', dsg.bruto2025, 'item', 1, 'cierre oficial Kevin Díaz T.P. 103960-T');
-    html += fila('(−) Depreciación acumulada 2025', -dsg.deprec2025, 'item', 1, 'depreciación acumulada al cierre');
-  } else if (dsg.apertura2025) {
-    html += fila('PP&E neto apertura 01-Ene-2026', dsg.apertura2025, 'item', 1, 'cierre oficial 2025');
+    html += fila('PP&E bruto apertura 31-Dic-2025', dsg.bruto2025, 'item', 1, 'cierre oficial Kevin Díaz');
+    html += fila('(−) Depreciación acum. al 31-Dic-2025', -dsg.deprec2025, 'item', 1);
   }
-
-  // Adquisiciones 2026 desde FR_DATA
+  // Adquisiciones 2026
   var CATS_DISPLAY = {
-    'Equipos de Oficina':        'Equipos de oficina 2026 (cómputo, celulares, TV)',
-    'Equipos y Tecnología':      'Equipos de oficina 2026',
-    'Equipos y tecnologia':      'Equipos de oficina 2026',
-    'Mobiliario y Enseres':      'Mobiliario y enseres 2026',
-    'Mobiliario y enseres':      'Mobiliario y enseres 2026',
-    'Materiales y Construcción': 'Obras y adecuaciones 2026',
-    'Materiales y Construccion': 'Obras y adecuaciones 2026'
+    'Equipos de Oficina':'Equipos oficina 2026','Equipos y Tecnología':'Equipos oficina 2026',
+    'Mobiliario y Enseres':'Mobiliario y enseres 2026','Mobiliario y enseres':'Mobiliario y enseres 2026'
   };
-  var dispActivos = {};
+  var dispActivos={};
   if (d.activosPorCat) {
-    Object.keys(d.activosPorCat).forEach(function(cat) {
-      var lbl = CATS_DISPLAY[cat] || (cat + ' 2026');
-      dispActivos[lbl] = (dispActivos[lbl]||0) + d.activosPorCat[cat];
+    Object.keys(d.activosPorCat).forEach(function(cat){
+      var lbl=CATS_DISPLAY[cat]||(cat+' 2026');
+      dispActivos[lbl]=(dispActivos[lbl]||0)+d.activosPorCat[cat];
     });
   }
-  Object.keys(dispActivos).forEach(function(lbl) {
-    if (dispActivos[lbl] > 0)
-      html += fila(lbl, dispActivos[lbl], 'item', 1, 'facturas radicadas 2026');
+  Object.keys(dispActivos).forEach(function(lbl){
+    if (dispActivos[lbl]>0) html += fila('(+) '+lbl, dispActivos[lbl], 'item', 1);
   });
-
-  if (!dsg.apertura2025 && !dsg.adquisiciones2026)
-    html += fila('Sin activos fijos registrados', 0, 'item', 1);
-
-  // Manuales adicionales
   if (d.af.equiposComputo) html += fila('Equipos adicionales (manual)', d.af.equiposComputo, 'item', 1);
-  if (d.af.vehiculos)      html += fila('Vehículos', d.af.vehiculos, 'item', 1);
-
-  if (d.af.muebles)        html += fila('Muebles y enseres', d.af.muebles, 'item', 1);
-
-  if (d.af.otrosActivos)   html += fila('Otros activos fijos', d.af.otrosActivos, 'item', 1);
-
-  html += fila('Total Activos No Corrientes', d.totalAF, 'st');
-
+  if (d.af.vehiculos) html += fila('Vehículos', d.af.vehiculos, 'item', 1);
+  if (d.af.muebles) html += fila('Muebles y enseres (manual)', d.af.muebles, 'item', 1);
+  if (d.af.otrosActivos) html += fila('Otros activos fijos', d.af.otrosActivos, 'item', 1);
+  // Depreciación 2026
+  if (dsg.deprec2026>0) {
+    html += fila('(−) Depreciación 2026 acumulada', -Math.round(dsg.deprec2026), 'item', 1,
+      'Equipos 33%/año + Mobiliario 10%/año + PP&E 2025 20%/año');
+  }
+  html += fila('Total Activos No Corrientes (PP&E neto)', d.totalAF, 'st');
   html += fila('TOTAL ACTIVOS', d.totalAct, 'total');
 
   html += '<div style="height:4px;background:#e0ddd8"></div>';
 
-  // ── PASIVOS ───────────────────────────────────────────────
-
+  // ── PASIVOS ─────────────────────────────────────────────
   html += fila('PASIVOS', null, 'h');
-
   html += fila('Pasivos Corrientes', null, 'h', 0);
 
-  html += fila('Cuentas por pagar — Honorarios', d.cxpHon, 'item', 1,
+  // Grupos de FR_DATA ordenados por monto
+  var gruposOrd = Object.keys(d.pasivosCorrientes).sort(function(a,b){return d.pasivosCorrientes[b]-d.pasivosCorrientes[a];});
+  gruposOrd.forEach(function(grupo){
+    var val=d.pasivosCorrientes[grupo];
+    if (val<=0) return;
+    var det=d.pasivosDetalle[grupo]||{};
+    var nCats=Object.keys(det).length;
+    var _uid='bal-pas-'+grupo.replace(/[^a-zA-Z0-9]/g,'');
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 14px 5px 30px;font-size:11px;border-bottom:1px solid #f0ede8">'
+      + '<span style="color:#444">'+grupo
+      + (nCats>1?' <span id="'+_uid+'-btn" onclick="balToggleDetalle(this.dataset.uid)" data-uid="'+_uid+'" style="cursor:pointer;color:#A32D2D;font-size:10px;font-weight:600">&#9658; detalle</span>':'')
+      + '</span><span style="color:#54504F">'+F(val)+'</span></div>';
+    if (nCats>1) {
+      html += '<div id="'+_uid+'" style="display:none">';
+      Object.keys(det).sort(function(a,b){return det[b]-det[a];}).forEach(function(cat){
+        html += fila(cat, det[cat], 'item', 2);
+      });
+      html += '</div>';
+    }
+  });
 
-    GASTOS_DATA.filter(function(r){return !r._pagada&&['Nomina y honorarios','Nómina y Honorarios'].indexOf(r['Categoria'])>=0;}).length+' cuentas pendientes');
+  if (d.totalPasCorrFR===0) html += fila('Sin obligaciones corrientes pendientes', 0, 'item', 1);
+  html += fila('Total Pasivos Corrientes', d.totalPasCorrFR, 'st');
 
-  if (d.oblFin) html += fila('Obligaciones financieras', d.oblFin, 'item', 1);
-
-  if (d.oblTrib) html += fila('Obligaciones Tributarias DIAN (pendientes)', d.oblTrib, 'item', 1,
-
-    'Acuerdos de pago IVA — no afectan el P&L');
-
-  if (d.imptos - d.oblTrib > 0) html += fila('Impuestos y retenciones por pagar', d.imptos - d.oblTrib, 'item', 1);
-
-  if (d.tc)     html += fila('Tarjeta de crédito por pagar', d.tc, 'item', 1);
-
-  if (d.otrosPas) html += fila('Otros pasivos corrientes', d.otrosPas, 'item', 1);
-
-  // CxP Contratistas — facturas radicadas pendientes al corte del mes
-  if (d.cxpContratistas > 0) {
-    html += fila('Cuentas por pagar — Contratistas y Proveedores', d.cxpContratistas, 'item', 1,
-      'Facturas radicadas pendientes al corte del período');
-    // Detalle por categoría
-    var cats = Object.keys(d.cxpContratistasDetalle).sort(function(a,b){
-      return d.cxpContratistasDetalle[b] - d.cxpContratistasDetalle[a];
+  // Pasivos No Corrientes
+  if (d.prestamosTotal>0) {
+    html += fila('Pasivos No Corrientes', null, 'h', 0);
+    d.prestamosDetalle.forEach(function(p){
+      html += fila('Préstamo '+p.nombre, p.saldo, 'item', 1, 'Inicial: '+F(p.saldoInicial)+' · Pagado: '+F(p.pagado));
     });
-    cats.forEach(function(cat) {
-      html += fila(cat, d.cxpContratistasDetalle[cat], 'item', 2);
-    });
+    html += fila('Total Pasivos No Corrientes', d.prestamosTotal, 'st');
   }
 
-  html += fila('Total Pasivos Corrientes', d.totalPas, 'st');
-
   html += fila('TOTAL PASIVOS', d.totalPas, 'total-pas');
-
   html += '<div style="height:4px;background:#e0ddd8"></div>';
 
-  // ── PATRIMONIO ────────────────────────────────────────────
-
+  // ── PATRIMONIO ──────────────────────────────────────────
   html += fila('PATRIMONIO', null, 'h');
-
-  if (d.capSoc)  html += fila('Capital social', d.capSoc, 'item', 1);
-
+  if (d.capSoc) html += fila('Capital social', d.capSoc, 'item', 1);
   if (d.utilAnt) html += fila('Utilidades acumuladas años anteriores', d.utilAnt, 'item', 1);
-
   html += fila('Utilidad del ejercicio', d.utilEj, 'item', 1,
-
-    d.utilEj>=0 ? 'superávit' : 'déficit');
-
+    'Ingresos '+F(d.ingT)+' − Costos '+F(d.gasT)+' (fuente: FR_DATA = ER)');
   html += fila('TOTAL PATRIMONIO', d.totalPat, 'total-pat');
 
   html += '<div style="height:4px;background:#e0ddd8"></div>';
 
-  // ── VERIFICACIÓN ──────────────────────────────────────────
-
+  // ── VERIFICACIÓN ────────────────────────────────────────
   var dif = d.totalAct - d.totalPP;
-
   html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:'+(d.cuadra?'#F0F6EC':'#FCEBEB')+'">'
-
     + '<span style="font-size:12px;font-weight:700;color:'+(d.cuadra?'#5DC3DA':'#A32D2D')+'">'
-
-    + (d.cuadra ? '✅ Activos = Pasivos + Patrimonio' : '⚠️ Diferencia: '+F(Math.abs(dif))+'  — Revisa activos fijos o patrimonio inicial')
-
+    + (d.cuadra ? '✅ Activos = Pasivos + Patrimonio' : '⚠️ Diferencia: '+F(Math.abs(dif))+'  — Revisa configuración de apertura/patrimonio')
     + '</span>'
-
     + '<span style="font-size:13px;font-weight:700;color:'+(d.cuadra?'#5DC3DA':'#A32D2D')+'">P+P: '+F(d.totalPP)+'</span>'
-
     + '</div>';
 
   html += '</div>';
-
   elTabla.innerHTML = html;
+}
 
+function balToggleDetalle(uid) {
+  var el = document.getElementById(uid);
+  var btn = document.getElementById(uid + '-btn');
+  if (!el) return;
+  var vis = el.style.display !== 'none';
+  el.style.display = vis ? 'none' : 'block';
+  if (btn) btn.innerHTML = vis ? '&#9658; ver detalle' : '&#9660; ocultar';
 }
 
 var ER_MES_SEL = '';

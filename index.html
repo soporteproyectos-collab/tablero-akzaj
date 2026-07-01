@@ -2289,6 +2289,28 @@ function alzakCargarDatosPrincipal(url, callback) {
         cargados.push('Programadas: ' + FP_DATA.length);
       }
 
+      // ── Deduplicar FP_DATA contra FACTURAS reales ──────────
+      // Si una programada tiene un cliente+monto que coincide con una factura real,
+      // eliminarla de FP_DATA para evitar doble conteo
+      if (FP_DATA.length > 0 && FACTURAS.length > 0) {
+        var facturasUsadas = {};
+        FP_DATA = FP_DATA.filter(function(fp) {
+          var fpCli = (fp.cliente||'').trim().toUpperCase();
+          var fpMonto = Math.round(parseFloat(fp.monto)||0);
+          for (var fi=0; fi<FACTURAS.length; fi++) {
+            var f = FACTURAS[fi];
+            if (facturasUsadas[fi]) continue;
+            var fCli = (f.cliente||'').trim().toUpperCase();
+            var fMonto = Math.round(f.bruto||0);
+            if (fpCli === fCli && Math.abs(fpMonto - fMonto) < 1000) {
+              facturasUsadas[fi] = true;
+              return false; // eliminar esta programada
+            }
+          }
+          return true; // mantener
+        });
+      }
+
       // ── Gastos Programados → GP_DATA ────────────────
       if (data.gastos_programados && data.gastos_programados.length) {
         GP_DATA = data.gastos_programados;

@@ -9658,7 +9658,7 @@ function renderResumenTablero() {
       if (typeof frEsProyectado === 'function' && frEsProyectado(r)) return false;
       return frEsGastoOpPL(r);
     }).reduce(function(a,r){
-      var v = r['Total (COP)'] || 0;
+      var v = r['Subtotal (COP)'] || 0;
       if (typeof v === 'string') v = v.replace(/[^0-9.]/g,'');
       return a + (parseFloat(v)||0);
     }, 0);
@@ -10579,7 +10579,7 @@ function calcBalMes(mes) {
       if (mes && (fAnio>corteAnio_cxc||(fAnio===corteAnio_cxc&&fMes>corteMes_cxc))) return false;
       if (typeof frEsGastoOpPL==='function' && !frEsGastoOpPL(r)) return false;
       return true;
-    }).reduce(function(a,r){return a+parseFloat(r['Total (COP)']||r['Total_COP']||0);},0);
+    }).reduce(function(a,r){return a+parseFloat(r['Subtotal (COP)']||r['Subtotal_COP']||0);},0);
   }
 
   var utilEj=ingT-gasT;
@@ -10947,7 +10947,7 @@ function calcMesData(mes) {
     });
     // Separar reales vs proyectados
     frMes.forEach(function(r){
-      var v = r['Total (COP)'] || r['Total(COP)'] || r['Total'] || 0;
+      var v = r['Subtotal (COP)'] || r['Subtotal(COP)'] || r['Subtotal'] || 0;
       if (typeof v === 'string') v = v.replace(/[^0-9.]/g,'');
       var monto = parseFloat(v)||0;
       if (typeof frEsProyectado === 'function' && frEsProyectado(r)) {
@@ -11232,7 +11232,7 @@ function renderErDetalle() {
 
   function getValGasto(r) {
     if (usarFR) {
-      var v = r['Total (COP)'] || 0;
+      var v = r['Subtotal (COP)'] || 0;
       if (typeof v === 'string') v = v.replace(/[^0-9.]/g,'');
       return parseFloat(v)||0;
     }
@@ -11973,7 +11973,7 @@ function renderEstadoResultados() {
           if (typeof frEsProyectado === 'function' && frEsProyectado(r)) return false;
           return frEsGastoOpPL(r); // Excluir DIAN, préstamos, traslados
         }).reduce(function(a,r){
-          var v = r['Total (COP)'] || r['Total(COP)'] || r['Total'] || 0;
+          var v = r['Subtotal (COP)'] || r['Subtotal(COP)'] || r['Subtotal'] || 0;
           if (typeof v === 'string') v = v.replace(/[^0-9.]/g,'');
           return a + (parseFloat(v)||0);
         },0);
@@ -17373,7 +17373,7 @@ function fcRender() {
       var m = parseInt(dp[1]) - 1;
       var c = (r['Concepto']||'').toLowerCase();
       if (c.indexOf('abono factura')>=0 || c.indexOf('pago final factura')>=0) return;
-      if (m >= 0 && m < 12) egr[m] += parseFloat(r['Total (COP)']||0);
+      if (m >= 0 && m < 12) egr[m] += parseFloat(r['Subtotal (COP)']||0);
     });
   }
 
@@ -20755,7 +20755,7 @@ function alzakGenerarInforme() {
       var fp = (r['Fecha']||'').split('/');
       if (fp.length<3 || parseInt(fp[2])!==2026) return;
       var mes = parseInt(fp[1]);
-      var val = parseFloat(r['Total (COP)']||r['Total_COP']||0);
+      var val = parseFloat(r['Subtotal (COP)']||r['Subtotal_COP']||0);
       var cat = r['Categoria']||r['Categoría']||'Otros';
       costosTotal += val;
       if (mes <= mesActual+1) { // hasta mes actual inclusive

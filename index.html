@@ -1522,13 +1522,13 @@ function cerrarLogin() {
     // fp2026 — Facturación Programada
     gsGet('fp2026', function(rows){
       if(rows && rows.length > 1) {
-        try{ var j=rows[1]&&rows[1][0]; if(j){ localStorage.setItem('alzak_fp2026',j); if(typeof fpRender==='function') fpRender(); } }catch(e){}
+        try{ var j=rows[1]&&rows[1][0]; if(j){ localStorage.setItem(_orgKey('alzak_fp2026'),j); if(typeof fpRender==='function') fpRender(); } }catch(e){}
       }
     });
     // pf2026 — Presupuesto matriz
     gsGet('pf2026', function(rows){
       if(rows && rows.length > 1) {
-        try{ var j=rows[1]&&rows[1][0]; if(j){ localStorage.setItem('pf2026v2',j); if(typeof pfRender==='function') pfRender(); } }catch(e){}
+        try{ var j=rows[1]&&rows[1][0]; if(j){ localStorage.setItem(_orgKey('pf2026v2'),j); if(typeof pfRender==='function') pfRender(); } }catch(e){}
       }
     });
     // facturas
@@ -1651,6 +1651,7 @@ var ALZAK_ORGS = {
 };
 
 var ALZAK_ORG_ACTIVA = 'GROUP'; // Siempre inicia en GROUP
+function _orgKey(base) { return base + '_' + (ALZAK_ORG_ACTIVA||'GROUP'); }
 
 function alzakCambiarOrg(orgKey) {
   if (!ALZAK_ORGS[orgKey]) return;
@@ -2268,10 +2269,10 @@ function alzakCargarDatosPrincipal(url, callback) {
               return !fpDelSheet.some(function(s){ return s.cliente===r.cliente && String(s.monto)===String(r.monto); });
             });
             FP_DATA = fpDelSheet.concat(fpMaestro);
-            try { localStorage.removeItem('alzak_fp_2026'); } catch(e) {}
+            try { localStorage.removeItem(_orgKey('alzak_fp_2026')); } catch(e) {}
           } else if (data.programadas && data.programadas.length) {
             FP_DATA = data.programadas;
-            try { localStorage.setItem('alzak_fp_2026', JSON.stringify(FP_DATA)); } catch(e) {}
+            try { localStorage.setItem(_orgKey('alzak_fp_2026'), JSON.stringify(FP_DATA)); } catch(e) {}
           }
 
           cargados.push('Facturación: ' + FACTURAS.length + (programadasDelSheet.length?' (+'+programadasDelSheet.length+' prog.)':''));
@@ -2282,7 +2283,7 @@ function alzakCargarDatosPrincipal(url, callback) {
       // Solo agregar las del Sheet maestro si FP_DATA está vacío
       if (FP_DATA.length === 0 && data.programadas && data.programadas.length) {
         FP_DATA = data.programadas;
-        try { localStorage.setItem('alzak_fp_2026', JSON.stringify(FP_DATA)); } catch(e) {}
+        try { localStorage.setItem(_orgKey('alzak_fp_2026'), JSON.stringify(FP_DATA)); } catch(e) {}
         cargados.push('Programadas maestro: ' + FP_DATA.length);
       } else if (FP_DATA.length > 0) {
         cargados.push('Programadas: ' + FP_DATA.length);
@@ -6817,7 +6818,13 @@ function renderFacturas() {
 
   var kp = g('fact-kpis');
   var baseProyectada = 0;
-  if (typeof FP_DATA !== 'undefined') FP_DATA.forEach(function(fp){ baseProyectada += (parseFloat(fp.monto)||0); });
+  var _mesActualFP = new Date().getMonth(); // 0-indexed (Jul=6)
+  if (typeof FP_DATA !== 'undefined') FP_DATA.forEach(function(fp){
+    // Solo sumar meses presentes y futuros
+    for (var mm=_mesActualFP; mm<12; mm++) {
+      baseProyectada += parseFloat(fp['m'+(mm+1)]||0);
+    }
+  });
   var totalBaseGravable = totalBruto + baseProyectada;
   if (kp) kp.innerHTML =
     '<div class="met"><div class="met-l" style="color:#888">Base gravable</div><div class="met-v tb">' + F(totalBruto) + '</div><div class="met-s">' + FACTURAS.length + ' facturas emitidas</div></div>' +
@@ -9283,6 +9290,8 @@ function renderCarteraHome() {
         var fpd=fp.fecha.split('-');
         var fMes=parseInt(fpd[1]||0),fAnio=parseInt(fpd[0]||0);
         if(!fMes||!fAnio)return;
+        // Solo meses presentes y futuros
+        if(fAnio<hoyAnio||(fAnio===hoyAnio&&fMes<hoyMes)) return;
         var mk=MN[fMes-1]+' '+fAnio;
         if(!mm[mk])mm[mk]={total:0,cobrado:0,pendiente:0,vencida:0,programada:0,mes:fMes,anio:fAnio};
         if(!mm[mk].programada)mm[mk].programada=0;
@@ -17223,7 +17232,7 @@ function devolverModulosAHome() {
 function pfRender() {
   var wrap = document.getElementById('pf-tabla-wrap');
   if (!wrap) return;
-  var raw = localStorage.getItem('pf2026v2');
+  var raw = localStorage.getItem(_orgKey('pf2026v2'));
   var data = [];
   try { if (raw) data = JSON.parse(raw); } catch(e) {}
   if (!data.length) {
@@ -17271,7 +17280,7 @@ function pfAgregar() {
   var cliente  = prompt('Cliente / Empresa:');
   if (!cliente) return;
   var proyecto = prompt('Proyecto / Descripción:');
-  var raw = localStorage.getItem('pf2026v2');
+  var raw = localStorage.getItem(_orgKey('pf2026v2'));
   var data = [];
   try { if (raw) data = JSON.parse(raw); } catch(e) {}
   var nuevo = { cliente: cliente, proyecto: proyecto||'' };
@@ -17281,18 +17290,18 @@ function pfAgregar() {
     nuevo['m'+(m+1)] = parseFloat(v)||0;
   }
   data.push(nuevo);
-  localStorage.setItem('pf2026v2', JSON.stringify(data));
+  localStorage.setItem(_orgKey('pf2026v2'), JSON.stringify(data));
   pfRender();
   if (typeof fcRender === 'function') fcRender();
 }
 
 function pfEliminar(idx) {
   if (!confirm('¿Eliminar esta fila?')) return;
-  var raw = localStorage.getItem('pf2026v2');
+  var raw = localStorage.getItem(_orgKey('pf2026v2'));
   var data = [];
   try { if (raw) data = JSON.parse(raw); } catch(e) {}
   data.splice(idx, 1);
-  localStorage.setItem('pf2026v2', JSON.stringify(data));
+  localStorage.setItem(_orgKey('pf2026v2'), JSON.stringify(data));
   pfRender();
   if (typeof fcRender === 'function') fcRender();
 }
@@ -17323,11 +17332,12 @@ function fcRender() {
 
   // Ingresos programados de pfRender data
   var ingProg = new Array(12).fill(0);
+  var _mesHoyProg = new Date().getMonth(); // 0-indexed (Jul=6)
   try {
-    var raw = localStorage.getItem('pf2026v2');
+    var raw = localStorage.getItem(_orgKey('pf2026v2'));
     if (raw) {
       JSON.parse(raw).forEach(function(r) {
-        for (var m=0; m<12; m++) ingProg[m] += parseFloat(r['m'+(m+1)]||0);
+        for (var m=0; m<12; m++) { if (m >= _mesHoyProg) ingProg[m] += parseFloat(r['m'+(m+1)]||0); }
       });
     }
   } catch(e) {}
@@ -17502,11 +17512,13 @@ function fcActualizar() {
   }
 
   // ── Programadas ──────────────────────────────────────
+  var _mesFCProg = new Date().getMonth(); // 0-indexed
   try {
     fpCargarDatos().forEach(function(r) {
       for (var m=0; m<12; m++) {
         var v = parseFloat(r['m'+(m+1)]||0);
         if (!v) continue;
+        if (m < _mesFCProg) continue; // Meses pasados: ya no se facturan
         ingProg[m] += v;
         // Proyectar cobro
         // Usar fecha exacta guardada (no día 1 del mes)
@@ -17710,7 +17722,7 @@ function fcToggleDet(m) {
 function fpSyncSheets(data) {
   FP_DATA = data;
   // Cache local como fallback
-  try { localStorage.setItem('alzak_fp_2026', JSON.stringify(data)); } catch(e) {}
+  try { localStorage.setItem(_orgKey('alzak_fp_2026'), JSON.stringify(data)); } catch(e) {}
 
   // POST al GAS — guardar en pestaña _programadas del Sheet
   if (typeof ALZAK_GS_URL === 'undefined') {
@@ -17723,6 +17735,7 @@ function fpSyncSheets(data) {
 
   var payload = JSON.stringify({
     tab: '_programadas',
+    sheetId: alzakGetOrgActiva().facturacion,
     rows: [['cliente','proyecto','monto','fecha','obs','m1','m2','m3','m4','m5','m6','m7','m8','m9','m10','m11','m12']].concat(
       data.map(function(r) {
         return [r.cliente||'',r.proyecto||'',r.monto||0,r.fecha||'',r.obs||'',
@@ -17772,7 +17785,8 @@ function fpSyncSheets(data) {
 // ── Leer FP_DATA (Sheets tiene prioridad sobre localStorage) ──
 function fpCargarDatos() {
   if (FP_DATA && FP_DATA.length) return FP_DATA;
-  try { return JSON.parse(localStorage.getItem('alzak_fp_2026')||'[]'); } catch(e) { return []; }
+  var orgKey = 'alzak_fp_2026_' + (ALZAK_ORG_ACTIVA||'GROUP');
+  try { return JSON.parse(localStorage.getItem(orgKey)||'[]'); } catch(e) { return []; }
 }
 
 function fpRenderLista() {
@@ -20016,7 +20030,7 @@ function alzakSyncDesdeSheet() {
         try{
           var json = rows[1] && rows[1][0];
           if(json) {
-            localStorage.setItem('pf2026v2', json);
+            localStorage.setItem(_orgKey('pf2026v2'), json);
             if(typeof pfRender==='function') pfRender();
           }
         }catch(e){}
@@ -20029,7 +20043,7 @@ function alzakSyncDesdeSheet() {
         try{
           var json = rows[1] && rows[1][0];
           if(json) {
-            localStorage.setItem('alzak_fp2026', json);
+            localStorage.setItem(_orgKey('alzak_fp2026'), json);
             if(typeof fpRender==='function') fpRender();
           }
         }catch(e){}
@@ -20215,7 +20229,7 @@ function fpFmt(n) { return '$'+(Math.round(n||0)).toLocaleString('es-CO'); }
 
 function fpLoad() {
   try {
-    var raw = localStorage.getItem('alzak_fp2026');
+    var raw = localStorage.getItem(_orgKey('alzak_fp2026'));
     if (raw) { var d=JSON.parse(raw); if(d&&d.length) return d; }
   } catch(e){}
   return [];
@@ -20617,7 +20631,7 @@ function concPdfAgregar() {
 </script>
 <script>
 function fpSave(data) {
-  try { localStorage.setItem('alzak_fp2026', JSON.stringify(data)); } catch(e){}
+  try { localStorage.setItem(_orgKey('alzak_fp2026'), JSON.stringify(data)); } catch(e){}
   // Sync to Sheet so the other user sees it
   if(window.GS_SYNC_ACTIVO && typeof gsPost === 'function') {
     try {
@@ -20689,7 +20703,14 @@ function alzakGenerarInforme() {
   // ── INGRESOS PROYECTADOS (FP_DATA) ──
   var baseProyectada = 0, nProgramadas = 0;
   if (typeof FP_DATA!=='undefined') {
-    FP_DATA.forEach(function(fp){ baseProyectada += (parseFloat(fp.monto)||0); nProgramadas++; });
+    FP_DATA.forEach(function(fp){
+      var tieneMontoFuturo = false;
+      for (var mm=mesActual; mm<12; mm++) {
+        var v = parseFloat(fp['m'+(mm+1)]||0);
+        if (v > 0) { baseProyectada += v; tieneMontoFuturo = true; }
+      }
+      if (tieneMontoFuturo) nProgramadas++;
+    });
   }
   var totalBaseAnual = totalFacturado + baseProyectada;
 

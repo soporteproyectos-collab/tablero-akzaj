@@ -16467,14 +16467,16 @@ function alzakConstruirPDesdeConc(rows) {
       if (boldObj) ex.bold = boldObj;
       if (bcOK || fidObj || cajaObj || boldObj) actualizados++;
     } else {
-      if (!bcOK) continue; // mes nuevo requiere Bancolombia cuadrado como base
+      if (!bcOK && !fidObj && !cajaObj && !boldObj) continue; // mes nuevo requiere al menos 1 extracto
       P.push({
         label: label,
         desde: '01/' + ('0'+mn).slice(-2) + '/' + anio,
         hasta: diasMes + '/' + ('0'+mn).slice(-2) + '/' + anio,
-        sA: parseFloat(bc.sA)||0, sF: parseFloat(bc.sF)||0,
-        tAb: parseFloat(bc.tAb)||0, tCar: parseFloat(bc.tCar)||0,
-        movs: (bc.movs||[]).map(function(m){ return convMovGAS(m, 'Bancolombia'); }),
+        sA: bcOK ? (parseFloat(bc.sA)||0) : 0,
+        sF: bcOK ? (parseFloat(bc.sF)||0) : 0,
+        tAb: bcOK ? (parseFloat(bc.tAb)||0) : 0,
+        tCar: bcOK ? (parseFloat(bc.tCar)||0) : 0,
+        movs: bcOK ? (bc.movs||[]).map(function(m){ return convMovGAS(m, 'Bancolombia'); }) : [],
         fid: fidObj || {sA:0,sF:0,rendNetos:0,retencion:0,adiciones:0,retiros:0,movs:[]},
         caja: cajaObj || {sA:0,sF:0,movs:[],label:label},
         bold: boldObj || {sA:0,sF:0,movs:[],intereses:0}

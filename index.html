@@ -3288,7 +3288,166 @@ function toggleM(m) { if(filtMeses[m]) delete filtMeses[m]; else filtMeses[m]=tr
 function limpiarF() { filtA=''; filtMeses={}; renderHome(); }
 
 var DATA = {};
+</script>
 
+<div id="pg-conc">
+<div class="header">
+  <div style="display:flex;align-items:center;gap:13px">
+    <div>
+      <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJkAAABFCAMAAABufrTcAAAAXVBMVEVMaXFUUE9dw9pUUE9dw9pUUE9dw9pUUE9UUE9UUE9UUE9UUE9dw9pdw9pUUE9dw9pUUE9UUE9dw9pdw9pdw9pdw9pUUE9dw9pdw9pUUE9dw9pUUE9dw9pUUE9dw9qB9seNAAAAHXRSTlMA7u7du0R3u3dmzBERRJmIMyIimd1miKozqsxVVdoHr78AAAAJcEhZcwAAC4gAAAuIAeWOKUkAAASLSURBVGiB7ZnZlqM6DEWFCZMZwxDIYP3/Z94lMcQ2Zqi6/VAPnIdeaUMVO0eSJVNw6dKlS5cuXfqfyrt/6WCQ/Lvf1WJtrYSIeLNvi5RbhXmbr+72T8ZKqUhfuEsl02OwDrE8Q/aIbPlEaj0iUepxRFZ59tdxq0UU2QmylVJPKeVV5rKvlGfbYZElSsVnwDpExPA3ZJIse5trCa3ZzzXJHso7l4o3IhO/IHsQhB05TkZvhywtVjZvKMdWIKJZnmfI3srOaypM5VOILU80slQquaoQt24YlojY/pSs4iSzMypSMVnpb5FVnnqeKEpgy0RWo23aMVnKSWaHJVBeelcr0xayxFsX7pYaSv7GBjkmK1yZDgUtFasoz2TxKs7bqnnDYNPyn5DRs9TTXr1zeNm0wEFWKC+wf2RTzbjJ3iySI7LKscWyZRyryDaNySj3zxUlsGVjY8rJNK1FHZClvmOLZbO47ALi1guQyHzf9V02VWIzXnohzh9PkEXrJAfe4KaeI61uSmSecn6bDWViNqozTdsni11bLDeryajEMo2jmfwELfz61KLe13fJOFjSBbz45JvoYwWMaKdqIBMY5pNot/329T2yO2+x63089VQcTHqYu/BUm4HnzoK16PmGlr6+RyZXm8L38YZi41I0940zaC12ea6btrSoHTL3FssRTIJAN+3bopYeMKIdtoEOX9r/Mr2vb5Mlzi2WL+iplxp9/ds3x6Z2NDa2Zq/UTdsk4y/tu7Yl34ySYZo5axyiddZ8wS3qs0/m7uPAlpnzxV2fKo357OnuH5pu1kym9/UtsudmBkf2st7XzZm2OEDLLcsAhm9f3yCLNyMR2CPZ2FoDF9mEtjk/3uzZf+zr/Q7ZRh+HcWJcLy2lYp+d4r12kK/OS3pfJzJx0zXXm5Krs100Toz2b9P6+uq8udep+rVlY4tqwLUH45xkLtElxw7nL6FfkdFwq84eoS5dunTp0qW/oUDuTSPc+7i1JfaIw2pQTINmxq31+CUlzLeLgzsqOitEjpOjQRZtvFMdsCvb+VElTSqOGeGXZE+aBFJV0SwgK4g9qfw7jQFeAFEBoBLwE3qzlPgQqIgGQXpdPk2vNTYvnQxED/WNz9Od4MNOiPgaILshigF6UQr4tHQ9Q9Hq7yochkxuBCqAQkKsgtSLwX9DLL9k5BmTxRBF8KSj9jS8vOiBpmevBmoRgmigx/ojamhaaHAYsIReoIC2hRLzDEX2Wv0NQpecHvHg2S+NfSCgp1fE4CC7Q+yD9+Zl4AlPiFyEsOSZGA852EOLfVnzuQJxgLIno3r8wDA6RdHscTgRTSJ7L2SQFjKiD6mDTC1kA5ZZOw3G7NkHu3pKtazsUWTNmE0lNiWTZefJKEKplPBWFYVpIpNM8qTorj2TT17mk3MD5XSWZrIBQ2hfkGNJGRdi3WEHN5E19GkkA/GCEodjMkh8ehfIx1Z5n8novUhA/0YjWTxVAN9Q+UsFfASKZjahpIoI9QoIAUJBFTAI7IUYyT5cGifIfi4vZof/oMjQU38zunTp0qVLf0oA8B/GsoA79/xQqwAAAABJRU5ErkJggg==" alt="ALZAK Consulting & Research" style="height:38px;width:auto;display:block;">
+    </div>
+    <div style="width:1px;height:30px;background:var(--gray-light)"></div>
+    <div>
+      <div style="font-size:12px;font-weight:600;color:var(--gray-dark)">Conciliación Bancaria</div>
+      <div style="font-size:10px;color:var(--gray-mid)">Bancolombia · Fiducuenta · Caja Social · Bold CF</div>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <select id="sel-periodo" onchange="renderConc()">
+      <option value="0">Enero 2026</option>
+      <option value="1">Febrero 2026</option>
+      <option value="2">Marzo 2026</option>
+      <option value="3" selected>Abril 2026</option>
+    </select>
+    <button class="btn" onclick="exportarCSVConc()">↓ CSV</button>
+    <button class="btn btn-pri" onclick="window.print()">⎙ Imprimir</button>
+    <button class="btn btn-pri" onclick="pdfUploadOpen()" style="background:#2E7D32;border-color:#2E7D32;">📂 Nuevo mes</button>
+    <button class="btn btn-sec" onclick="alzakSyncDrive()" title="Leer PDFs desde carpetas de Google Drive" style="background:#1565C0;border-color:#1565C0;color:#fff;margin-left:6px">☁️ Sync Drive</button>
+  </div>
+</div>
+
+<div class="scroll-area">
+  <div class="section"><div class="section-head s-global"><span class="sec-badge sb-global">Resumen global</span><span class="sec-title on-teal" id="g-title"></span><span class="sec-sub on-teal" id="g-periodo"></span></div><div class="section-body" id="body-global" style="background:var(--teal)"></div></div>
+  <div class="section"><div class="section-head s-ahorros"><div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;"><span class="sec-badge sb-ahorros">Cta. Ahorros</span><span class="sec-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">78349636556 · Bancolombia · Sucursal Mall Plaza del Castillo</span></div><span id="ah-per" style="font-size:10px;color:#aaa;white-space:nowrap;padding:0 10px;flex-shrink:0;"></span><label style="cursor:pointer;background:#5BC8CD;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:10px;font-weight:700;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;box-shadow:0 1px 4px rgba(0,0,0,.25);flex-shrink:0;">📄 Extracto PDF<input type="file" accept=".pdf" style="display:none" onchange="concPdfLoad(this,'ahorros')"></label></div><div class="section-body" id="body-ahorros"></div></div>
+  <div class="section"><div class="section-head s-fondo"><div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;"><span class="sec-badge sb-fondo">Fiducuenta</span><span class="sec-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">98000001771 · Fondo de Inversión Colectiva · Fiduciaria Bancolombia</span></div><span id="fid-per" style="font-size:10px;color:#aaa;white-space:nowrap;padding:0 10px;flex-shrink:0;"></span><label style="cursor:pointer;background:#6950B8;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:10px;font-weight:700;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;box-shadow:0 1px 4px rgba(0,0,0,.25);flex-shrink:0;">📄 Extracto PDF<input type="file" accept=".pdf" style="display:none" onchange="concPdfLoad(this,'fondo')"></label></div>
+  <div class="section-body" id="body-fondo"></div></div>
+
+  <div class="section"><div class="section-head s-caja"><div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;"><span class="sec-badge sb-caja">Cta. Corriente</span><span class="sec-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">21003622970 · Banco Caja Social · Cartagena</span></div><span id="cj-per" style="font-size:10px;color:#aaa;white-space:nowrap;padding:0 10px;flex-shrink:0;"></span><label style="cursor:pointer;background:#C2410C;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:10px;font-weight:700;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;box-shadow:0 1px 4px rgba(0,0,0,.25);flex-shrink:0;">📄 Extracto PDF<input type="file" accept=".pdf" style="display:none" onchange="concPdfLoad(this,'caja')"></label></div><div class="section-body" id="body-caja"></div></div>
+
+<div class="section"><div class="section-head s-bold"><div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;"><span class="sec-badge sb-bold">Bold CF</span><span class="sec-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">1700-1155-2371 · Bold Compañía de Financiamiento · Depósito Ordinario</span></div><span id="bl-per" style="font-size:10px;color:#aaa;white-space:nowrap;padding:0 10px;flex-shrink:0;"></span><label style="cursor:pointer;background:#1E3A5F;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:10px;font-weight:700;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;box-shadow:0 1px 4px rgba(0,0,0,.25);flex-shrink:0;">📄 Extracto PDF<input type="file" accept=".pdf" style="display:none" onchange="concPdfLoad(this,'bold')"></label></div><div class="section-body" id="body-bold"></div></div>
+
+<!-- ══ TC BCS VISA ══════════════════════════════════════════════════ --> ══════════════════════════════════════════════════ -->
+<div class="section-card" style="margin:10px 0;">
+  <div class="section-head" style="background:#FEF2F2;border-color:#FECACA;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 20px;">
+    <div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;">
+      <span class="sec-badge" style="background:#DC2626;color:#fff;flex-shrink:0;">TC VISA</span>
+      <span class="sec-title" style="color:#991B1B;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">4704-3710-5418-6529 · Tarjeta de Crédito BCS · Cupo $4.000.000</span>
+    </div>
+    <span id="tc-per" style="font-size:10px;color:#aaa;white-space:nowrap;padding:0 10px;flex-shrink:0;"></span>
+    <label style="cursor:pointer;background:#DC2626;color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:10px;font-weight:700;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;box-shadow:0 1px 4px rgba(0,0,0,.25);flex-shrink:0;">📄 Extracto PDF<input type="file" accept=".pdf" style="display:none" onchange="concPdfLoad(this,'tc')"></label>
+  </div>
+  <div class="section-body" id="body-tc">
+    <div style="color:#aaa;font-size:12px;padding:10px;">Cargando...</div>
+  </div>
+</div>
+
+<div class="footer">
+  <span>ALZAK GROUP SAS · Bancolombia 78349636556 · Fiducuenta 98000001771 · Caja Social 21003622970 · Bold CF 1700-1155-2371 · TC BCS VISA 4704-3710-5418-6529</span>
+  <span id="fecha-gen"></span>
+</div>
+</div>
+<script>
+function tabHome() {
+  if(typeof devolverModulosAHome==="function") devolverModulosAHome();
+  // Restaurar el split
+  var split = document.getElementById('home-split');
+  if (split) split.style.display = 'flex';
+  var pgs = document.querySelectorAll('.pg');
+  for (var i=0; i<pgs.length; i++) { pgs[i].classList.remove('on'); pgs[i].style.display=''; }
+  var c = document.getElementById('pg-conc');
+  if (c) c.classList.remove('on');
+  var h = document.getElementById('pg-home');
+  if (h) h.classList.add('on');
+  var pp = document.getElementById('pg-presupuesto');
+  if (pp) pp.style.display = 'none';
+  // Siempre mover pg-conc al split derecho y forzar renderizado
+  var conc2 = document.getElementById('pg-conc');
+  var right2 = document.getElementById('home-split-right');
+  if (conc2 && right2) {
+    if (conc2.parentElement !== right2) right2.appendChild(conc2);
+    conc2.style.cssText = 'display:block; position:relative; height:auto; width:100%;';
+    conc2.classList.add('on');
+    if (typeof renderConc === 'function') setTimeout(renderConc, 150);
+  }
+  var tb = document.getElementById('topbar-t');
+  if (tb) tb.textContent = 'Inicio';
+  document.getElementById('tab-home-btn').style.background='#5DC3DA';
+  document.getElementById('tab-home-btn').style.color='#fff';
+      if (typeof renderHome === 'function') renderHome();
+}
+function tabConc() {
+  // Conciliación ahora vive en el home — hacer tabHome y scroll a conciliación
+  tabHome();
+  setTimeout(function(){
+    var conc = document.getElementById('pg-conc');
+    if (conc) conc.scrollIntoView({ behavior:'smooth', block:'start' });
+  }, 400);
+}
+
+function tabPres() {
+  // Ocultar el split del home
+  var split = document.getElementById('home-split');
+  if (split) split.style.display = 'none';
+  // Ocultar pg-home y mostrar presupuesto
+  var pgs = document.querySelectorAll('.pg');
+  for (var i=0; i<pgs.length; i++) { pgs[i].classList.remove('on'); pgs[i].style.display=''; }
+  var pgHome = document.getElementById('pg-home');
+  if (pgHome) { pgHome.classList.remove('on'); pgHome.style.display='none'; }
+  // Forzar que #content tenga altura visible para pg-presupuesto
+  var cnt = document.getElementById('content');
+  if (cnt) { cnt.style.height = 'auto'; cnt.style.minHeight = '100vh'; cnt.style.overflow = 'auto'; }
+  var c = document.getElementById('pg-presupuesto');
+  if (c) { c.classList.add('on'); c.style.cssText = 'display:block !important; min-height:100vh; width:100%;'; }
+  var tb = document.getElementById('topbar-t');
+  if (tb) tb.textContent = 'Presupuesto 2026';
+  ['tab-home-btn','tab-pres-btn'].forEach(function(id){
+    var b = document.getElementById(id);
+    if (b) { b.style.background='rgba(255,255,255,0.12)'; b.style.color='#ccc'; }
+  });
+  var pb = document.getElementById('tab-pres-btn');
+  if (pb) { pb.style.background='#5DC3DA'; pb.style.color='#fff'; }
+  setTimeout(function(){ try{ renderPresupuesto(); }catch(e){} try{ pfRender(); }catch(e){} try{ fcRender(); }catch(e){} }, 60);
+}
+
+// Intercept tablero's ir() to also hide pg-conc/pg-balance and update tabs
+document.addEventListener('DOMContentLoaded', function() {
+  var nav = document.getElementById('tab-nav');
+  if (nav) nav.style.display = 'flex';
+
+  // Mover pg-conc al split derecho desde el inicio
+  setTimeout(function() {
+    var right = document.getElementById('home-split-right');
+    var conc  = document.getElementById('pg-conc');
+    if (right && conc) {
+      if (conc.parentElement !== right) right.appendChild(conc);
+      conc.style.cssText = 'display:block; position:relative; height:auto; width:100%;';
+      conc.classList.add('on');
+      if (typeof renderConc === 'function') renderConc();
+    }
+  }, 600);
+  var origIr = window.ir;
+  if (origIr) {
+    window.ir = function(id) {
+      if(typeof devolverModulosAHome==="function") devolverModulosAHome();
+      var c = document.getElementById('pg-conc');
+      if (c) c.classList.remove('on');
+      var pb2 = document.getElementById('pg-balance');
+      if (pb2) pb2.classList.remove('on');
+      var pp=document.getElementById('pg-presupuesto');
+      if(pp) pp.classList.remove('on');
+      origIr(id);
+      ['tab-home-btn','tab-pres-btn'].forEach(function(id2){
+        var b = document.getElementById(id2);
+        if (b) { b.style.background='rgba(255,255,255,0.12)'; b.style.color='#ccc'; }
+      });
+      var hb=document.getElementById('tab-home-btn');
+      if(hb){hb.style.background='#5DC3DA';hb.style.color='#fff';}
+    };
+  }
+});
+</script>
+
+<script>
 (function buildPFromDATA() {
   if (typeof DATA === 'undefined' || !Object.keys(DATA).length) return;
   var MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];

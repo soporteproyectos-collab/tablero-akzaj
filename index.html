@@ -13526,21 +13526,51 @@ function getMeses() {
 
   }
 
-  // Nunca mostrar meses futuros — cortar en el mes actual
+  // Corte en mes actual para datos reales — pero incluir meses futuros
+  // si tienen datos proyectados (FP_DATA o GP_DATA)
   var hoy = new Date();
   var mesActualIdx = hoy.getMonth();   // 0=Enero … 11=Diciembre
   var anioActual   = hoy.getFullYear();
 
+  // Marcar qué meses tienen proyecciones
+  var dispProy = {};
+  if (typeof FP_DATA !== 'undefined') {
+    for (var i=0; i<FP_DATA.length; i++) {
+      var fpd2 = FP_DATA[i];
+      // columnas m1..m12
+      for (var gm2=1; gm2<=12; gm2++) {
+        if (parseFloat(fpd2['m'+gm2]||0) > 0) dispProy[MN[gm2-1]+' 2026'] = 1;
+      }
+      // fecha yyyy-mm-dd
+      var ff2 = fpd2.fecha || '';
+      if (ff2.indexOf('-') > 0) {
+        var pp2 = ff2.split('-');
+        var mm3 = parseInt(pp2[1]) - 1;
+        if (mm3 >= 0 && mm3 < 12) dispProy[MN[mm3]+' '+pp2[0]] = 1;
+      }
+    }
+  }
+  if (typeof GP_DATA !== 'undefined') {
+    for (var i=0; i<GP_DATA.length; i++) {
+      for (var gm3=1; gm3<=12; gm3++) {
+        if (parseFloat(GP_DATA[i]['m'+gm3]||0) > 0) dispProy[MN[gm3-1]+' 2026'] = 1;
+      }
+    }
+  }
+
   return MESES_ORD.filter(function(m) {
-    if (!disp[m]) return false;
-    // Parsear "Enero 2026" → mes 0, año 2026
+    if (!disp[m] && !dispProy[m]) return false;
     var partes = m.split(' ');
     var mNom   = partes[0];
     var mAnio  = parseInt(partes[1]);
     var mIdx   = MN.indexOf(mNom);
-    if (mAnio > anioActual) return false;
-    if (mAnio === anioActual && mIdx > mesActualIdx) return false;
-    return true;
+    // Meses pasados y actuales: siempre incluir si tienen datos
+    if (mAnio < anioActual) return !!disp[m];
+    if (mAnio === anioActual && mIdx <= mesActualIdx) return !!disp[m];
+    // Meses futuros: incluir solo si tienen proyecciones
+    if (mAnio > anioActual) return !!dispProy[m];
+    if (mAnio === anioActual && mIdx > mesActualIdx) return !!dispProy[m];
+    return false;
   });
 
 }

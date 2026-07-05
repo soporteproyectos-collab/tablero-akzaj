@@ -11982,19 +11982,19 @@ var BAL_CONFIG = {
 
   apertura2025: {
 
-    cxc:         312180000,  // Cuentas por cobrar comerciales cartera activa 2025
+    cxc:         428804000,  // CxC oficial DIAN 2025 (casilla 38 Formulario 110)
 
     cxpProv:     155301000,  // Cuentas por pagar proveedores nacionales
 
-    efectivo:      4485000,  // Efectivo y equivalentes en cuentas bancarias
+    efectivo:      4485000,  // Efectivo y equivalentes al 31-Dic-2025 (DIAN casilla 36)
 
-    rete:        116724000,  // Impuestos anticipados (retefuente acumulada 2025)
+    rete:        178329000,  // Saldo a favor DIAN 2025: retenciones $123.998M + autorret. $65.009M - imp.cargo $10.768M (casilla 114 DR 2025)
 
-    equiposNeto:  72899000,  // PP&E neto al 31-Dic-2025 ($80.754.000 - $7.855.000 depreciación)
+    equiposNeto:  52019000,  // PP&E neto oficial DIAN 2025 (casilla 42 Formulario 110)
 
-    equiposBruto: 80754000,  // PP&E bruto al 31-Dic-2025
+    equiposBruto: 60000000,  // PP&E bruto estimado al 31-Dic-2025
 
-    depreciacion:  7855000   // Depreciación acumulada al 31-Dic-2025
+    depreciacion:  7981000   // Depreciación acumulada al 31-Dic-2025
 
   }
 
@@ -12192,7 +12192,9 @@ function calcBalMes(mes) {
 
   var afNeto2025 = (BAL_CONFIG.apertura2025&&BAL_CONFIG.apertura2025.equiposNeto)||0;
 
-  // 1b. CxC — facturas pendientes de cobro al corte
+  // 1b. CxC — facturas emitidas pendientes de cobro al corte
+  // Incluye: facturas reales no pagadas + facturas proyectadas (ya causadas, aún por cobrar)
+  // Lógica 45-60-90 días: si no hay pago confirmado al corte = sigue en CxC
 
   var factFil = FACTURAS;
 
@@ -12208,6 +12210,7 @@ function calcBalMes(mes) {
 
     if (fAnio<2026) return; // Facturas 2025 van aparte con cxcApertura
 
+    // Para balance por mes: incluir facturas hasta el corte (real o proyectada)
     if (mes && (fAnio>corteAnio_cxc||(fAnio===corteAnio_cxc&&fMes>corteMes_cxc))) return;
 
     // ¿Pagada al corte?
@@ -12274,7 +12277,38 @@ function calcBalMes(mes) {
 
   }
 
-  var cxc=cxcAperturaPendiente+cxc2026Pendiente;
+  // Agregar ingresos proyectados (FP_DATA) como CxC futura
+  // Si hay meses proyectados dentro del período de corte, esos ingresos
+  // ya están causados y son cartera por cobrar
+  var cxcProyectada = 0;
+  if (typeof FP_DATA !== 'undefined' && FP_DATA.length && mes) {
+    var MN_FP = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                 'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    FP_DATA.forEach(function(fp) {
+      // Verificar si este ingreso proyectado ya fue incluido en FACTURAS reales
+      // Si ya está en cxcArr como factura, no duplicar
+      var fpMonto = parseFloat(fp.monto || 0);
+      if (fpMonto <= 0) return;
+      var ffp = fp.fecha || '';
+      var ffpp = ffp.indexOf('-') > 0 ? ffp.split('-') : [];
+      if (ffpp.length < 3) return;
+      var fpAnio = parseInt(ffpp[0]), fpMes = parseInt(ffpp[1]);
+      // Solo meses futuros al mes actual pero dentro del corte
+      var hoyMes = new Date().getMonth() + 1;
+      var hoyAnio = new Date().getFullYear();
+      if (fpAnio < hoyAnio || (fpAnio === hoyAnio && fpMes <= hoyMes)) return;
+      if (fpAnio > corteAnio_cxc || (fpAnio === corteAnio_cxc && fpMes > corteMes_cxc)) return;
+      // Verificar que no exista ya como factura real
+      var yaFacturado = cxcArr.some(function(f) {
+        var cli = (f.cliente || '').toLowerCase();
+        var fpCli = (fp.cliente || '').toLowerCase();
+        return cli.indexOf(fpCli.substring(0,6)) >= 0 && Math.abs((f.bruto||0) - fpMonto) < 1000000;
+      });
+      if (!yaFacturado) cxcProyectada += fpMonto;
+    });
+  }
+
+  var cxc=cxcAperturaPendiente+cxc2026Pendiente+cxcProyectada;
 
   // 1c. Retefuente (impuestos anticipados)
 
@@ -12630,15 +12664,15 @@ function calcBalMes(mes) {
 
     });
 
-    // Préstamos conocidos (configurar saldos iniciales aquí)
-
+    // Préstamos — saldos al cierre 2025 según declaración de renta
+    // Pasivos DIAN 2025: $381.645.000 total. Desglose préstamos:
     var PRESTAMOS_SALDO_INICIAL = {
 
-      'Scotiabank NJAZ': 24000000,   // Saldo inicial estimado
+      'Scotiabank NJAZ': 14123004,   // Saldo real Dic-2025 según extracto
 
-      'ITAU NJAZ': 8000000,          // Saldo inicial estimado
+      'ITAU NJAZ': 2000000,          // Saldo real Dic-2025 según extracto
 
-      'Jannina Alvis': 31100000      // Préstamo personal documentado
+      'Jannina Alvis': 4205505       // Saldo real Dic-2025 (abono ene-2026 ya aplicado)
 
     };
 

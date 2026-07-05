@@ -13522,7 +13522,22 @@ function getMeses() {
 
   }
 
-  return MESES_ORD.filter(function(m){return disp[m];});
+  // Nunca mostrar meses futuros — cortar en el mes actual
+  var hoy = new Date();
+  var mesActualIdx = hoy.getMonth();   // 0=Enero … 11=Diciembre
+  var anioActual   = hoy.getFullYear();
+
+  return MESES_ORD.filter(function(m) {
+    if (!disp[m]) return false;
+    // Parsear "Enero 2026" → mes 0, año 2026
+    var partes = m.split(' ');
+    var mNom   = partes[0];
+    var mAnio  = parseInt(partes[1]);
+    var mIdx   = MN.indexOf(mNom);
+    if (mAnio > anioActual) return false;
+    if (mAnio === anioActual && mIdx > mesActualIdx) return false;
+    return true;
+  });
 
 }
 

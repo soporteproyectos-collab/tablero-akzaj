@@ -21,6 +21,7 @@ body{background:#f5f4f0;color:#54504F;min-height:100vh}
 #content{padding:0;max-width:100%;margin:0}
 
 .pg{display:none}
+#pg-dian.on{display:block !important}
 
 .pg.on{display:block}
 
@@ -28455,28 +28456,37 @@ var DIAN_DATA = [
 ];
 
 function tabDIAN() {
-  // Hide all pages using class
-  var pgs = document.querySelectorAll('.pg');
-  for (var i=0;i<pgs.length;i++) pgs[i].className = pgs[i].className.replace(' on','');
-  // Reset any inline display overrides
-  ['pg-home','pg-facturas','pg-conc','pg-presupuesto'].forEach(function(id){
-    var el = document.getElementById(id);
-    if (el) el.style.display = '';
-  });
-  // Reset home-split
+  // Reset home split
   var hs = document.getElementById('home-split');
-  if (hs) hs.style.display = '';
-  // Show pg-dian
+  if (hs) hs.style.display = 'none';
+  // Hide ALL pages — remove class and force display:none on problematic ones
+  var pgs = document.querySelectorAll('.pg');
+  for (var i=0;i<pgs.length;i++) {
+    pgs[i].classList.remove('on');
+    pgs[i].style.display = 'none';
+  }
+  // Also reset presupuesto and conc which use inline styles
+  ['pg-presupuesto','pg-conc','pg-balance'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) { el.classList.remove('on'); el.style.display='none'; }
+  });
+  // Show ONLY pg-dian
   var pg = document.getElementById('pg-dian');
-  if (pg) { pg.className += ' on'; pg.style.display = 'block'; }
+  if (pg) {
+    pg.classList.add('on');
+    pg.style.cssText = 'display:block !important; padding:0; background:#f5f4f0; min-height:100vh;';
+  }
+  // Make sure #content is visible
+  var cnt = document.getElementById('content');
+  if (cnt) { cnt.style.height='auto'; cnt.style.minHeight='100vh'; cnt.style.overflow='auto'; }
   // Update tab buttons
   ['tab-home-btn','tab-pres-btn'].forEach(function(id){
     var b = document.getElementById(id);
-    if (b) { b.style.background='transparent'; b.style.color='rgba(255,255,255,0.6)'; }
+    if (b) { b.style.background='rgba(255,255,255,0.1)'; b.style.color='rgba(255,255,255,0.5)'; }
   });
   var db = document.getElementById('tab-dian-btn');
-  if (db) { db.style.background='#FFC107'; db.style.color='#000'; db.style.fontWeight='700'; }
-  setTimeout(renderDIAN, 150);
+  if (db) { db.style.background='#FFC107'; db.style.color='#111'; db.style.fontWeight='700'; }
+  setTimeout(renderDIAN, 200);
 }
 
 var dianRendered = false;

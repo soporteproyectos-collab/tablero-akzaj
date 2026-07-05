@@ -28530,52 +28530,97 @@ function tabDIAN() {
 var dianRendered = false;
 
 function getDian2026Live() {
-  // Lee datos reales del tablero en tiempo real
+  // Lee el ESCENARIO PROYECTADO TOTAL 2026 del tablero en tiempo real
+  // Combina: ingresos reales + proyectados / costos reales + proyectados / balance actual
   try {
     var anioFil = '2026';
+    var MN = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+              'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    var hoy     = new Date();
+    var mesIdx  = hoy.getMonth(); // 0=Ene, 6=Jul
 
-    // ── INGRESOS: suma de FACTURAS 2026 (igual que accIng en renderErDetalle) ──
-    var ingVivo = 0;
+    // ── 1. INGRESOS REALES acumulados 2026 (facturas emitidas) ──
+    var ingReal = 0;
     if (typeof FACTURAS !== 'undefined') {
       FACTURAS.forEach(function(f) {
         var dp = (f.fecha_raw || f.fecha || '').split('/');
-        var aa = dp.length >= 3 ? dp[2].substring(0,4) : '';
-        if (aa === anioFil) ingVivo += (f.bruto || 0);
+        if (dp.length >= 3 && dp[2].substring(0,4) === anioFil) ingReal += (f.bruto || 0);
       });
     }
 
-    // ── COSTOS: suma de FR_DATA 2026 filtrado por frEsGastoOpPL ──
-    var cosVivo = 0;
+    // ── 2. INGRESOS PROYECTADOS: FP_DATA meses futuros ──
+    var ingProy = 0;
+    if (typeof FP_DATA !== 'undefined') {
+      FP_DATA.forEach(function(fp) {
+        // Meses futuros (desde mes siguiente al actual)
+        for (var mm = mesIdx + 1; mm < 12; mm++) {
+          ingProy += parseFloat(fp['m' + (mm + 1)] || 0);
+        }
+      });
+      // Deduplicar: quitar lo que ya está en FACTURAS
+      ingProy = Math.max(0, ingProy);
+    }
+
+    // ── 3. COSTOS REALES 2026 desde FR_DATA ──
+    var cosReal = 0;
     if (typeof FR_DATA !== 'undefined') {
       FR_DATA.forEach(function(r) {
-        var fp = (r['Fecha'] || '').split('/');
-        if (fp.length < 3) return;
-        if (fp[2].substring(0,4) !== anioFil) return;
+        var fp2 = (r['Fecha'] || '').split('/');
+        if (fp2.length < 3) return;
+        if (fp2[2].substring(0,4) !== anioFil) return;
         if (typeof frEsGastoOpPL === 'function' && !frEsGastoOpPL(r)) return;
-        cosVivo += parseFloat(r['Subtotal (COP)'] || 0);
+        cosReal += parseFloat(r['Subtotal (COP)'] || 0);
       });
     }
 
-    // ── BALANCE: usa calcBalMes() sin filtro de mes = acumulado ──
-    var bal = (typeof calcBalMes === 'function') ? calcBalMes('') : null;
+    // ── 4. GASTOS PROYECTADOS: GP_DATA meses futuros ──
+    var gasProy = 0;
+    if (typeof GP_DATA !== 'undefined') {
+      GP_DATA.forEach(function(gp) {
+        for (var mm = mesIdx + 1; mm < 12; mm++) {
+          gasProy += parseFloat(gp['m' + (mm + 1)] || 0);
+        }
+      });
+    }
 
-    var ingM  = Math.round(ingVivo / 1e6 * 10) / 10;
-    var cosM  = Math.round(cosVivo / 1e6 * 10) / 10;
-    var utilM = Math.round((ingVivo - cosVivo) / 1e6 * 10) / 10;
-    var pbM   = bal ? Math.round(bal.totalAct / 1e6 * 10) / 10 : 0;
-    var pasM  = bal ? Math.round(bal.totalPas / 1e6 * 10) / 10 : 0;
-    var plM   = bal ? Math.round(bal.totalPat / 1e6 * 10) / 10 : 0;
-    var efM   = bal ? Math.round(bal.bancos / 1e6 * 10) / 10 : 0;
-    var cxcM  = bal ? Math.round(bal.cxc / 1e6 * 10) / 10 : 0;
+    // ── 5. TOTALES DEL ESCENARIO FINAL 2026 ──
+    var ingTotal  = ingReal + ingProy;   // Ingresos año completo proyectado
+    var cosTotal  = cosReal + gasProy;   // Costos año completo proyectado
+    var utilTotal = ingTotal - cosTotal;
+
+    // ── 6. BALANCE al mes de corte (para patrimonio, pasivos, efectivo) ──
+    var mesCorteBal = MN[mesIdx] + ' ' + anioFil;
+    var bal = (typeof calcBalMes === 'function') ? calcBalMes(mesCorteBal) : null;
+
+    // Apertura 2025 para calcular patrimonio líquido proyectado
+    var aper = (typeof BAL_CONFIG !== 'undefined' && BAL_CONFIG.apertura2025) ? BAL_CONFIG.apertura2025 : {};
+    var plApertura = (aper.efectivo||0) + (aper.cxc||0) + (aper.equiposNeto||0) + (aper.rete||0) - (aper.cxpProv||0);
+
+    var R = function(v) { return Math.round(v / 1e6 * 10) / 10; };
+
+    var ingM  = R(ingTotal);
+    var cosM  = R(cosTotal);
+    var utilM = R(utilTotal);
+    var efM   = bal ? R(bal.bancos) : 0;
+    var cxcM  = bal ? R(bal.cxc)   : 0;
+    // Pasivos: lo que quedó del cierre 2025 + lo pendiente de pagar en 2026
+    var pasM  = bal ? R(bal.totalPas) : 0;
+    // Patrimonio líquido proyectado = apertura + utilidad proyectada del año
+    var plM   = R(plApertura + utilTotal);
+    // Patrimonio bruto = pl + pasivos (simplificado)
+    var pbM   = R(plApertura + utilTotal + (bal ? bal.totalPas : 0));
     var endM  = pbM > 0 ? Math.round(pasM / pbM * 1000) / 10 : 0;
 
     return {
       a: '2026*', ing: ingM, cos: cosM, util: utilM,
       pb: pbM, pas: pasM, pl: plM,
       ef: efM, cxc: cxcM, imp: 0, end: endM,
+      ingReal: R(ingReal), ingProy: R(ingProy),
+      cosReal: R(cosReal), gasProy: R(gasProy),
       vivo: true
     };
   } catch(e) {
+    console.log('getDian2026Live error:', e);
     return null;
   }
 }
@@ -28599,21 +28644,33 @@ function renderDIAN() {
 }
 
 function buildDianKPIs2026(live) {
-  // Actualizar KPIs de apertura con datos reales si existen
   if (!live || live.ing <= 0) return;
+
   var el = document.getElementById('dian-kpi-ing-2026');
-  if (el) el.innerHTML = '$' + live.ing.toFixed(1) + 'M <span style="font-size:10px;color:#888">(Ene–Jun real)</span>';
+  if (el) el.innerHTML = '$' + live.ing.toFixed(1) + 'M'
+    + '<br><span style="font-size:10px;color:#0C447C">✅ Real: $' + (live.ingReal||0).toFixed(1) + 'M</span>'
+    + ' <span style="font-size:10px;color:#7C3AED">+ Proy: $' + (live.ingProy||0).toFixed(1) + 'M</span>';
+
   var el2 = document.getElementById('dian-kpi-util-2026');
   if (el2) {
     var color = live.util >= 0 ? '#166534' : '#DC2626';
-    el2.innerHTML = '<span style="color:' + color + '">$' + live.util.toFixed(1) + 'M</span> <span style="font-size:10px;color:#888">(' + (live.ing > 0 ? (live.util/live.ing*100).toFixed(1) : 0) + '% margen)</span>';
+    var mg = live.ing > 0 ? (live.util/live.ing*100).toFixed(1) : 0;
+    el2.innerHTML = '<span style="color:' + color + '">$' + live.util.toFixed(1) + 'M</span>'
+      + '<br><span style="font-size:10px;color:#888">Margen proyectado: ' + mg + '%</span>';
   }
+
   var el3 = document.getElementById('dian-kpi-ef-2026');
-  if (el3) el3.innerHTML = '$' + live.ef.toFixed(1) + 'M';
+  if (el3) {
+    var efColor = live.ef < 10 ? '#DC2626' : '#166534';
+    el3.innerHTML = '<span style="color:' + efColor + '">$' + live.ef.toFixed(1) + 'M</span>'
+      + '<br><span style="font-size:10px;color:#888">CxC: $' + (live.cxc||0).toFixed(1) + 'M</span>';
+  }
+
   var el4 = document.getElementById('dian-kpi-end-2026');
   if (el4) {
     var color4 = live.end > 75 ? '#DC2626' : live.end > 60 ? '#D97706' : '#166534';
-    el4.innerHTML = '<span style="color:' + color4 + '">' + live.end.toFixed(1) + '%</span>';
+    el4.innerHTML = '<span style="color:' + color4 + '">' + live.end.toFixed(1) + '%</span>'
+      + '<br><span style="font-size:10px;color:#888">Pasivos: $' + (live.pas||0).toFixed(1) + 'M</span>';
   }
 }
 

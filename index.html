@@ -3232,7 +3232,18 @@ function alzakCargarDatosPrincipal(url, callback) {
 
               total:       total,
 
-              pagada:      estadoRaw.toLowerCase().indexOf('pagad') >= 0
+              pagada:      estadoRaw.toLowerCase().indexOf('pagad') >= 0,
+
+              fecha_pago:  (function(){
+                var fp = r['Fecha_Pago']||r['Fecha Pago']||r['FechaPago']||r['Fecha_Cobro']||'';
+                if (!fp) return null;
+                fp = String(fp).trim();
+                if (fp.indexOf('T') >= 0) fp = fp.substring(0,10);
+                if (/^\d{2}\/\d{2}\/\d{4}$/.test(fp)) {
+                  var p = fp.split('/'); return p[2]+'-'+p[1]+'-'+p[0];
+                }
+                return /^\d{4}-\d{2}-\d{2}$/.test(fp) ? fp : null;
+              })()
 
             };
 
@@ -12122,11 +12133,33 @@ function calcBalMes(mes) {
 
   function fFechaPartes(f) {
 
-    var p=(f||'').split('/'); if(p.length<3) return [];
+    var s = String(f||'').trim();
 
-    // dd/MM/yyyy → [yyyy, MM, dd]
+    if (!s) return [];
 
-    return [p[2], p[1], p[0]];
+    // Formato dd/MM/yyyy
+    if (s.indexOf('/') >= 0) {
+
+      var p = s.split('/');
+
+      if (p.length < 3) return [];
+
+      return [p[2].substring(0,4), p[1], p[0]];
+
+    }
+
+    // Formato yyyy-MM-dd (ISO)
+    if (s.indexOf('-') >= 0) {
+
+      var p2 = s.substring(0,10).split('-');
+
+      if (p2.length < 3) return [];
+
+      return [p2[0], p2[1], p2[2]];
+
+    }
+
+    return [];
 
   }
 
@@ -12213,29 +12246,36 @@ function calcBalMes(mes) {
     // Para balance por mes: incluir facturas hasta el corte (real o proyectada)
     if (mes && (fAnio>corteAnio_cxc||(fAnio===corteAnio_cxc&&fMes>corteMes_cxc))) return;
 
-    // ¿Pagada al corte?
+    // ¿Cobrada al corte del mes?
+    // Fuentes de fecha de cobro (en orden de prioridad):
+    // 1. Fecha_Pago explícita en el Sheet
+    // 2. Si pagada=true → usar fecha de vencimiento como proxy (cliente pagó aprox. en esa fecha)
+    // 3. Si pagada=true y sin vencimiento → cobrada en el mismo mes de la factura
+    var salioDeCartera = false;
+    var fechaCobroStr = f.fecha_pago || null;
 
-    if (f.pagada) {
-
-      if (!mes) return; // Acumulado: ya cobrada, no es CxC
-
-      if (f.fecha_pago) {
-
-        var dp3=fFechaPartes(f.fecha_pago);
-
-        if (dp3.length>=3) {
-
-          var pTs=new Date(parseInt(dp3[0]),parseInt(dp3[1])-1,parseInt(dp3[2])).getTime();
-
-          if (pTs<=cierreTimestamp) return; // cobrada antes del cierre
-
-        }
-
-      } else return; // pagada sin fecha → asumimos ya cobrada
-
+    if (!fechaCobroStr && f.pagada) {
+      // Usar vencimiento como fecha aproximada de cobro
+      if (f.vence) {
+        fechaCobroStr = f.vence; // yyyy-MM-dd
+      } else {
+        // Sin vencimiento: asumir cobrada en el mes de la factura
+        fechaCobroStr = f.fecha || f.fecha_raw || null;
+      }
     }
 
-    cxc2026Pendiente+=(f.total||0);
+    if (fechaCobroStr) {
+      var dp3 = fFechaPartes(fechaCobroStr);
+      if (dp3.length >= 3) {
+        var pTs = new Date(parseInt(dp3[0]), parseInt(dp3[1])-1, parseInt(dp3[2])).getTime();
+        if (!mes || pTs <= cierreTimestamp) salioDeCartera = true;
+      }
+    }
+
+    if (salioDeCartera) return;
+
+    // Usar bruto (base gravable) para CxC — el IVA no es ingreso propio
+    cxc2026Pendiente += (f.bruto || f.total || 0);
 
     cxcArr.push(f);
 
@@ -12255,17 +12295,20 @@ function calcBalMes(mes) {
 
       if (dp0.length<3||parseInt(dp0[0])>=2026) return;
 
-      if (!f.pagada) return;
+      if (!f.pagada && !f.fecha_pago) return;
 
-      if (f.fecha_pago) {
+      // Fecha de cobro: explícita > vencimiento > fecha factura
+      var fechaCobro2025 = f.fecha_pago || (f.pagada ? (f.vence || f.fecha || f.fecha_raw) : null);
 
-        var dp3=fFechaPartes(f.fecha_pago);
+      if (fechaCobro2025) {
+
+        var dp3=fFechaPartes(fechaCobro2025);
 
         if (dp3.length>=3) {
 
           var pTs=new Date(parseInt(dp3[0]),parseInt(dp3[1])-1,parseInt(dp3[2])).getTime();
 
-          if (pTs<=cierreTimestamp) cobrado2025+=(f.total||0);
+          if (pTs<=cierreTimestamp) cobrado2025+=(f.bruto||f.total||0);
 
         }
 
@@ -12310,15 +12353,49 @@ function calcBalMes(mes) {
 
   var cxc=cxcAperturaPendiente+cxc2026Pendiente+cxcProyectada;
 
-  // 1c. Retefuente (impuestos anticipados)
+  // 1c. Retefuente acumulada (anticipo a favor ante la DIAN)
+  // Regla: cada factura emitida genera una retención del 11% que el cliente descuenta.
+  // Ese valor queda como saldo a favor de ALZAK ante la DIAN — activo corriente fiscal.
+  // Se acumula desde apertura 2025 + cada factura emitida hasta el corte del mes.
+  // No se descuenta cuando se cobra la factura — es una retención independiente del cobro.
 
-  var rete2026=factFil.filter(function(f){
+  var rete2026 = factFil.filter(function(f) {
 
-    var dp=fFechaPartes(f.fecha_raw||f.fecha); return dp[0]&&parseInt(dp[0])>=2026;
+    var dp = fFechaPartes(f.fecha_raw || f.fecha);
 
-  }).reduce(function(a,f){return a+(parseFloat(f.retefuente)||0);},0);
+    if (!dp[0] || parseInt(dp[0]) < 2026) return false;
 
-  var rete=reteApertura+rete2026;
+    // Solo facturas hasta el corte del mes
+    if (mes) {
+      var fAnioR = parseInt(dp[0]), fMesR = parseInt(dp[1]);
+      if (fAnioR > corteAnio_cxc) return false;
+      if (fAnioR === corteAnio_cxc && fMesR > corteMes_cxc) return false;
+    }
+
+    return true;
+
+  }).reduce(function(a, f) { return a + (parseFloat(f.retefuente) || 0); }, 0);
+
+  // También incluir retenciones de facturas proyectadas (FP_DATA) que tienen rete estimada
+  // Las retenciones proyectadas son reales en cuanto la factura se emite
+  var rete2026Proy = 0;
+  if (typeof FP_DATA !== 'undefined' && FP_DATA.length && mes) {
+    FP_DATA.forEach(function(fp) {
+      var ffp = (fp.fecha || '').split('-');
+      if (ffp.length < 3) return;
+      var fpAnio = parseInt(ffp[0]), fpMes = parseInt(ffp[1]);
+      var hoyM = new Date().getMonth() + 1;
+      var hoyA = new Date().getFullYear();
+      // Solo meses futuros dentro del corte (no los pasados que ya están en FACTURAS reales)
+      if (fpAnio < hoyA || (fpAnio === hoyA && fpMes <= hoyM)) return;
+      if (fpAnio > corteAnio_cxc || (fpAnio === corteAnio_cxc && fpMes > corteMes_cxc)) return;
+      // Estimar retención 11% sobre el monto proyectado
+      var monto = parseFloat(fp.monto || 0);
+      rete2026Proy += Math.round(monto * 0.11);
+    });
+  }
+
+  var rete = reteApertura + rete2026 + rete2026Proy;
 
   var totalActCorr=totalBancos+cxc+rete;
 

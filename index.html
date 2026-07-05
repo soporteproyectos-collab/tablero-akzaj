@@ -830,6 +830,8 @@ tbody tr:hover td{background:var(--cyan-light);}
 
   <button onclick="alzakGenerarInforme()" title="Generar informe ejecutivo PPT + PDF" style="padding:6px 14px;border-radius:20px;border:1px solid rgba(93,195,218,0.3);cursor:pointer;font-size:11px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif;background:rgba(93,195,218,0.12);color:#5DC3DA;">📊 Informe</button>
 
+  <button id="tab-dian-btn" onclick="tabDIAN()" title="Diagnóstico histórico DIAN 2015-2025" style="padding:6px 14px;border-radius:20px;border:1px solid rgba(255,193,7,0.4);cursor:pointer;font-size:11px;font-weight:700;font-family:Montserrat,Helvetica,Arial,sans-serif;background:rgba(255,193,7,0.12);color:#FFC107;"><button id="btn-ocultar-saldos-nav"#127963; DIAN</button>
+
   <button id="btn-ocultar-saldos-nav" onclick="alzakToggleSaldos()" title="Ocultar/mostrar saldos" style="padding:6px 12px;border-radius:20px;border:1px solid rgba(255,255,255,0.15);cursor:pointer;font-size:13px;font-family:'Montserrat',Helvetica,Arial,sans-serif;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.6);">&#128065;</button>
 
 </div>
@@ -1743,6 +1745,244 @@ tbody tr:hover td{background:var(--cyan-light);}
   </div>
 
 </div><!-- /home-split -->
+
+
+<div id="pg-dian" class="pg" style="padding:0;background:#f5f4f0;min-height:100vh">
+
+<!-- Header -->
+<div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);padding:28px 32px;margin-bottom:0">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+    <div>
+      <div style="font-size:11px;font-weight:700;color:#FFC107;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">📋 Declaraciones de Renta · Formulario 110</div>
+      <div style="font-size:24px;font-weight:800;color:#fff;margin-bottom:4px">Diagnóstico Financiero Histórico</div>
+      <div style="font-size:13px;color:rgba(255,255,255,0.6)">ALZAK GROUP S.A.S. · NIT 900.898.741-8 · Años gravables 2015–2025</div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <div style="background:rgba(255,255,255,0.08);border-radius:12px;padding:12px 18px;text-align:center">
+        <div style="font-size:10px;color:rgba(255,255,255,0.5);margin-bottom:2px">AÑOS ANALIZADOS</div>
+        <div style="font-size:22px;font-weight:800;color:#5DC3DA">11</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.08);border-radius:12px;padding:12px 18px;text-align:center">
+        <div style="font-size:10px;color:rgba(255,255,255,0.5);margin-bottom:2px">CRECIMIENTO INGRESOS</div>
+        <div style="font-size:22px;font-weight:800;color:#4ade80">×11.7</div>
+      </div>
+      <div style="background:rgba(255,193,7,0.15);border:1px solid rgba(255,193,7,0.3);border-radius:12px;padding:12px 18px;text-align:center">
+        <div style="font-size:10px;color:rgba(255,193,7,0.8);margin-bottom:2px">SALDO A FAVOR DIAN 2025</div>
+        <div style="font-size:22px;font-weight:800;color:#FFC107">$178.3M</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Alertas críticas -->
+<div style="background:#991B1B;padding:14px 32px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+  <span style="font-size:13px;font-weight:700;color:#fff">🔴 ALERTAS ACTIVAS 2025:</span>
+  <span style="font-size:12px;color:#FECACA">Endeudamiento 78.6% del patrimonio bruto</span>
+  <span style="color:rgba(255,255,255,0.3)">|</span>
+  <span style="font-size:12px;color:#FECACA">Efectivo crítico $4.5M vs pasivos $381.6M</span>
+  <span style="color:rgba(255,255,255,0.3)">|</span>
+  <span style="font-size:12px;color:#FECACA">Margen fiscal 2.9% — costos absorben 97% de ingresos</span>
+  <span style="color:rgba(255,255,255,0.3)">|</span>
+  <span style="font-size:12px;color:#FECACA">Saldo DIAN $178.3M no registrado en balance</span>
+</div>
+
+<div style="padding:24px 32px">
+
+<!-- KPIs cierre 2025 -->
+<div style="margin-bottom:24px">
+  <div style="font-size:12px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">Saldos de apertura 2026 — Cierre oficial DIAN 31-Dic-2025</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
+    <div style="background:#fff;border-radius:12px;padding:14px 16px;border:0.5px solid #e0ddd8">
+      <div style="font-size:10px;color:#888;font-weight:600;margin-bottom:4px">EFECTIVO</div>
+      <div style="font-size:20px;font-weight:700;color:#DC2626">$4.5M</div>
+      <div style="font-size:10px;color:#DC2626;margin-top:2px">⚠️ Nivel crítico</div>
+    </div>
+    <div style="background:#fff;border-radius:12px;padding:14px 16px;border:0.5px solid #e0ddd8">
+      <div style="font-size:10px;color:#888;font-weight:600;margin-bottom:4px">CxC CARTERA</div>
+      <div style="font-size:20px;font-weight:700;color:#0C447C">$428.8M</div>
+      <div style="font-size:10px;color:#888;margin-top:2px">88% del activo bruto</div>
+    </div>
+    <div style="background:#fff;border-radius:12px;padding:14px 16px;border:0.5px solid #e0ddd8">
+      <div style="font-size:10px;color:#888;font-weight:600;margin-bottom:4px">PP&E NETO</div>
+      <div style="font-size:20px;font-weight:700;color:#374151">$52.0M</div>
+      <div style="font-size:10px;color:#f59e0b;margin-top:2px">⚠️ Código usa $72.9M</div>
+    </div>
+    <div style="background:#fff;border-radius:12px;padding:14px 16px;border:0.5px solid #e0ddd8">
+      <div style="font-size:10px;color:#888;font-weight:600;margin-bottom:4px">PASIVOS TOTALES</div>
+      <div style="font-size:20px;font-weight:700;color:#DC2626">$381.6M</div>
+      <div style="font-size:10px;color:#DC2626;margin-top:2px">78.6% del bruto</div>
+    </div>
+    <div style="background:#fff;border-radius:12px;padding:14px 16px;border:0.5px solid #e0ddd8">
+      <div style="font-size:10px;color:#888;font-weight:600;margin-bottom:4px">PATRIMONIO LÍQUIDO</div>
+      <div style="font-size:20px;font-weight:700;color:#374151">$103.7M</div>
+      <div style="font-size:10px;color:#888;margin-top:2px">Cierre Kevin Díaz</div>
+    </div>
+    <div style="background:#FFFBEB;border-radius:12px;padding:14px 16px;border:1px solid #FCD34D">
+      <div style="font-size:10px;color:#92400E;font-weight:700;margin-bottom:4px">SALDO A FAVOR DIAN</div>
+      <div style="font-size:20px;font-weight:700;color:#D97706">$178.3M</div>
+      <div style="font-size:10px;color:#DC2626;margin-top:2px">❌ No en balance aún</div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts row 1 -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+
+  <!-- Ingresos vs Costos -->
+  <div style="background:#fff;border-radius:16px;padding:20px;border:0.5px solid #e0ddd8">
+    <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:4px">Ingresos vs Costos totales</div>
+    <div style="font-size:11px;color:#888;margin-bottom:14px">Millones COP · 2015–2025</div>
+    <div style="display:flex;gap:14px;font-size:11px;color:#666;margin-bottom:10px">
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#2a78d6;display:inline-block"></span>Ingresos</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#e34948;display:inline-block"></span>Costos+Gastos</span>
+    </div>
+    <div style="position:relative;width:100%;height:220px"><canvas id="dian-c1" role="img" aria-label="Ingresos vs costos ALZAK 2015-2025"></canvas></div>
+  </div>
+
+  <!-- Patrimonio -->
+  <div style="background:#fff;border-radius:16px;padding:20px;border:0.5px solid #e0ddd8">
+    <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:4px">Estructura patrimonial</div>
+    <div style="font-size:11px;color:#888;margin-bottom:14px">Millones COP · 2015–2025</div>
+    <div style="display:flex;gap:14px;font-size:11px;color:#666;margin-bottom:10px">
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#2a78d6;display:inline-block"></span>Patrimonio bruto</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#e34948;display:inline-block"></span>Pasivos</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#1baf7a;display:inline-block"></span>Pat. líquido</span>
+    </div>
+    <div style="position:relative;width:100%;height:220px"><canvas id="dian-c2" role="img" aria-label="Estructura patrimonial ALZAK 2015-2025"></canvas></div>
+  </div>
+
+</div>
+
+<!-- Charts row 2 -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+
+  <!-- Margen y endeudamiento -->
+  <div style="background:#fff;border-radius:16px;padding:20px;border:0.5px solid #e0ddd8">
+    <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:4px">Margen fiscal % vs Endeudamiento %</div>
+    <div style="font-size:11px;color:#888;margin-bottom:14px">Línea roja = zona de pérdida</div>
+    <div style="display:flex;gap:14px;font-size:11px;color:#666;margin-bottom:10px">
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:3px;background:#2a78d6;display:inline-block"></span>Margen %</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:3px;background:#eda100;display:inline-block;border-top:2px dashed #eda100;"></span>Endeudamiento %</span>
+    </div>
+    <div style="position:relative;width:100%;height:220px"><canvas id="dian-c3" role="img" aria-label="Margen y endeudamiento ALZAK 2015-2025"></canvas></div>
+  </div>
+
+  <!-- Efectivo histórico -->
+  <div style="background:#fff;border-radius:16px;padding:20px;border:0.5px solid #e0ddd8">
+    <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:4px">Efectivo y CxC histórico</div>
+    <div style="font-size:11px;color:#888;margin-bottom:14px">Millones COP — Riesgo de liquidez</div>
+    <div style="display:flex;gap:14px;font-size:11px;color:#666;margin-bottom:10px">
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#4ade80;display:inline-block"></span>Efectivo</span>
+      <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#818cf8;display:inline-block"></span>Cuentas por cobrar</span>
+    </div>
+    <div style="position:relative;width:100%;height:220px"><canvas id="dian-c4" role="img" aria-label="Efectivo y CxC ALZAK 2015-2025"></canvas></div>
+  </div>
+
+</div>
+
+<!-- Tabla histórica detallada -->
+<div style="background:#fff;border-radius:16px;padding:20px;border:0.5px solid #e0ddd8;margin-bottom:16px;overflow-x:auto">
+  <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:4px">Tabla histórica completa — Formulario 110 DIAN</div>
+  <div style="font-size:11px;color:#888;margin-bottom:16px">Todos los valores en millones COP</div>
+  <table style="width:100%;border-collapse:collapse;font-size:11px;min-width:780px">
+    <thead>
+      <tr style="background:#f5f4f0">
+        <th style="padding:8px 10px;text-align:left;color:#666;font-weight:700;border-bottom:2px solid #e0ddd8">Año</th>
+        <th style="padding:8px 10px;text-align:right;color:#666;font-weight:700;border-bottom:2px solid #e0ddd8">Ingresos</th>
+        <th style="padding:8px 10px;text-align:right;color:#666;font-weight:700;border-bottom:2px solid #e0ddd8">Costos+Gas.</th>
+        <th style="padding:8px 10px;text-align:right;color:#666;font-weight:700;border-bottom:2px solid #e0ddd8">Util./Pérd.</th>
+        <th style="padding:8px 10px;text-align:right;color:#666;font-weight:700;border-bottom:2px solid #e0ddd8">Margen</th>
+        <th style="padding:8px 10px;text-align:right;color:#666;font-weight:700;border-bottom:2px solid #e0ddd8">Pat. Bruto</th>
+        <th style="padding:8px 10px;text-align:right;color:#666;font-weight:700;border-bottom:2px solid #e0ddd8">Pasivos</th>
+        <th style="padding:8px 10px;text-align:right;color:#666;font-weight:700;border-bottom:2px solid #e0ddd8">Pat. Líquido</th>
+        <th style="padding:8px 10px;text-align:right;color:#666;font-weight:700;border-bottom:2px solid #e0ddd8">Endeud.</th>
+        <th style="padding:8px 10px;text-align:right;color:#666;font-weight:700;border-bottom:2px solid #e0ddd8">Imp. Renta</th>
+        <th style="padding:8px 10px;text-align:left;color:#666;font-weight:700;border-bottom:2px solid #e0ddd8">Alerta</th>
+      </tr>
+    </thead>
+    <tbody id="dian-tabla-body"></tbody>
+  </table>
+</div>
+
+<!-- Análisis cualitativo -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+
+  <!-- Fortalezas -->
+  <div style="background:#fff;border-radius:16px;padding:20px;border:0.5px solid #e0ddd8">
+    <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:14px">✅ Fortalezas identificadas</div>
+    <div style="display:flex;flex-direction:column;gap:8px" id="dian-fortalezas">
+      <div style="background:#DCFCE7;border-radius:8px;padding:10px 12px;font-size:12px;color:#166534">
+        <strong>Crecimiento sostenido ×11.7:</strong> De $91M en 2015 a $1.070M en 2025 — 10 años de expansión real
+      </div>
+      <div style="background:#DCFCE7;border-radius:8px;padding:10px 12px;font-size:12px;color:#166534">
+        <strong>Clientes multinacionales:</strong> BAYER, MSD, JANSSEN, SANOFI, AMGEN — cartera de primer nivel con bajo riesgo de impago
+      </div>
+      <div style="background:#DCFCE7;border-radius:8px;padding:10px 12px;font-size:12px;color:#166534">
+        <strong>2022 demostró el potencial:</strong> $266M utilidad fiscal, margen 36%, endeudamiento 33% — el modelo puede ser muy rentable
+      </div>
+      <div style="background:#DCFCE7;border-radius:8px;padding:10px 12px;font-size:12px;color:#166534">
+        <strong>Especialización de nicho:</strong> Farmacoeconomía con altas barreras de entrada — difícil de replicar
+      </div>
+      <div style="background:#DCFCE7;border-radius:8px;padding:10px 12px;font-size:12px;color:#166534">
+        <strong>Saldo DIAN $178.3M:</strong> Activo recuperable que puede resolver la presión de liquidez si se gestiona a tiempo
+      </div>
+    </div>
+  </div>
+
+  <!-- Riesgos -->
+  <div style="background:#fff;border-radius:16px;padding:20px;border:0.5px solid #e0ddd8">
+    <div style="font-size:13px;font-weight:700;color:#991B1B;margin-bottom:14px">🔴 Riesgos críticos 2026</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="background:#FEE2E2;border-radius:8px;padding:10px 12px;font-size:12px;color:#991B1B">
+        <strong>Liquidez extrema:</strong> $4.5M efectivo vs $381.6M pasivos — un retraso de 30 días de un cliente grande colapsa el flujo
+      </div>
+      <div style="background:#FEE2E2;border-radius:8px;padding:10px 12px;font-size:12px;color:#991B1B">
+        <strong>Ciclo de caída cada 3-4 años:</strong> 2018 (-44%), 2020 (-34%), 2024 (-44%) — 2026 podría ser otro año de contracción tras el pico 2025
+      </div>
+      <div style="background:#FEE2E2;border-radius:8px;padding:10px 12px;font-size:12px;color:#991B1B">
+        <strong>Margen insostenible:</strong> Costos al 97% de ingresos en 2025 — cualquier incremento genera pérdida inmediata
+      </div>
+      <div style="background:#FEF3C7;border-radius:8px;padding:10px 12px;font-size:12px;color:#92400E">
+        <strong>Gastos admin crecen el doble:</strong> De $9M (2015) a $201M (2025) = ×22 veces, mientras ingresos crecieron ×11.7
+      </div>
+      <div style="background:#FEF3C7;border-radius:8px;padding:10px 12px;font-size:12px;color:#92400E">
+        <strong>Balance desactualizado:</strong> CxC apertura difiere $116.6M vs DIAN — riesgo de decisiones basadas en datos incorrectos
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Recomendaciones -->
+<div style="background:#fff;border-radius:16px;padding:20px;border:0.5px solid #e0ddd8;margin-bottom:16px">
+  <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:14px">🎯 Recomendaciones para la toma de decisiones</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px">
+    <div style="border-left:4px solid #DC2626;padding:12px 14px;background:#FEF2F2;border-radius:0 8px 8px 0">
+      <div style="font-size:11px;font-weight:700;color:#DC2626;margin-bottom:4px">URGENTE — Esta semana</div>
+      <div style="font-size:12px;color:#374151">Iniciar solicitud de devolución del saldo DIAN de <strong>$178.3M</strong>. Proceso: 30–90 días hábiles ante DIAN. Este activo resolvería la crisis de liquidez.</div>
+    </div>
+    <div style="border-left:4px solid #D97706;padding:12px 14px;background:#FFFBEB;border-radius:0 8px 8px 0">
+      <div style="font-size:11px;font-weight:700;color:#D97706;margin-bottom:4px">ESTE MES — Contabilidad</div>
+      <div style="font-size:12px;color:#374151">Corregir saldos de apertura 2026 en el balance: CxC real <strong>$428.8M</strong> (no $312.2M), PP&E real <strong>$52.0M</strong> (no $72.9M), registrar saldo DIAN.</div>
+    </div>
+    <div style="border-left:4px solid #2a78d6;padding:12px 14px;background:#EFF6FF;border-radius:0 8px 8px 0">
+      <div style="font-size:11px;font-weight:700;color:#2a78d6;margin-bottom:4px">ESTRATÉGICO — Trim. 3-4</div>
+      <div style="font-size:12px;color:#374151">Implementar política de caja mínima: nunca bajar de <strong>2 meses de nómina</strong>. Monitoreo semanal de cartera por cliente con semáforo de vencimiento.</div>
+    </div>
+    <div style="border-left:4px solid #059669;padding:12px 14px;background:#ECFDF5;border-radius:0 8px 8px 0">
+      <div style="font-size:11px;font-weight:700;color:#059669;margin-bottom:4px">OPERATIVO — Control de costos</div>
+      <div style="font-size:12px;color:#374151">Análisis de rentabilidad por proyecto: con margen 2.9%, identificar cuáles proyectos generan pérdida. Gastos admin crecen el doble que ingresos — revisar estructura.</div>
+    </div>
+  </div>
+</div>
+
+<div style="text-align:center;font-size:10px;color:#aaa;padding:8px 0">
+  Diagnóstico basado en Declaraciones de Renta Formulario 110 DIAN · Períodos 2015–2025 · ALZAK GROUP S.A.S. NIT 900.898.741-8
+</div>
+
+</div><!-- /padding -->
+</div><!-- /pg-dian -->
+
 
 <div id="pg-facturas" class="pg">
 
@@ -28191,6 +28431,175 @@ function alzakSyncDrive() {
 
 })();
 
+</script>
+
+
+<script>
+// ============================================================
+// MÓDULO DIAGNÓSTICO HISTÓRICO DIAN
+// ============================================================
+
+var DIAN_DATA = [
+  {a:2015,ing:91.2,cos:39.4,util:29.5,pb:121.6,pas:58.1,pl:63.5,ef:57.2,cxc:61.1,imp:7.4,end:47.7},
+  {a:2016,ing:215.3,cos:38.7,util:19.5,pb:81.2,pas:66.3,pl:15.0,ef:13.3,cxc:60.1,imp:4.9,end:81.6},
+  {a:2017,ing:276.8,cos:210.5,util:66.4,pb:227.8,pas:105.5,pl:122.3,ef:5.8,cxc:163.5,imp:22.6,end:46.3},
+  {a:2018,ing:154.1,cos:219.3,util:-65.3,pb:93.9,pas:78.2,pl:15.8,ef:9.6,cxc:45.9,imp:1.4,end:83.2},
+  {a:2019,ing:257.5,cos:187.2,util:70.3,pb:218.9,pas:133.2,pl:85.6,ef:2.7,cxc:129.2,imp:23.2,end:60.9},
+  {a:2020,ing:168.9,cos:203.6,util:-34.7,pb:146.2,pas:95.3,pl:50.9,ef:4.3,cxc:61.0,imp:0.1,end:65.2},
+  {a:2021,ing:371.2,cos:337.1,util:34.1,pb:269.3,pas:185.3,pl:84.0,ef:3.0,cxc:146.2,imp:10.6,end:68.8},
+  {a:2022,ing:744.1,cos:477.9,util:266.1,pb:475.0,pas:158.2,pl:316.8,ef:60.9,cxc:360.7,imp:93.1,end:33.3},
+  {a:2023,ing:1054.1,cos:976.7,util:77.4,pb:457.4,pas:265.2,pl:192.2,ef:30.4,cxc:384.6,imp:27.1,end:58.0},
+  {a:2024,ing:588.2,cos:585.4,util:2.8,pb:136.5,pas:63.5,pl:73.0,ef:1.8,cxc:76.9,imp:1.0,end:46.5},
+  {a:2025,ing:1070.1,cos:1039.4,util:30.8,pb:485.3,pas:381.6,pl:103.7,ef:4.5,cxc:428.8,imp:10.8,end:78.6}
+];
+
+function tabDIAN() {
+  // Hide all pages
+  var pgs = document.querySelectorAll('.pg');
+  for (var i=0;i<pgs.length;i++) pgs[i].className = pgs[i].className.replace(' on','');
+  // Show pg-dian
+  var pg = document.getElementById('pg-dian');
+  if (pg) pg.className += ' on';
+  // Update tab buttons
+  ['tab-home-btn','tab-pres-btn'].forEach(function(id){
+    var b = document.getElementById(id);
+    if (b) { b.style.background='transparent'; b.style.color='rgba(255,255,255,0.6)'; }
+  });
+  var db = document.getElementById('tab-dian-btn');
+  if (db) { db.style.background='#FFC107'; db.style.color='#000'; }
+  // Hide pg-conc if visible
+  var pc = document.getElementById('pg-conc');
+  if (pc) pc.style.display='none';
+  setTimeout(renderDIAN, 100);
+}
+
+var dianRendered = false;
+
+function renderDIAN() {
+  if (dianRendered) return;
+  dianRendered = true;
+  buildDianTabla();
+  buildDianCharts();
+}
+
+function buildDianTabla() {
+  var tbody = document.getElementById('dian-tabla-body');
+  if (!tbody) return;
+  var html = '';
+  DIAN_DATA.forEach(function(d,i) {
+    var margen = d.ing > 0 ? (d.util/d.ing*100) : 0;
+    var prev = i > 0 ? DIAN_DATA[i-1] : null;
+    var varIng = prev ? ((d.ing - prev.ing)/prev.ing*100) : 0;
+    var bgRow = (i%2===0) ? '#fff' : '#fafaf8';
+    var utilColor = d.util < 0 ? '#DC2626' : d.util < 10 ? '#D97706' : '#166534';
+    var endColor = d.end > 75 ? '#DC2626' : d.end > 65 ? '#D97706' : '#166534';
+    var margenColor = margen < 0 ? '#DC2626' : margen < 5 ? '#D97706' : '#166534';
+    // Alert text
+    var alerts = [];
+    if (d.util < 0) alerts.push('⛔ Pérdida');
+    if (d.end > 75) alerts.push('🔴 Endeud. alto');
+    if (d.ef < 5) alerts.push('⚠️ Caja crítica');
+    if (i > 0 && varIng < -30) alerts.push('📉 Caída -'+(Math.abs(varIng).toFixed(0))+'%');
+    if (i > 0 && varIng > 80) alerts.push('📈 Boom +'+(varIng.toFixed(0))+'%');
+    if (d.a === 2022) alerts.push('🏆 Mejor año');
+    html += '<tr style="background:'+bgRow+'">';
+    html += '<td style="padding:7px 10px;font-weight:700;color:#374151;border-bottom:1px solid #f0eeea">'+d.a+'</td>';
+    html += '<td style="padding:7px 10px;text-align:right;border-bottom:1px solid #f0eeea">$'+d.ing.toFixed(1)+'M'+(prev?'<span style="font-size:9px;color:'+(varIng>=0?'#166534':'#DC2626')+'"> '+(varIng>=0?'+':'')+varIng.toFixed(0)+'%</span>':'')+'</td>';
+    html += '<td style="padding:7px 10px;text-align:right;border-bottom:1px solid #f0eeea">$'+d.cos.toFixed(1)+'M</td>';
+    html += '<td style="padding:7px 10px;text-align:right;font-weight:700;color:'+utilColor+';border-bottom:1px solid #f0eeea">'+(d.util<0?'-':'')+' $'+Math.abs(d.util).toFixed(1)+'M</td>';
+    html += '<td style="padding:7px 10px;text-align:right;font-weight:700;color:'+margenColor+';border-bottom:1px solid #f0eeea">'+margen.toFixed(1)+'%</td>';
+    html += '<td style="padding:7px 10px;text-align:right;border-bottom:1px solid #f0eeea">$'+d.pb.toFixed(1)+'M</td>';
+    html += '<td style="padding:7px 10px;text-align:right;border-bottom:1px solid #f0eeea">$'+d.pas.toFixed(1)+'M</td>';
+    html += '<td style="padding:7px 10px;text-align:right;border-bottom:1px solid #f0eeea">$'+d.pl.toFixed(1)+'M</td>';
+    html += '<td style="padding:7px 10px;text-align:right;font-weight:700;color:'+endColor+';border-bottom:1px solid #f0eeea">'+d.end.toFixed(1)+'%</td>';
+    html += '<td style="padding:7px 10px;text-align:right;border-bottom:1px solid #f0eeea">$'+d.imp.toFixed(1)+'M</td>';
+    html += '<td style="padding:7px 10px;font-size:10px;border-bottom:1px solid #f0eeea">'+(alerts.join(' ')|| '—')+'</td>';
+    html += '</tr>';
+  });
+  tbody.innerHTML = html;
+}
+
+function buildDianCharts() {
+  var años = DIAN_DATA.map(function(d){return String(d.a);});
+  var ing  = DIAN_DATA.map(function(d){return d.ing;});
+  var cos  = DIAN_DATA.map(function(d){return d.cos;});
+  var util = DIAN_DATA.map(function(d){return d.util;});
+  var pb   = DIAN_DATA.map(function(d){return d.pb;});
+  var pas  = DIAN_DATA.map(function(d){return d.pas;});
+  var pl   = DIAN_DATA.map(function(d){return d.pl;});
+  var mar  = DIAN_DATA.map(function(d){return d.ing>0?+(d.util/d.ing*100).toFixed(1):0;});
+  var end  = DIAN_DATA.map(function(d){return d.end;});
+  var ef   = DIAN_DATA.map(function(d){return d.ef;});
+  var cxc  = DIAN_DATA.map(function(d){return d.cxc;});
+
+  var grid = '#e8e6e0', tick = '#9ca3af';
+  var defScales = {
+    x:{grid:{color:grid},ticks:{color:tick,font:{size:10}},border:{color:grid}},
+    y:{grid:{color:grid},ticks:{color:tick,font:{size:10},callback:function(v){return '$'+v+'M';}},border:{color:grid}}
+  };
+
+  // Chart 1: Ingresos vs Costos
+  var c1 = document.getElementById('dian-c1');
+  if (c1) new Chart(c1, {
+    type:'bar',
+    data:{labels:años,datasets:[
+      {label:'Ingresos',data:ing,backgroundColor:'#2a78d6',borderRadius:{topLeft:3,topRight:3},borderSkipped:false},
+      {label:'Costos',data:cos,backgroundColor:'rgba(227,73,72,0.75)',borderRadius:{topLeft:3,topRight:3},borderSkipped:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:defScales}
+  });
+
+  // Chart 2: Patrimonio
+  var c2 = document.getElementById('dian-c2');
+  if (c2) new Chart(c2, {
+    type:'line',
+    data:{labels:años,datasets:[
+      {label:'Pat. Bruto',data:pb,borderColor:'#2a78d6',backgroundColor:'rgba(42,120,214,0.07)',borderWidth:2,pointRadius:3,fill:true,tension:0.3},
+      {label:'Pasivos',data:pas,borderColor:'#e34948',backgroundColor:'rgba(227,73,72,0.05)',borderWidth:2,pointRadius:3,fill:true,tension:0.3},
+      {label:'Pat. Líquido',data:pl,borderColor:'#1baf7a',borderWidth:2,pointRadius:3,borderDash:[4,3],tension:0.3}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:defScales}
+  });
+
+  // Chart 3: Margen y Endeudamiento
+  var c3 = document.getElementById('dian-c3');
+  if (c3) new Chart(c3, {
+    type:'line',
+    data:{labels:años,datasets:[
+      {label:'Margen %',data:mar,borderColor:'#2a78d6',borderWidth:2,pointRadius:5,
+       pointBackgroundColor:mar.map(function(v){return v<0?'#e34948':'#2a78d6';}),
+       tension:0.3,yAxisID:'y'},
+      {label:'Endeudamiento %',data:end,borderColor:'#eda100',borderWidth:2,pointRadius:3,
+       borderDash:[5,3],tension:0.3,yAxisID:'y2'}
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        annotation:{annotations:{zero:{type:'line',yMin:0,yMax:0,borderColor:'#e34948',borderWidth:1,borderDash:[3,3]}}}
+      },
+      scales:{
+        x:{grid:{color:grid},ticks:{color:tick,font:{size:10}},border:{color:grid}},
+        y:{grid:{color:grid},ticks:{color:tick,font:{size:10},callback:function(v){return v+'%';}},
+           border:{color:grid},title:{display:true,text:'Margen %',color:tick,font:{size:9}}},
+        y2:{position:'right',grid:{display:false},ticks:{color:tick,font:{size:10},callback:function(v){return v+'%';}},
+            border:{color:grid},title:{display:true,text:'Endeud. %',color:tick,font:{size:9}}}
+      }
+    }
+  });
+
+  // Chart 4: Efectivo y CxC
+  var c4 = document.getElementById('dian-c4');
+  if (c4) new Chart(c4, {
+    type:'bar',
+    data:{labels:años,datasets:[
+      {label:'CxC',data:cxc,backgroundColor:'rgba(129,140,248,0.7)',borderRadius:{topLeft:3,topRight:3},borderSkipped:false,order:2},
+      {label:'Efectivo',data:ef,type:'line',borderColor:'#4ade80',backgroundColor:'rgba(74,222,128,0.15)',borderWidth:2.5,pointRadius:5,
+       pointBackgroundColor:'#4ade80',fill:true,tension:0.3,order:1,yAxisID:'y'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:defScales}
+  });
+}
 </script>
 
 </body>

@@ -28433,10 +28433,13 @@ function alzakSyncDrive() {
 
 <!-- Punto 2026 vivo -->
 <div style="background:#fff;border-radius:16px;padding:20px;border:2px solid #5DC3DA;margin-bottom:16px">
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-    <div style="width:10px;height:10px;border-radius:50%;background:#5DC3DA;animation:pulse 1.5s infinite"></div>
-    <div style="font-size:13px;font-weight:700;color:#0C447C">2026 — Datos reales del tablero (Ene–Jun)</div>
-    <div style="font-size:10px;color:#888;margin-left:auto">Se actualiza al sincronizar con Sheets</div>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+    <div id="dian-live-dot" style="width:10px;height:10px;border-radius:50%;background:#5DC3DA;animation:pulse 1.5s infinite;flex-shrink:0"></div>
+    <div style="font-size:13px;font-weight:700;color:#0C447C">2026 — Escenario final proyectado (Real + Programado)</div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+      <span id="dian-live-status" style="font-size:10px;color:#888">Cargando datos…</span>
+      <button onclick="forzarActualizar2026()" style="font-size:10px;padding:4px 10px;border-radius:6px;border:1px solid #5DC3DA;background:#F0F9FF;color:#0C447C;cursor:pointer;font-weight:600">↻ Actualizar</button>
+    </div>
   </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
     <div style="background:#F0F9FF;border-radius:8px;padding:12px 14px">
@@ -28530,117 +28533,147 @@ function tabDIAN() {
 var dianRendered = false;
 
 function getDian2026Live() {
-  // Lee el ESCENARIO PROYECTADO TOTAL 2026 del tablero en tiempo real
-  // Combina: ingresos reales + proyectados / costos reales + proyectados / balance actual
+  // Replica EXACTAMENTE la lógica del ER acumulado 2026:
+  // ingTotal = ingT (real) + ingProyT (programado meses restantes)
+  // cosTotal = gasT (real) + gasProyT (GP_DATA meses restantes)
   try {
-    var anioFil = '2026';
-    var MN = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
-              'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-    var hoy     = new Date();
-    var mesIdx  = hoy.getMonth(); // 0=Ene, 6=Jul
+    var anioFil2 = '2026';
+    if (typeof getMeses !== 'function' || typeof calcMesData !== 'function') return null;
+    if (typeof FACTURAS === 'undefined' || FACTURAS.length === 0) return null;
 
-    // ── 1. INGRESOS REALES acumulados 2026 (facturas emitidas) ──
-    var ingReal = 0;
-    if (typeof FACTURAS !== 'undefined') {
-      FACTURAS.forEach(function(f) {
-        var dp = (f.fecha_raw || f.fecha || '').split('/');
-        if (dp.length >= 3 && dp[2].substring(0,4) === anioFil) ingReal += (f.bruto || 0);
-      });
+    // ── 1. INGRESOS REALES (igual que renderEstadoResultados acumulado) ──
+    var ingT = FACTURAS.filter(function(f) {
+      var dp = (f.fecha_raw || f.fecha || '').split('/');
+      if (dp.length < 3) return false;
+      // fecha_raw es dd/MM/yyyy → dp[2]=año
+      return dp[2].substring(0,4) === anioFil2;
+    }).reduce(function(a,f){ return a + (f.bruto||0); }, 0);
+
+    // ── 2. COSTOS REALES (igual que renderEstadoResultados acumulado) ──
+    var gasT = 0;
+    if (typeof FR_DATA !== 'undefined' && FR_DATA.length) {
+      gasT = FR_DATA.filter(function(r) {
+        var fp = (r['Fecha']||'').split('/');
+        if (fp.length < 3) return false;
+        if ((fp[2]||'').substring(0,4) !== anioFil2) return false;
+        if (typeof frEsProyectado === 'function' && frEsProyectado(r)) return false;
+        return (typeof frEsGastoOpPL === 'function') ? frEsGastoOpPL(r) : true;
+      }).reduce(function(a,r){
+        var v = r['Subtotal (COP)'] || r['Subtotal(COP)'] || r['Subtotal'] || 0;
+        if (typeof v === 'string') v = v.replace(/[^0-9.]/g,'');
+        return a + (parseFloat(v)||0);
+      }, 0);
     }
 
-    // ── 2. INGRESOS PROYECTADOS: FP_DATA meses futuros ──
-    var ingProy = 0;
-    if (typeof FP_DATA !== 'undefined') {
-      FP_DATA.forEach(function(fp) {
-        // Meses futuros (desde mes siguiente al actual)
-        for (var mm = mesIdx + 1; mm < 12; mm++) {
-          ingProy += parseFloat(fp['m' + (mm + 1)] || 0);
-        }
-      });
-      // Deduplicar: quitar lo que ya está en FACTURAS
-      ingProy = Math.max(0, ingProy);
+    // ── 3. PROYECCIONES: suma calcMesData por cada mes (igual que ER) ──
+    var ingProyT = 0, gasProyT = 0;
+    var mesesAll = getMeses();
+    if (!mesesAll || mesesAll.length === 0) return null;
+    var dataAll = mesesAll.map(calcMesData);
+    for (var i = 0; i < dataAll.length; i++) {
+      ingProyT += (dataAll[i].ingProy || 0);
+      gasProyT += (dataAll[i].gasProy || 0);
     }
 
-    // ── 3. COSTOS REALES 2026 desde FR_DATA ──
-    var cosReal = 0;
-    if (typeof FR_DATA !== 'undefined') {
-      FR_DATA.forEach(function(r) {
-        var fp2 = (r['Fecha'] || '').split('/');
-        if (fp2.length < 3) return;
-        if (fp2[2].substring(0,4) !== anioFil) return;
-        if (typeof frEsGastoOpPL === 'function' && !frEsGastoOpPL(r)) return;
-        cosReal += parseFloat(r['Subtotal (COP)'] || 0);
-      });
-    }
-
-    // ── 4. GASTOS PROYECTADOS: GP_DATA meses futuros ──
-    var gasProy = 0;
-    if (typeof GP_DATA !== 'undefined') {
-      GP_DATA.forEach(function(gp) {
-        for (var mm = mesIdx + 1; mm < 12; mm++) {
-          gasProy += parseFloat(gp['m' + (mm + 1)] || 0);
-        }
-      });
-    }
-
-    // ── 5. TOTALES DEL ESCENARIO FINAL 2026 ──
-    var ingTotal  = ingReal + ingProy;   // Ingresos año completo proyectado
-    var cosTotal  = cosReal + gasProy;   // Costos año completo proyectado
+    // ── 4. TOTALES DEL ESCENARIO FINAL (= Escenario Total del ER) ──
+    var ingTotal  = ingT + ingProyT;
+    var cosTotal  = gasT + gasProyT;
     var utilTotal = ingTotal - cosTotal;
 
-    // ── 6. BALANCE al mes de corte (para patrimonio, pasivos, efectivo) ──
-    var mesCorteBal = MN[mesIdx] + ' ' + anioFil;
+    // Sin datos útiles
+    if (ingTotal <= 0 && cosTotal <= 0) return null;
+
+    // ── 5. BALANCE al mes de corte para efectivo y pasivos ──
+    var hoy = new Date();
+    var MN = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+              'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    var mesCorteBal = MN[hoy.getMonth()] + ' 2026';
     var bal = (typeof calcBalMes === 'function') ? calcBalMes(mesCorteBal) : null;
 
-    // Apertura 2025 para calcular patrimonio líquido proyectado
+    // ── 6. PATRIMONIO PROYECTADO ──
     var aper = (typeof BAL_CONFIG !== 'undefined' && BAL_CONFIG.apertura2025) ? BAL_CONFIG.apertura2025 : {};
     var plApertura = (aper.efectivo||0) + (aper.cxc||0) + (aper.equiposNeto||0) + (aper.rete||0) - (aper.cxpProv||0);
 
     var R = function(v) { return Math.round(v / 1e6 * 10) / 10; };
 
-    var ingM  = R(ingTotal);
-    var cosM  = R(cosTotal);
-    var utilM = R(utilTotal);
-    var efM   = bal ? R(bal.bancos) : 0;
-    var cxcM  = bal ? R(bal.cxc)   : 0;
-    // Pasivos: lo que quedó del cierre 2025 + lo pendiente de pagar en 2026
-    var pasM  = bal ? R(bal.totalPas) : 0;
-    // Patrimonio líquido proyectado = apertura + utilidad proyectada del año
-    var plM   = R(plApertura + utilTotal);
-    // Patrimonio bruto = pl + pasivos (simplificado)
-    var pbM   = R(plApertura + utilTotal + (bal ? bal.totalPas : 0));
-    var endM  = pbM > 0 ? Math.round(pasM / pbM * 1000) / 10 : 0;
+    var efM  = bal ? R(bal.bancos) : R(aper.efectivo||0);
+    var cxcM = bal ? R(bal.cxc)   : 0;
+    var pasM = bal ? R(bal.totalPas) : 0;
+    var plM  = R(plApertura + utilTotal);
+    var pbM  = R(plApertura + utilTotal + (bal ? bal.totalPas : 0));
+    var endM = pbM > 0 ? Math.round(pasM / pbM * 1000) / 10 : 0;
 
     return {
-      a: '2026*', ing: ingM, cos: cosM, util: utilM,
+      a: '2026*',
+      ing:  R(ingTotal),
+      cos:  R(cosTotal),
+      util: R(utilTotal),
       pb: pbM, pas: pasM, pl: plM,
       ef: efM, cxc: cxcM, imp: 0, end: endM,
-      ingReal: R(ingReal), ingProy: R(ingProy),
-      cosReal: R(cosReal), gasProy: R(gasProy),
+      ingReal: R(ingT), ingProy: R(ingProyT),
+      cosReal: R(gasT), gasProy: R(gasProyT),
       vivo: true
     };
   } catch(e) {
-    console.log('getDian2026Live error:', e);
+    console.log('getDian2026Live error:', e.message);
     return null;
   }
 }
 
+
 function renderDIAN() {
   if (dianRendered) return;
   dianRendered = true;
-
-  // Inyectar punto 2026 vivo si hay datos
-  var live = getDian2026Live();
-  if (live && live.ing > 0) {
-    // Reemplazar o agregar 2026
-    var idx2026 = DIAN_DATA.findIndex(function(d){ return String(d.a).indexOf('2026') >= 0; });
-    if (idx2026 >= 0) DIAN_DATA[idx2026] = live;
-    else DIAN_DATA.push(live);
-  }
-
   buildDianTabla();
   buildDianCharts();
-  buildDianKPIs2026(live);
+
+  // Intentar inyectar 2026 — si los datos no están listos, reintentar
+  function inyectar2026(intentos) {
+    var live = getDian2026Live();
+    if (live && live.ing > 0) {
+      // Tiene datos — agregar o reemplazar en DIAN_DATA
+      var idx2026 = DIAN_DATA.findIndex(function(d){ return String(d.a).indexOf('2026') >= 0; });
+      if (idx2026 >= 0) DIAN_DATA[idx2026] = live;
+      else DIAN_DATA.push(live);
+      // Redibujar tabla y gráficos con 2026 incluido
+      buildDianTabla();
+      buildDianCharts();
+      buildDianKPIs2026(live);
+      var st = document.getElementById('dian-live-status');
+      if (st) st.textContent = '✅ Actualizado · Real: $' + (live.ingReal||0).toFixed(0) + 'M + Proy: $' + (live.ingProy||0).toFixed(0) + 'M';
+      var dot = document.getElementById('dian-live-dot');
+      if (dot) dot.style.background = '#22c55e';
+    } else if (intentos > 0) {
+      // Datos aún no cargados — reintentar
+      setTimeout(function(){ inyectar2026(intentos - 1); }, 1200);
+    } else {
+      var st2 = document.getElementById('dian-live-status');
+      if (st2) st2.textContent = '⚠️ Sincroniza con Sheets para ver 2026';
+      var dot2 = document.getElementById('dian-live-dot');
+      if (dot2) dot2.style.background = '#f59e0b';
+    }
+  }
+  // Dar tiempo a que los datos de Sheets estén disponibles
+  setTimeout(function(){ inyectar2026(5); }, 500);
+}
+
+function forzarActualizar2026() {
+  var st = document.getElementById('dian-live-status');
+  if (st) st.textContent = 'Actualizando…';
+  // Reset 2026 entry
+  DIAN_DATA = DIAN_DATA.filter(function(d){ return !d.vivo; });
+  var live = getDian2026Live();
+  if (live && live.ing > 0) {
+    DIAN_DATA.push(live);
+    buildDianTabla();
+    buildDianCharts();
+    buildDianKPIs2026(live);
+    if (st) st.textContent = '✅ Actualizado — ' + new Date().toLocaleTimeString('es-CO');
+  } else {
+    if (st) st.textContent = '⚠️ Sin datos — sincroniza primero con Sheets';
+    var dot = document.getElementById('dian-live-dot');
+    if (dot) dot.style.background = '#f59e0b';
+  }
 }
 
 function buildDianKPIs2026(live) {

@@ -14110,8 +14110,11 @@ function renderErDetalle() {
 
   var th1Style='padding:7px 10px;font-size:10px;font-weight:700;text-align:left;background:#54504F;color:#fff;';
 
-  // Calcular top del sticky header: altura del nav + filtros ER (~110px)
-  var stickyTop = '108px';
+  // top sticky = altura del main-header (72px fijo) + barra de botones nav (~52px)
+  var _mainH = document.getElementById('main-header') ? document.getElementById('main-header').offsetHeight : 72;
+  var _navBar = document.getElementById('tab-home-btn') ? document.getElementById('tab-home-btn').closest('div') : null;
+  var _navH2  = _navBar ? _navBar.offsetHeight : 52;
+  var stickyTop = (_mainH + _navH2) + 'px';
 
   var html='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">';
 

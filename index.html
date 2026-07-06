@@ -14110,9 +14110,15 @@ function renderErDetalle() {
 
   var th1Style='padding:7px 10px;font-size:10px;font-weight:700;text-align:left;background:#54504F;color:#fff;';
 
+  // Calcular top del sticky header: altura del nav + filtros ER (~110px)
+  var stickyTop = '108px';
+
   var html='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">';
 
-  html+='<thead><tr><th style="'+th1Style+'min-width:180px;max-width:240px;position:sticky;left:0;z-index:3;border-right:1px solid #555;">Concepto</th>';
+  // thead sticky: se queda fijo al hacer scroll vertical
+  var theadStyle = 'position:sticky;top:'+stickyTop+';z-index:10;';
+
+  html+='<thead style="'+theadStyle+'"><tr><th style="'+th1Style+'min-width:180px;max-width:240px;position:sticky;left:0;z-index:11;border-right:1px solid #555;">Concepto</th>';
 
   for(var i=0;i<colMeses.length;i++) html+='<th style="'+thStyle+'min-width:100px">'+colMeses[i].mes+'</th>';
 

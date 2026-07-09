@@ -13960,6 +13960,8 @@ function renderErDetalle() {
 
         if(MN2[mm]+' '+aa !== mesNombre) return false;
 
+        // ER por causación: incluir TODA factura del período sin importar si está pagada o no
+        // El estado de pago no afecta el costo del período — lo que se causó, se causó
         return frEsGastoOpPL(r);
 
       });
@@ -13974,11 +13976,20 @@ function renderErDetalle() {
 
     if (usarFR) {
 
-      var v = r['Subtotal (COP)'] || 0;
+      // Subtotal = base gravable (preferido). Fallback a Total - IVA si Subtotal es 0
+      var v = r['Subtotal (COP)'] || r['Subtotal ($)'] || 0;
 
       if (typeof v === 'string') v = v.replace(/[^0-9.]/g,'');
 
-      return parseFloat(v)||0;
+      var parsed = parseFloat(v) || 0;
+
+      if (parsed === 0) {
+        var tot2 = parseFloat(r['Total (COP)'] || r['Total ($)'] || r['Total_COP'] || 0);
+        var iva2 = parseFloat(r['IVA (COP)'] || r['IVA ($)'] || 0);
+        parsed = tot2 > 0 ? (iva2 > 0 ? tot2 - iva2 : tot2) : 0;
+      }
+
+      return parsed;
 
     }
 

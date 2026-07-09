@@ -11421,7 +11421,14 @@ function renderResumenTablero() {
 
   var margen     = ingResumen ? Math.round(utilidad/ingResumen*100) : 0;
 
-  var ivaGen = FACTURAS.reduce(function(a,f){ return a+(parseFloat(f.iva)||0); }, 0);
+  // IVA generado: total acumulado 2026
+  var ivaGen = FACTURAS.reduce(function(a,f) {
+    var fp2 = (f.fecha_raw || f.fecha || '').split('/');
+    var fAnioIva = fp2.length >= 3 ? parseInt(fp2[2].substring(0,4)) : 0;
+    if (fAnioIva !== 2026) return a;
+    return a + (parseFloat(f.iva) || 0);
+  }, 0);
+  var _ivaCuatriLabel = 'Acumulado Ene–' + ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][new Date().getMonth()] + ' 2026';
 
   // Gravamen 4x1000 — fuente 1: extractos Excel (BCOL_MOVS) + fuente 2: conciliación P[]
 
@@ -11581,7 +11588,7 @@ function renderResumenTablero() {
 
     +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
 
-    + card('🧾','IVA generado',      ivaGen,     '#B45309','#FFFBEB',  'Cuatrimestre Ene–Abr', ivaGen===0?'Facturas sin IVA registrado':'')
+    + card('🧾','IVA generado',      ivaGen,     '#B45309','#FFFBEB',  _ivaCuatriLabel, ivaGen===0?'Facturas sin IVA registrado':'')
 
     + card('⏳','Facturas por cobrar',totalPendFact,'#A32D2D','#FFF1F2', FACTURAS.filter(function(f){return !f.pagada;}).length+' facturas pendientes','')
 
@@ -11653,25 +11660,48 @@ function renderResumenTablero() {
 
     + (function(){
 
-        var ivaDes   = FR_DATA.filter(function(r){
+        var _mH = new Date().getMonth() + 1;
+        var _qActual = _mH <= 4 ? [1,2,3,4] : (_mH <= 8 ? [5,6,7,8] : [9,10,11,12]);
+        var _qLbl    = _mH <= 4 ? 'Ene–Abr' : (_mH <= 8 ? 'May–Ago' : 'Sep–Dic');
+        var _mesNoms = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
-          var fp=(r['Fecha']||'').split('/');
+        // ── IVA generado cuatrimestre actual (facturas emitidas por ALZAK) ──
+        var ivaGenQ = FACTURAS.reduce(function(a,f) {
+          var fp2 = (f.fecha_raw || f.fecha || '').split('/');
+          if (fp2.length < 3) return a;
+          if (parseInt(fp2[2].substring(0,4)) !== 2026) return a;
+          if (_qActual.indexOf(parseInt(fp2[1])) < 0) return a;
+          return a + (parseFloat(f.iva) || 0);
+        }, 0);
 
-          return fp.length>=3 && (fp[2]||'').substring(0,4)==='2026';
+        // ── IVA descontable cuatrimestre actual (facturas radicadas A ALZAK) ──
+        var ivaDes = FR_DATA.filter(function(r){
+          var fp = (r['Fecha']||'').split('/');
+          if (fp.length < 3) return false;
+          if ((fp[2]||'').substring(0,4) !== '2026') return false;
+          if (_qActual.indexOf(parseInt(fp[1])) < 0) return false;
+          if (typeof frEsGastoOpPL === 'function' && !frEsGastoOpPL(r)) return false;
+          return parseFloat(r['IVA (COP)'] || 0) > 0;
+        }).reduce(function(a,r){ return a + parseFloat(r['IVA (COP)'] || 0); }, 0);
 
-        }).reduce(function(a,r){return a+parseFloat(r['IVA (COP)']||0);},0);
-
-        var ivaRteV  = FACTURAS.reduce(function(a,f){return a+(f.reteiva||0);},0);
+        // ── ReteIVA cobrada a clientes (año completo) ──
+        var ivaRteV = FACTURAS.reduce(function(a,f){
+          var fp2 = (f.fecha_raw || f.fecha || '').split('/');
+          if (fp2.length < 3 || parseInt(fp2[2].substring(0,4)) !== 2026) return a;
+          return a + (f.reteiva || 0);
+        }, 0);
 
         var ivaNeto  = ivaGen - ivaRteV;
-
         var saldoIVA = Math.max(0, ivaNeto - ivaDes);
-
         var aFavor   = Math.max(0, ivaDes - ivaNeto);
 
-        return card('🔢','IVA neto a cargo',   ivaNeto,   '#0C447C','#EBF3FB', 'Generado − ReteIVA clientes','')
+        return card('🧾','IVA generado Q ' + _qLbl, ivaGenQ, '#B45309','#FFFBEB', 'Facturas emitidas ' + _qLbl,'Cuatrimestre en curso')
 
-          + card('✅','IVA descontable',   ivaDes,    '#0F6E56','#F0FDF4', 'Compras con IVA acreditable','Art. 485 E.T.')
+          + card('🧾','IVA generado 2026',  ivaGen,    '#7C5A0C','#FEF9EE', 'Total acumulado Ene–' + _mesNoms[_mH] + ' 2026','')
+
+          + card('✅','IVA descontable Q ' + _qLbl, ivaDes, '#0F6E56','#F0FDF4', 'Compras con IVA acreditable ' + _qLbl,'Art. 485 E.T.')
+
+          + card('🔢','IVA neto a cargo', ivaNeto, '#0C447C','#EBF3FB', 'IVA generado año − ReteIVA clientes','')
 
           + (saldoIVA>0
 
@@ -11703,7 +11733,7 @@ function renderResumenTablero() {
 
               proxBg    = diasQ1 <= 7 ? '#FEE2E2' : diasQ1 <= 30 ? '#FEF3C7' : '#EBF3FB';
 
-              proxSub   = 'IVA Cuatrimestre 1 (Ene–Abr 2026)';
+              proxSub   = 'IVA ' + _ivaCuatriLabel + ' 2026';
 
             } else {
 
@@ -23445,15 +23475,19 @@ function frEstadoReal(r) {
 
   if (total <= 0) return 'PAGADO';
 
+  // frCalcularAbonado suma TODOS los pagos parciales reales
+  var ab = frCalcularAbonado(r);
+
+  if (ab > 0) {
+    // Tiene al menos un pago registrado
+    if (ab >= total * 0.99) return 'PAGADO';  // 99% pagado = completo (tolerancia centavos)
+    return 'ABONO';                            // Pago parcial — saldo pendiente
+  }
+
+  // Sin ningún pago → verificar si hay extracto del período
   var fuente = frFuentePago(r);
+  if (fuente !== null) return 'PAGADO';        // Extracto confirmó pago completo por monto
 
-  var ab     = frCalcularAbonado(r);
-
-  // Pagado si aparece en extracto bancario o en egresos registrados
-  if (fuente !== null || ab > 0) return ab >= total ? 'PAGADO' : 'ABONO';
-
-  // Sin confirmación de pago (ni extracto ni egreso) → se debe
-  // SIN-EXTRACTO se mantiene solo como info del período, pero la obligación sigue siendo PENDIENTE
   if (!frPeriodoTieneExtracto(r)) return 'SIN-EXTRACTO';
 
   return 'PENDIENTE';

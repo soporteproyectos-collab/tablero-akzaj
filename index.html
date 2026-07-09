@@ -12021,9 +12021,29 @@ var BAL_CONFIG = {
 
   // Saldos de apertura al 01-Ene-2026 (Cierre oficial 31-Dic-2025 — Kevin Díaz T.P. 103960-T)
 
+  // ── Cartera 2025 pendiente de cobro al cierre ──────────────────────────
+  // Fuente: Facturación 2025 ALZAK GROUP — facturas FEE2273–FEE2284
+  // Cuando entren pagos en extractos bancarios que coincidan con estos valores,
+  // se descuentan de cxcApertura automáticamente en calcBalMes()
+  cartera2025: [
+    { num:'FEE2273', cliente:'JANSSEN',   bruto:  5000000, total:  5950000 },
+    { num:'FEE2274', cliente:'MSD',       bruto: 49968398, total: 59462394 },
+    { num:'FEE2275', cliente:'BAYER',     bruto: 12063830, total: 14355958 },
+    { num:'FEE2276', cliente:'BAYER',     bruto: 12063830, total: 14355958 },
+    { num:'FEE2277', cliente:'MSD',       bruto: 24984199, total: 29731197 },
+    { num:'FEE2278', cliente:'SANOFI',    bruto:  5885000, total:  7003150 },
+    { num:'FEE2279', cliente:'BAYER',     bruto: 32542500, total: 38725575 },
+    { num:'FEE2280', cliente:'BAYER',     bruto: 80000000, total: 95200000 },
+    { num:'FEE2281', cliente:'BAYER',     bruto: 44806020, total: 53319164 },
+    { num:'FEE2282', cliente:'SANOFI',    bruto:  3361345, total:  4000000 },
+    { num:'FEE2283', cliente:'ADIUM',     bruto: 25403750, total: 30230463 },
+    { num:'FEE2284', cliente:'VAXTHERA',  bruto: 12888512, total: 15337329 }
+  ],
+  // Total cartera 2025: base $308.971.384 — total con IVA $367.671.188
+
   apertura2025: {
 
-    cxc:         428804000,  // CxC oficial DIAN 2025 (casilla 38 Formulario 110)
+    cxc:         308967384,  // CxC cartera activa cierre 2025 — facturas FEE2273 a FEE2284 pendientes de cobro (base gravable sin IVA)
 
     cxpProv:     155301000,  // Cuentas por pagar proveedores nacionales
 
@@ -12317,34 +12337,56 @@ function calcBalMes(mes) {
 
   if (mes && cxcApertura>0) {
 
-    var cobrado2025=0;
+    // ── Dar de baja cartera 2025 cuando entren pagos en extractos bancarios ──
+    // Fuente primaria: FACTURAS array (facturas 2025 marcadas pagadas con fecha de cobro)
+    // Fuente secundaria: extractos bancarios P[] — si entró un pago de cliente de 2025
+    var cobrado2025 = 0;
+    var cartera2025 = (BAL_CONFIG.cartera2025 || []);
 
-    FACTURAS.forEach(function(f){
-
-      var dp0=fFechaPartes(f.fecha_raw||f.fecha||'');
-
-      if (dp0.length<3||parseInt(dp0[0])>=2026) return;
-
+    // Método 1: cruzar contra FACTURAS con fecha de cobro confirmada
+    FACTURAS.forEach(function(f) {
+      var dp0 = fFechaPartes(f.fecha_raw || f.fecha || '');
+      if (dp0.length < 3 || parseInt(dp0[0]) >= 2026) return;
       if (!f.pagada && !f.fecha_pago) return;
-
-      // Fecha de cobro: explícita > vencimiento > fecha factura
       var fechaCobro2025 = f.fecha_pago || (f.pagada ? (f.vence || f.fecha || f.fecha_raw) : null);
-
-      if (fechaCobro2025) {
-
-        var dp3=fFechaPartes(fechaCobro2025);
-
-        if (dp3.length>=3) {
-
-          var pTs=new Date(parseInt(dp3[0]),parseInt(dp3[1])-1,parseInt(dp3[2])).getTime();
-
-          if (pTs<=cierreTimestamp) cobrado2025+=(f.bruto||f.total||0);
-
-        }
-
-      }
-
+      if (!fechaCobro2025) return;
+      var dp3 = fFechaPartes(fechaCobro2025);
+      if (dp3.length < 3) return;
+      var pTs = new Date(parseInt(dp3[0]), parseInt(dp3[1])-1, parseInt(dp3[2])).getTime();
+      if (pTs <= cierreTimestamp) cobrado2025 += (f.bruto || f.total || 0);
     });
+
+    // Método 2: cruzar cartera2025 contra extractos bancarios P[]
+    // Si en el extracto del mes entró un PAGO INTERBANC o ingreso que coincida
+    // con cliente de cartera2025, se da de baja esa factura
+    if (typeof P !== 'undefined' && P.length && cartera2025.length) {
+      cartera2025.forEach(function(fac) {
+        if (cobrado2025 >= fac.bruto) return; // ya contabilizado arriba
+        // Buscar en movimientos de extractos hasta el corte
+        for (var pi = 0; pi < P.length; pi++) {
+          var per = P[pi];
+          // Solo períodos hasta el corte
+          var perAnio = per.label ? parseInt((per.label.split(' ')[1]||'0')) : 0;
+          var perMesN = per.label ? ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+            'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'].indexOf(per.label.split(' ')[0]) + 1 : 0;
+          if (perAnio > corteAnio_cxc) continue;
+          if (perAnio === corteAnio_cxc && perMesN > corteMes_cxc) continue;
+          (per.movs || []).forEach(function(mv) {
+            if (mv.v <= 0) return; // solo ingresos
+            if (mv.clase !== 'ingreso_externo' && mv.clase !== 'ingreso') return;
+            var desc = (mv.d || mv.desc || '').toUpperCase();
+            var cliU = fac.cliente.toUpperCase();
+            // Coincide si la descripción del movimiento contiene el nombre del cliente
+            // y el monto está dentro del rango del total con IVA (±5%)
+            var montoOk = Math.abs(mv.v - fac.total) / fac.total < 0.05 ||
+                          Math.abs(mv.v - fac.bruto) / fac.bruto < 0.05;
+            var clienteOk = desc.indexOf(cliU) >= 0 ||
+                            desc.indexOf(cliU.split(' ')[0]) >= 0;
+            if (montoOk && clienteOk) cobrado2025 += fac.bruto;
+          });
+        }
+      });
+    }
 
     cxcAperturaPendiente=Math.max(0,cxcApertura-cobrado2025);
 

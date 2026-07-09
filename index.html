@@ -825,6 +825,8 @@ tbody tr:hover td{background:var(--cyan-light);}
 
   <button id="tab-sync-btn" onclick="alzakCargarDatosSheets()" title="Sincronizar datos desde Google Sheets" style="padding:6px 14px;border-radius:20px;border:1px solid rgba(93,195,218,0.4);cursor:pointer;font-size:11px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif;background:rgba(93,195,218,0.15);color:#5DC3DA;">&#128260; Sincronizar</button>
 
+  <span id="sync-indicator" style="font-size:10px;color:rgba(255,255,255,0.45);font-family:'Montserrat',Helvetica,Arial,sans-serif;white-space:nowrap;" title="Última sincronización exitosa con Sheets"></span>
+
   <button onclick="alzakGuardarParaEquipo()" title="Guardar datos para que Paula y el equipo los vean" style="padding:6px 14px;border-radius:20px;border:1px solid rgba(100,200,100,0.3);cursor:pointer;font-size:11px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif;background:rgba(100,200,100,0.12);color:#90EE90;">&#128190; Guardar</button>
 
   <button onclick="if(confirm('¿Limpiar caché y recargar todo desde Sheets?')) alzakLimpiarCache()" title="Limpiar caché" style="padding:6px 14px;border-radius:20px;border:1px solid rgba(255,100,100,0.3);cursor:pointer;font-size:11px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif;background:rgba(255,100,100,0.12);color:#ff9999;">&#128465; Limpiar caché</button>
@@ -3594,6 +3596,13 @@ function alzakCargarDatosPrincipal(url, callback) {
       if (typeof fcActualizar           === 'function') setTimeout(function(){ var b=document.getElementById('fc-body'); if(b&&b.style.display!=='none') fcActualizar(); }, 500);
 
       if (typeof mostrarToast === 'function') mostrarToast('✅ Sincronizado — ' + cargados.join(' · '), '#1D9E75', 4000);
+
+      // Registrar y mostrar última sincronización exitosa
+      try {
+        var _syncTs = new Date();
+        localStorage.setItem('alzak_last_sync', _syncTs.toISOString());
+        if (typeof alzakActualizarIndicadorSync === 'function') alzakActualizarIndicadorSync();
+      } catch(e) {}
 
       if (callback) callback();
 
@@ -12957,7 +12966,13 @@ function renderBalance() {
 
   var MN = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
-  function fFechaPartes(f) { var p=(f||'').split('/'); if(p.length<3) return []; return [p[2],p[1],p[0]]; }
+  function fFechaPartes(f) {
+    var s = String(f||'').trim();
+    if (!s) return [];
+    if (s.indexOf('/') >= 0) { var p = s.split('/'); if (p.length < 3) return []; return [p[2].substring(0,4), p[1], p[0]]; }
+    if (s.indexOf('-') >= 0) { var q = s.substring(0,10).split('-'); if (q.length < 3) return []; return [q[0], q[1], q[2]]; }
+    return [];
+  }
 
   var disp = {};
 
@@ -28753,39 +28768,8 @@ var DIAN_DATA = [
   {a:2025,ing:1070.1,cos:1039.4,util:30.8,pb:485.3,pas:381.6,pl:103.7,ef:4.5,cxc:428.8,imp:10.8,end:78.6}
 ];
 
-function tabDIAN() {
-  // Reset home split
-  var hs = document.getElementById('home-split');
-  if (hs) hs.style.display = 'none';
-  // Hide ALL pages — remove class and force display:none on problematic ones
-  var pgs = document.querySelectorAll('.pg');
-  for (var i=0;i<pgs.length;i++) {
-    pgs[i].classList.remove('on');
-    pgs[i].style.display = 'none';
-  }
-  // Also reset presupuesto and conc which use inline styles
-  ['pg-presupuesto','pg-conc','pg-balance'].forEach(function(id){
-    var el = document.getElementById(id);
-    if (el) { el.classList.remove('on'); el.style.display='none'; }
-  });
-  // Show ONLY pg-dian
-  var pg = document.getElementById('pg-dian');
-  if (pg) {
-    pg.classList.add('on');
-    pg.style.cssText = 'display:block !important; padding:0; background:#f5f4f0; min-height:100vh;';
-  }
-  // Make sure #content is visible
-  var cnt = document.getElementById('content');
-  if (cnt) { cnt.style.height='auto'; cnt.style.minHeight='100vh'; cnt.style.overflow='auto'; }
-  // Update tab buttons
-  ['tab-home-btn','tab-pres-btn'].forEach(function(id){
-    var b = document.getElementById(id);
-    if (b) { b.style.background='rgba(255,255,255,0.1)'; b.style.color='rgba(255,255,255,0.5)'; }
-  });
-  var db = document.getElementById('tab-dian-btn');
-  if (db) { db.style.background='#FFC107'; db.style.color='#111'; db.style.fontWeight='700'; }
-  setTimeout(renderDIAN, 200);
-}
+// (tabDIAN definida más abajo — versión overlay)
+
 
 var dianRendered = false;
 
@@ -29109,6 +29093,32 @@ function cerrarDIAN() {
 }
 
 </script>
+
+<script>
+// ── Indicador de última sincronización ──────────────────────────
+function alzakActualizarIndicadorSync() {
+  var el = document.getElementById('sync-indicator');
+  if (!el) return;
+  var iso = null;
+  try { iso = localStorage.getItem('alzak_last_sync'); } catch(e) {}
+  if (!iso) { el.textContent = '⚠ sin sincronizar'; el.style.color = '#f59e0b'; return; }
+  var ts = new Date(iso);
+  var mins = Math.floor((Date.now() - ts.getTime()) / 60000);
+  var texto;
+  if (mins < 1)        texto = 'sync: ahora';
+  else if (mins < 60)  texto = 'sync: hace ' + mins + ' min';
+  else if (mins < 1440) texto = 'sync: hace ' + Math.floor(mins/60) + ' h';
+  else texto = 'sync: ' + ts.toLocaleDateString('es-CO', {day:'2-digit', month:'short'}) + ' ' + ts.toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'});
+  el.textContent = texto;
+  // Color: verde <30min, ámbar <24h, rojo más viejo (datos posiblemente obsoletos)
+  el.style.color = mins < 30 ? 'rgba(74,222,128,0.8)' : (mins < 1440 ? 'rgba(255,255,255,0.45)' : '#ef4444');
+  if (mins >= 1440) el.textContent = '⚠ ' + texto + ' — datos posiblemente viejos';
+}
+// Actualizar al cargar y cada minuto
+document.addEventListener('DOMContentLoaded', alzakActualizarIndicadorSync);
+setInterval(alzakActualizarIndicadorSync, 60000);
+</script>
+
 </body>
 
 </html>

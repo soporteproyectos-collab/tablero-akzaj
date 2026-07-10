@@ -11637,9 +11637,10 @@ function renderResumenTablero() {
           }
         } catch(e) {}
         var lblReal = ALZAK_ORG_ACTIVA==='FOUNDATION' ? (utilidad>=0?'Excedentes al mes':'Pérdida al mes') : (utilidad>=0?'Utilidad a '+_mesU:'Pérdida a '+_mesU);
-        var htmlU = card('📊', lblReal, utilidad, utilidad>=0?'#1D6F42':'#A32D2D', utilidad>=0?'#F0FDF4':'#FEF2F2', 'Real acumulado Ene–'+_mesU+' · margen '+margen+'%', (typeof FR_DATA!=='undefined'&&FR_DATA.length?'Fact. emitidas – Fact. radicadas':'Carga datos'));
+        // Pérdida → rojo con signo negativo · Utilidad → verde en positivo
+        var htmlU = card('📊', lblReal, utilidad, utilidad>=0?'#1D6F42':'#DC2626', utilidad>=0?'#F0FDF4':'#FEE2E2', 'Real acumulado Ene–'+_mesU+' · margen '+margen+'%', (typeof FR_DATA!=='undefined'&&FR_DATA.length?'Fact. emitidas – Fact. radicadas':'Carga datos'), true);
         if (utilProy !== null) {
-          htmlU += card('🔮', ALZAK_ORG_ACTIVA==='FOUNDATION' ? 'Excedente proyectado 2026' : 'Utilidad proyectada 2026', utilProy, utilProy>=0?'#553C9A':'#A32D2D', utilProy>=0?'#F5F3FF':'#FEF2F2', 'Escenario total a Dic-2026', 'Real + programado (ingresos y gastos)');
+          htmlU += card('🔮', ALZAK_ORG_ACTIVA==='FOUNDATION' ? 'Excedente proyectado 2026' : 'Utilidad proyectada 2026', utilProy, utilProy>=0?'#1D6F42':'#DC2626', utilProy>=0?'#F0FDF4':'#FEE2E2', 'Escenario total a Dic-2026', 'Real + programado (ingresos y gastos)', true);
         }
         return htmlU;
       })()

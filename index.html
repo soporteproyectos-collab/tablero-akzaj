@@ -3331,6 +3331,16 @@ function alzakCargarDatosPrincipal(url, callback) {
 
       // Solo agregar las del Sheet maestro si FP_DATA está vacío
 
+      // Defensa multi-org: si el GAS no devolvió programadas para ESTA org,
+      // FP_DATA queda vacío — nunca heredar proyecciones de otra organización
+      if (!data.programadas || !data.programadas.length) {
+
+        if (FP_DATA.length === 0) {
+          try { localStorage.removeItem(_orgKey('alzak_fp_2026')); } catch(e) {}
+        }
+
+      }
+
       if (FP_DATA.length === 0 && data.programadas && data.programadas.length) {
 
         FP_DATA = data.programadas;
@@ -8288,9 +8298,9 @@ function renderFacturas() {
 
   var total    = FACTURAS.reduce(function(a,f){return a+f.total;},0);
 
-  var cobrado  = FACTURAS.filter(function(f){return f.pagada;}).reduce(function(a,f){return a+f.total;},0);
+  var cobrado  = FACTURAS.filter(function(f){return f.pagada;}).reduce(function(a,f){return a+(f.bruto||f.total||0);},0);
 
-  var pendiente= FACTURAS.filter(function(f){return !f.pagada;}).reduce(function(a,f){return a+f.total;},0);
+  var pendiente= FACTURAS.filter(function(f){return !f.pagada;}).reduce(function(a,f){return a+(f.bruto||f.total||0);},0);
 
   var vencidas = FACTURAS.filter(function(f){return !f.pagada && estadoFact(f)==='vencida';});
 
@@ -8300,17 +8310,20 @@ function renderFacturas() {
 
   var pctCobro = total ? Math.round(cobrado/total*100) : 0;
 
-  // Totales tributarios
+  // Totales tributarios — separando donaciones (Foundation) de facturas de venta
+  // Una donación se identifica por N_Factura = "DONACIÓN" en el Sheet (sin hardcode de datos)
+  function esDonacion(f) {
+    return String(f.num||'').toUpperCase().indexOf('DONACI') >= 0;
+  }
+  var factVenta  = FACTURAS.filter(function(f){ return !esDonacion(f); });
+  var donaciones = FACTURAS.filter(esDonacion);
 
-  var totalBruto   = FACTURAS.reduce(function(a,f){return a+(f.bruto||0);},0);
-
-  var totalIVA     = FACTURAS.reduce(function(a,f){return a+(f.iva||0);},0);
-
-  var totalRteF    = FACTURAS.reduce(function(a,f){return a+(f.retefuente||0);},0);
-
-  var totalRteIVA  = FACTURAS.reduce(function(a,f){return a+(f.reteiva||0);},0);
-
-  var totalNeto    = totalBruto + totalIVA - totalRteF - totalRteIVA;
+  var totalBruto   = factVenta.reduce(function(a,f){return a+(f.bruto||0);},0);
+  var totalDonado  = donaciones.reduce(function(a,f){return a+(f.bruto||f.total||0);},0);
+  var totalIVA     = factVenta.reduce(function(a,f){return a+(f.iva||0);},0);
+  var totalRteF    = factVenta.reduce(function(a,f){return a+(f.retefuente||0);},0);
+  var totalRteIVA  = factVenta.reduce(function(a,f){return a+(f.reteiva||0);},0);
+  var totalNeto    = totalBruto + totalDonado + totalIVA - totalRteF - totalRteIVA;
 
   var kp = g('fact-kpis');
 
@@ -8332,11 +8345,15 @@ function renderFacturas() {
 
   var totalBaseGravable = totalBruto + baseProyectada;
 
+  var esFund = (typeof ALZAK_ORG_ACTIVA !== 'undefined' && ALZAK_ORG_ACTIVA === 'FOUNDATION');
+
   if (kp) kp.innerHTML =
 
-    '<div class="met"><div class="met-l" style="color:#888">Base gravable</div><div class="met-v tb">' + F(totalBruto) + '</div><div class="met-s">' + FACTURAS.length + ' facturas emitidas</div></div>' +
+    '<div class="met"><div class="met-l" style="color:#888">' + (esFund ? 'Total facturado' : 'Base gravable') + '</div><div class="met-v tb">' + F(totalBruto) + '</div><div class="met-s">' + factVenta.length + ' facturas emitidas</div></div>' +
 
-    '<div class="met"><div class="met-l" style="color:#0F6E56">IVA generado 19%</div><div class="met-v" style="color:#0F6E56;font-weight:700">+' + F(totalIVA) + '</div><div class="met-s">IVA en facturas</div></div>' +
+    (esFund ? '<div class="met" style="border:1.5px solid #1D9E7533;background:#F0FDF4"><div class="met-l" style="color:#1D6F42">💚 Total donado</div><div class="met-v" style="color:#1D6F42;font-weight:700">' + F(totalDonado) + '</div><div class="met-s">' + donaciones.length + ' donaciones recibidas</div></div>' : '') +
+
+    '<div class="met"><div class="met-l" style="color:#0F6E56">IVA generado 19%</div><div class="met-v" style="color:#0F6E56;font-weight:700">+' + F(totalIVA) + '</div><div class="met-s">' + (esFund ? 'Solo facturas de venta — donaciones sin IVA' : 'IVA en facturas') + '</div></div>' +
 
     (ALZAK_ORG_ACTIVA !== 'FOUNDATION' ? '<div class="met"><div class="met-l" style="color:#854F0B">Rte. fuente 11%</div><div class="met-v" style="color:#854F0B;font-weight:700">−' + F(totalRteF) + '</div><div class="met-s">Retención aplicada</div></div>' : '') +
 
@@ -8344,7 +8361,7 @@ function renderFacturas() {
 
     '<div class="met" style="border:1.5px solid #993C1D22"><div class="met-l" style="color:#993C1D">Neto a cobrar</div><div class="met-v" style="color:#993C1D;font-weight:700">' + F(totalNeto) + '</div><div class="met-s">Base+IVA−Retenciones</div></div>' +
 
-    '<div class="met"><div class="met-l" style="color:#888">% Recaudo</div><div class="met-v ' + (pctCobro>70?'tg':pctCobro>30?'tw':'tr') + '">' + pctCobro + '%</div><div class="met-s">' + FACTURAS.filter(function(f){return f.pagada;}).length + ' pagadas · ' + FACTURAS.filter(function(f){return !f.pagada;}).length + ' pendientes</div></div>' +
+    '<div class="met"><div class="met-l" style="color:#888">% Recaudo</div><div class="met-v ' + (pctCobro>70?'tg':pctCobro>30?'tw':'tr') + '">' + pctCobro + '%</div><div class="met-s">' + FACTURAS.filter(function(f){return f.pagada;}).length + ' pagadas · ' + FACTURAS.filter(function(f){return !f.pagada;}).length + ' pendientes' + (esFund ? ' (incl. donaciones)' : '') + '</div></div>' +
 
     '<div class="met" style="border:1.5px dashed #7C3AED44"><div class="met-l" style="color:#7C3AED">Base gravable proyectada</div><div class="met-v" style="color:#7C3AED">' + F(baseProyectada) + '</div><div class="met-s">' + (typeof FP_DATA!=='undefined'?FP_DATA.length:0) + ' facturas programadas</div></div>' +
 
@@ -8454,9 +8471,9 @@ function renderFacturas() {
 
   if (resEl) {
 
-    var tSel = lista.reduce(function(a,f){return a+f.total;},0);
+    var tSel = lista.reduce(function(a,f){return a+(f.bruto||f.total||0);},0);
 
-    var cobSel = lista.filter(function(f){return f.pagada;}).reduce(function(a,f){return a+f.total;},0);
+    var cobSel = lista.filter(function(f){return f.pagada;}).reduce(function(a,f){return a+(f.bruto||f.total||0);},0);
 
     var filDesc = [];
 
@@ -8808,7 +8825,7 @@ function renderBarraClientes() {
 
     var f = lista[i]; if (!cm[f.cliente]) cm[f.cliente] = {total:0,cobrado:0};
 
-    cm[f.cliente].total += f.total; if (f.pagada) cm[f.cliente].cobrado += f.total;
+    cm[f.cliente].total += (f.bruto||f.total||0); if (f.pagada) cm[f.cliente].cobrado += (f.bruto||f.total||0);
 
   }
 
@@ -8936,9 +8953,9 @@ function renderTablaFact() {
 
   var lista = factFiltrarLista(), el = g('dash-cartera-tabla'); if (!el) return;
 
-  var tS = lista.reduce(function(a,f){return a+f.total;},0);
+  var tS = lista.reduce(function(a,f){return a+(f.bruto||f.total||0);},0);
 
-  var cS = lista.filter(function(f){return f.pagada;}).reduce(function(a,f){return a+f.total;},0);
+  var cS = lista.filter(function(f){return f.pagada;}).reduce(function(a,f){return a+(f.bruto||f.total||0);},0);
 
   var res = '<div style="display:flex;gap:16px;flex-wrap:wrap;padding:8px 12px;background:#f5f4f0;border-radius:8px;margin-bottom:10px;font-size:12px">' +
 
@@ -9016,9 +9033,9 @@ function renderDetalleFact() {
 
     var f = FACTURAS[i]; if (!clientes[f.cliente]) clientes[f.cliente] = {nit:f.nit,facturas:[],totalFact:0,totalCob:0};
 
-    clientes[f.cliente].facturas.push(f); clientes[f.cliente].totalFact += f.total;
+    clientes[f.cliente].facturas.push(f); clientes[f.cliente].totalFact += (f.bruto||f.total||0);
 
-    if (f.pagada) clientes[f.cliente].totalCob += f.total;
+    if (f.pagada) clientes[f.cliente].totalCob += (f.bruto||f.total||0);
 
   }
 
@@ -9030,11 +9047,11 @@ function renderDetalleFact() {
 
     '<div class="ind"><div class="ind-l">Clientes</div><div class="ind-v tb">' + cArr.length + '</div></div>' +
 
-    '<div class="ind"><div class="ind-l">Vencidas</div><div class="ind-v tr">' + v.length + '</div><div class="ind-s">' + F(v.reduce(function(a,f){return a+f.total;},0)) + '</div></div>' +
+    '<div class="ind"><div class="ind-l">Vencidas</div><div class="ind-v tr">' + v.length + '</div><div class="ind-s">' + F(v.reduce(function(a,f){return a+(f.bruto||f.total||0);},0)) + '</div></div>' +
 
-    '<div class="ind"><div class="ind-l">Pendientes</div><div class="ind-v tw">' + p.length + '</div><div class="ind-s">' + F(p.reduce(function(a,f){return a+f.total;},0)) + '</div></div>' +
+    '<div class="ind"><div class="ind-l">Pendientes</div><div class="ind-v tw">' + p.length + '</div><div class="ind-s">' + F(p.reduce(function(a,f){return a+(f.bruto||f.total||0);},0)) + '</div></div>' +
 
-    '<div class="ind"><div class="ind-l">Cobradas</div><div class="ind-v tg">' + c.length + '</div><div class="ind-s">' + F(c.reduce(function(a,f){return a+f.total;},0)) + '</div></div></div>';
+    '<div class="ind"><div class="ind-l">Cobradas</div><div class="ind-v tg">' + c.length + '</div><div class="ind-s">' + F(c.reduce(function(a,f){return a+(f.bruto||f.total||0);},0)) + '</div></div></div>';
 
   for (var ci = 0; ci < cArr.length; ci++) {
 
@@ -10878,7 +10895,7 @@ function renderCarteraHome() {
 
   var total    = FACTURAS.reduce(function(a,f){return a+f.total;},0);
 
-  var cobrado  = FACTURAS.filter(function(f){return f.pagada;}).reduce(function(a,f){return a+f.total;},0);
+  var cobrado  = FACTURAS.filter(function(f){return f.pagada;}).reduce(function(a,f){return a+(f.bruto||f.total||0);},0);
 
   var pendiente= total-cobrado, pct=total?Math.round(cobrado/total*100):0;
 
@@ -10942,7 +10959,9 @@ function renderCarteraHome() {
 
       if(!mm[mk])mm[mk]={total:0,cobrado:0,pendiente:0,vencida:0,mes:_mes,anio:_anio};
 
-      mm[mk].total+=f.total;if(f.pagada)mm[mk].cobrado+=f.total;else if(estadoFact(f)==='vencida')mm[mk].vencida+=f.total;else mm[mk].pendiente+=f.total;
+      // Base gravable (sin IVA) — consistente con ER, CxC y proyecciones
+      var _fb=(f.bruto||f.total||0);
+      mm[mk].total+=_fb;if(f.pagada)mm[mk].cobrado+=_fb;else if(estadoFact(f)==='vencida')mm[mk].vencida+=_fb;else mm[mk].pendiente+=_fb;
 
     }
 
@@ -10976,6 +10995,14 @@ function renderCarteraHome() {
 
       });
 
+    }
+
+    // Asegurar que TODOS los meses del año en curso existan (aunque estén en $0)
+    // — así el eje mantiene Ene–Dic aun sin proyecciones cargadas
+    var _anioCurso = new Date().getFullYear();
+    for (var _mi = 1; _mi <= 12; _mi++) {
+      var _mk = MN[_mi-1] + ' ' + _anioCurso;
+      if (!mm[_mk]) mm[_mk] = {total:0,cobrado:0,pendiente:0,vencida:0,programada:0,mes:_mi,anio:_anioCurso};
     }
 
     var meses=Object.keys(mm).sort(function(a,b){return mm[a].anio!==mm[b].anio?mm[a].anio-mm[b].anio:mm[a].mes-mm[b].mes;});

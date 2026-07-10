@@ -3269,9 +3269,16 @@ function alzakCargarDatosPrincipal(url, callback) {
 
           // Separar programadas del Sheet de Facturación → alimentan FP_DATA
 
-          var programadasDelSheet = FACTURAS.filter(function(f){ return (f.estado||'').toLowerCase() === 'programada'; });
+          // Programada si: estado contiene "program" O el N° de factura empieza por PROG
+          function _esFactProgramada(f) {
+            var est = (f.estado||'').toLowerCase().trim();
+            var num = String(f.num||'').toUpperCase().trim();
+            return est.indexOf('program') >= 0 || num.indexOf('PROG') === 0;
+          }
 
-          FACTURAS = FACTURAS.filter(function(f){ return (f.estado||'').toLowerCase() !== 'programada'; });
+          var programadasDelSheet = FACTURAS.filter(_esFactProgramada);
+
+          FACTURAS = FACTURAS.filter(function(f){ return !_esFactProgramada(f); });
 
           // Programadas del Sheet de Facturación son la fuente de verdad
 
@@ -3299,17 +3306,10 @@ function alzakCargarDatosPrincipal(url, callback) {
 
             });
 
-            // Las del Sheet reemplazan completamente al localStorage
-
-            // Mantener solo las del Sheet maestro (_programadas) que NO estén en el Sheet de facturación
-
-            var fpMaestro = (data.programadas||[]).filter(function(r){
-
-              return !fpDelSheet.some(function(s){ return s.cliente===r.cliente && String(s.monto)===String(r.monto); });
-
-            });
-
-            FP_DATA = fpDelSheet.concat(fpMaestro);
+            // FUENTE ÚNICA DE VERDAD: las filas PROG- del Sheet 1 de Facturación.
+            // El _programadas maestro NO se mezcla — evita dobles conteos y
+            // garantiza que el KPI Programado coincida exactamente con el Sheet.
+            FP_DATA = fpDelSheet;
 
             try { localStorage.removeItem(_orgKey('alzak_fp_2026')); } catch(e) {}
 
@@ -3366,6 +3366,12 @@ function alzakCargarDatosPrincipal(url, callback) {
         var facturasUsadas = {};
 
         FP_DATA = FP_DATA.filter(function(fp) {
+
+          // Las programadas del Sheet 1 de Facturación (filas PROG-) NUNCA se deduplican:
+          // el Sheet es la fuente de verdad — al facturar, Nelson convierte PROG→FEE él mismo.
+          // Deduplicar por cliente+monto mata falsos positivos en contratos con entregas
+          // de igual valor (ej. Bayer CO-Mapa: 5 facturas de $15.402.178 c/u).
+          if (fp._fromSheet) return true;
 
           var fpCli = (fp.cliente||'').trim().toUpperCase();
 
@@ -11632,7 +11638,12 @@ function renderResumenTablero() {
 
         var totalProg = 0, nProg = 0;
 
-        if(typeof FP_DATA!=='undefined') FP_DATA.forEach(function(fp){ totalProg+=(parseFloat(fp.monto)||0); nProg++; });
+        // Solo programadas con fecha de emisión en 2026 — coincide con el Sheet 1 de facturas
+        if(typeof FP_DATA!=='undefined') FP_DATA.forEach(function(fp){
+          var fAnio = (fp.fecha||'').substring(0,4);
+          if (fAnio && fAnio !== '2026') return;
+          totalProg+=(parseFloat(fp.monto)||0); nProg++;
+        });
 
         return card('🗓️','Programado 2026', totalProg,'#553C9A','#F5F3FF', nProg+' facturas programadas','');
 

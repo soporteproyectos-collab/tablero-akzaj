@@ -11620,7 +11620,29 @@ function renderResumenTablero() {
 
         '')
 
-    + card('📊', ALZAK_ORG_ACTIVA==='FOUNDATION' ? (utilidad>=0?'Excedentes':'Pérdidas') : 'Utilidad ant. imp.',utilidad,  utilidad>=0?'#1D6F42':'#A32D2D', utilidad>=0?'#F0FDF4':'#FEF2F2', 'Margen '+margen+'% · 2026', (typeof FR_DATA!=='undefined'&&FR_DATA.length?'Fact. emitidas – Fact. radicadas':'Carga datos para ver utilidad'))
+    + (function(){
+        // Utilidad REAL al mes en curso + PROYECTADA a cierre de año (misma lógica del ER)
+        var MN_U = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+        var _mesU = MN_U[new Date().getMonth()];
+        var utilProy = null;
+        try {
+          if (typeof getMeses === 'function' && typeof calcMesData === 'function') {
+            var _msU = getMeses(); var iR=0,gR=0,iP=0,gP=0;
+            for (var ui=0; ui<_msU.length; ui++) {
+              var dU = calcMesData(_msU[ui]);
+              iR += (dU.ing||0); gR += (dU.gas||0);
+              iP += (dU.ingProy||0); gP += (dU.gasProy||0);
+            }
+            utilProy = (iR + iP) - (gR + gP);
+          }
+        } catch(e) {}
+        var lblReal = ALZAK_ORG_ACTIVA==='FOUNDATION' ? (utilidad>=0?'Excedentes al mes':'Pérdida al mes') : (utilidad>=0?'Utilidad a '+_mesU:'Pérdida a '+_mesU);
+        var htmlU = card('📊', lblReal, utilidad, utilidad>=0?'#1D6F42':'#A32D2D', utilidad>=0?'#F0FDF4':'#FEF2F2', 'Real acumulado Ene–'+_mesU+' · margen '+margen+'%', (typeof FR_DATA!=='undefined'&&FR_DATA.length?'Fact. emitidas – Fact. radicadas':'Carga datos'));
+        if (utilProy !== null) {
+          htmlU += card('🔮', ALZAK_ORG_ACTIVA==='FOUNDATION' ? 'Excedente proyectado 2026' : 'Utilidad proyectada 2026', utilProy, utilProy>=0?'#553C9A':'#A32D2D', utilProy>=0?'#F5F3FF':'#FEF2F2', 'Escenario total a Dic-2026', 'Real + programado (ingresos y gastos)');
+        }
+        return htmlU;
+      })()
 
     + card('🏛','Gravamen 4x1000', gmf4x1000,'#6EA1BA','#EBF6FA', gmf_fuente,'GMF acumulado Ene–Mar 2026')
 
@@ -14246,11 +14268,16 @@ function renderErDetalle() {
 
   var th1Style='padding:7px 10px;font-size:10px;font-weight:700;text-align:left;background:#54504F;color:#fff;';
 
-  // top sticky = altura del main-header (72px fijo) + barra de botones nav (~52px)
-  var _mainH = document.getElementById('main-header') ? document.getElementById('main-header').offsetHeight : 72;
-  var _navBar = document.getElementById('tab-home-btn') ? document.getElementById('tab-home-btn').closest('div') : null;
-  var _navH2  = _navBar ? _navBar.offsetHeight : 52;
-  var stickyTop = (_mainH + _navH2) + 'px';
+  // top sticky = borde inferior REAL de la barra de navegación en el viewport
+  // (la barra es fija, así que su bottom es constante sin importar el scroll)
+  var stickyTop = '124px';
+  try {
+    var _hb = document.getElementById('tab-home-btn');
+    if (_hb && _hb.parentElement) {
+      var _b = _hb.parentElement.getBoundingClientRect().bottom;
+      if (_b > 0 && _b < 300) stickyTop = Math.round(_b) + 'px';
+    }
+  } catch(e) {}
 
   var html='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">';
 

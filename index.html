@@ -14300,27 +14300,19 @@ function renderErDetalle() {
 
   var showAcc  = !ER_MES_SEL;
 
-  var thStyle='padding:7px 10px;font-size:10px;font-weight:700;text-align:right;background:#54504F;color:#fff;white-space:nowrap;';
+  // sticky va en cada TH (no en thead): Safari no soporta sticky en thead/tr
+  var thStyle='padding:7px 10px;font-size:10px;font-weight:700;text-align:right;background:#54504F;color:#fff;white-space:nowrap;position:sticky;top:0;z-index:10;';
 
-  var th1Style='padding:7px 10px;font-size:10px;font-weight:700;text-align:left;background:#54504F;color:#fff;';
+  var th1Style='padding:7px 10px;font-size:10px;font-weight:700;text-align:left;background:#54504F;color:#fff;position:sticky;top:0;';
 
-  // top sticky = borde inferior REAL de la barra de navegación en el viewport
-  // (la barra es fija, así que su bottom es constante sin importar el scroll)
-  var stickyTop = '124px';
-  try {
-    var _hb = document.getElementById('tab-home-btn');
-    if (_hb && _hb.parentElement) {
-      var _b = _hb.parentElement.getBoundingClientRect().bottom;
-      if (_b > 0 && _b < 300) stickyTop = Math.round(_b) + 'px';
-    }
-  } catch(e) {}
+  // La tabla vive en su PROPIA área de scroll (vertical y horizontal).
+  // El thead sticky con top:0 se pega al borde superior de esa área —
+  // arriba de Ingresos, siempre visible al bajar, sin depender de medir el nav.
+  var html='<div style="overflow:auto;max-height:calc(100vh - 230px);border:1px solid #e0ddd8;border-radius:8px"><table style="width:100%;border-collapse:collapse;font-size:11px">';
 
-  var html='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">';
 
-  // thead sticky: se queda fijo al hacer scroll vertical
-  var theadStyle = 'position:sticky;top:'+stickyTop+';z-index:10;';
 
-  html+='<thead style="'+theadStyle+'"><tr><th style="'+th1Style+'min-width:180px;max-width:240px;position:sticky;left:0;z-index:11;border-right:1px solid #555;">Concepto</th>';
+  html+='<thead><tr><th style="'+th1Style+'min-width:180px;max-width:240px;left:0;z-index:11;border-right:1px solid #555;">Concepto</th>';
 
   for(var i=0;i<colMeses.length;i++) html+='<th style="'+thStyle+'min-width:100px">'+colMeses[i].mes+'</th>';
 

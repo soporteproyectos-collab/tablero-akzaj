@@ -965,6 +965,8 @@ tbody tr:hover td{background:var(--cyan-light);}
 
 <option value="pagada">✅ Pagadas</option>
 
+<option value="programada">🔮 Programadas (por facturar)</option>
+
 </select>
 
 <input type="text" id="dash-fil-q" placeholder="N° factura o cliente..." oninput="renderCarteraHome()" style="font-size:12px;border-radius:7px;padding:5px 10px;border:1px solid #d0cec8;flex:1;min-width:150px">
@@ -3297,6 +3299,10 @@ function alzakCargarDatosPrincipal(url, callback) {
           // Convertir a formato FP_DATA
 
           if (programadasDelSheet.length > 0) {
+
+            // Guardar las programadas originales (con num, vencimiento, totales)
+            // para poder listarlas en "Ver detalle por cliente" con el filtro Programadas
+            window.FACTURAS_PROG = programadasDelSheet;
 
             var fpDelSheet = programadasDelSheet.map(function(f) {
 
@@ -8803,7 +8809,11 @@ function factFiltrarLista() {
 
   var eFil = g('dash-fil-estado') ? g('dash-fil-estado').value : '';
 
-  return FACTURAS.filter(function(f) {
+  // Programadas: listar las PROG- originales del Sheet (no están en FACTURAS)
+  var _base = (eFil === 'programada' && typeof window.FACTURAS_PROG !== 'undefined')
+              ? window.FACTURAS_PROG : FACTURAS;
+
+  return _base.filter(function(f) {
 
     if (cFil && f.cliente !== cFil) return false;
 
@@ -8816,6 +8826,9 @@ function factFiltrarLista() {
     if (eFil === 'pendiente' && f.pagada)  return false;
 
     if (eFil === 'vencida'   && (f.pagada || estadoFact(f) !== 'vencida')) return false;
+
+    // eFil === 'programada': la base ya es FACTURAS_PROG — pasan todas las que
+    // cumplan cliente/año/búsqueda
 
     return true;
 

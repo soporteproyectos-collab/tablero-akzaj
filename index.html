@@ -12747,9 +12747,11 @@ function calcBalMes(mes) {
 
     var total=parseFloat(r['Total (COP)']||r['Total']||0);
 
-    var ncomp=String(r['N Comprobante']||r['N_Comprobante']||'').trim().toLowerCase();
+    function _snt(s){ try { return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,''); } catch(e){ return String(s); } }
 
-    var prov=(r['Proveedor / Beneficiario']||'').trim().toUpperCase();
+    var ncomp=_snt(String(r['N Comprobante']||r['N_Comprobante']||'').trim().toLowerCase());
+
+    var prov=_snt((r['Proveedor / Beneficiario']||'').trim().toUpperCase());
 
     var SKIP={S:1,A:1,SAS:1,DE:1,LA:1,EL:1,LOS:1,Y:1,DEL:1,LTDA:1};
 
@@ -12761,9 +12763,9 @@ function calcBalMes(mes) {
 
         var gx=GASTOS_DATA[gi];
 
-        var gComp=String(gx['N_Comprobante']||gx['N Comprobante']||gx['Concepto']||'').toLowerCase();
+        var gComp=_snt(String(gx['N_Comprobante']||gx['N Comprobante']||gx['Concepto']||'').toLowerCase());
 
-        var gProv=(gx['Beneficiario']||gx['Proveedor / Beneficiario']||'').toUpperCase();
+        var gProv=_snt((gx['Beneficiario']||gx['Proveedor / Beneficiario']||'').toUpperCase());
 
         var gTot=parseFloat(gx['Total_COP']||gx['Total ($)']||0);
 
@@ -24191,9 +24193,15 @@ function frCalcularAbonado(r) {
 
   if (total <= 0) return 0;
 
-  var ncomp     = String(r['N Comprobante'] || r['N_Comprobante'] || '').trim().toLowerCase();
+  // Normalizar tildes: "GARCÍA" y "GARCIA" deben matchear como el mismo nombre
+  function _sinTildes(s) {
+    try { return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+    catch(e) { return String(s); }
+  }
 
-  var proveedor = (r['Proveedor / Beneficiario'] || '').trim().toUpperCase();
+  var ncomp     = _sinTildes(String(r['N Comprobante'] || r['N_Comprobante'] || '').trim().toLowerCase());
+
+  var proveedor = _sinTildes((r['Proveedor / Beneficiario'] || '').trim().toUpperCase());
 
   var abonado   = 0;
 
@@ -24221,9 +24229,16 @@ function frCalcularAbonado(r) {
 
   if (typeof GASTOS_DATA !== 'undefined' && GASTOS_DATA.length > 0) {
 
-    var SKIP2 = {S:1,A:1,SAS:1,DE:1,LA:1,EL:1,LOS:1,Y:1,DEL:1,LTDA:1};
+    var SKIP2 = {S:1,A:1,SAS:1,DE:1,LA:1,EL:1,LOS:1,Y:1,DEL:1,LTDA:1,SA:1,ESP:1,INC:1,
+                 COLOMBIA:1,CARTAGENA:1,GROUP:1,GRUPO:1,COMPANY:1,SERVICIOS:1};
 
-    var pWords = proveedor.split(/\s+/).filter(function(w){ return w.length>3 && !SKIP2[w]; });
+    // Tokens limpios: sin puntuación ("S.A." ya no matchea "S.A.S." de todo el mundo)
+    // >3 letras, O cortos con & o dígitos (H&M, D1, 3M)
+    var pWords = proveedor.split(/[^A-Z0-9&]+/).filter(function(w){
+      if (!w || SKIP2[w]) return false;
+      if (w.length > 3) return true;
+      return w.length >= 2 && (/[&\d]/.test(w));
+    });
 
     for (var i = 0; i < GASTOS_DATA.length; i++) {
 
@@ -24232,9 +24247,19 @@ function frCalcularAbonado(r) {
 
       var gx2   = GASTOS_DATA[i];
 
-      var gComp2 = String(gx2['N_Comprobante']||gx2['N Comprobante']||gx2['N_Factura']||gx2['Concepto']||'').toLowerCase();
+      // Comprobante + Concepto CONCATENADOS: el N° de factura o el nombre del
+      // proveedor real suelen venir en el concepto ("Pago factura Mac Center BCA9094",
+      // "Pago Homecenter 9 febrero") cuando el pago lo hizo un tercero (NJAZ, Josefina)
+      var gComp2 = _sinTildes((String(gx2['N_Comprobante']||gx2['N Comprobante']||gx2['N_Factura']||'') + ' ' + String(gx2['Concepto']||'')).toLowerCase());
 
-      var gProv2 = (gx2['Beneficiario']||gx2['Proveedor / Beneficiario']||gx2['Proveedor_Beneficiario']||'').toUpperCase();
+      var gProv2 = _sinTildes((gx2['Beneficiario']||gx2['Proveedor / Beneficiario']||gx2['Proveedor_Beneficiario']||'').toUpperCase());
+
+      // El proveedor puede aparecer en el beneficiario O en el concepto del egreso
+      var gConc2 = _sinTildes(String(gx2['Concepto']||'').toUpperCase());
+
+      // Si la factura ya está cubierta, no reservar más egresos (deja pagos libres
+      // para otras facturas del mismo proveedor — ej. mensualidades Red Balloon)
+      if (abonado >= total) break;
 
       var gTot2  = parseFloat(gx2['Total ($)']||gx2['Total_COP']||gx2['Total (COP)']||0);
 
@@ -24247,7 +24272,15 @@ function frCalcularAbonado(r) {
         continue;
       }
 
-      var provMatch = pWords.length > 0 && pWords.some(function(w){ return gProv2.indexOf(w)>=0; });
+      // Conteo de tokens coincidentes (beneficiario o concepto)
+      var _nMatch = 0;
+      for (var _pw = 0; _pw < pWords.length; _pw++) {
+        if (gProv2.indexOf(pWords[_pw]) >= 0 || gConc2.indexOf(pWords[_pw]) >= 0) _nMatch++;
+      }
+      var provMatch = _nMatch > 0;
+      // Match FUERTE para pagos parciales: ≥2 tokens, o nombre completo de 1 sola palabra.
+      // Evita falsos positivos por apellidos comunes (HERNANDEZ, GARCIA...)
+      var provMatchFuerte = (_nMatch >= 2) || (pWords.length === 1 && _nMatch === 1);
       if (!provMatch) continue;
 
       // Fechas obligatorias para B y C: el egreso debe ser >= fecha de radicación.
@@ -24261,8 +24294,8 @@ function frCalcularAbonado(r) {
         continue;
       }
 
-      // Modo C: pago parcial — proveedor + monto menor + fecha válida
-      if (fechaOk && gTot2 > 0 && gTot2 < total) {
+      // Modo C: pago parcial — match FUERTE de proveedor + monto menor + fecha válida
+      if (fechaOk && provMatchFuerte && gTot2 > 0 && gTot2 < total) {
         abonado += gTot2;
         window._FR_EGRESO_RESERVADO[i] = _rowKey;
         continue;
@@ -24556,9 +24589,15 @@ function frFuentePago(r) {
 
   if (total <= 0) return null;
 
-  var ncomp     = String(r['N Comprobante'] || r['N_Comprobante'] || '').trim().toLowerCase();
+  // Normalizar tildes: "GARCÍA" y "GARCIA" deben matchear como el mismo nombre
+  function _sinTildes(s) {
+    try { return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+    catch(e) { return String(s); }
+  }
 
-  var proveedor = (r['Proveedor / Beneficiario'] || '').trim().toUpperCase();
+  var ncomp     = _sinTildes(String(r['N Comprobante'] || r['N_Comprobante'] || '').trim().toLowerCase());
+
+  var proveedor = _sinTildes((r['Proveedor / Beneficiario'] || '').trim().toUpperCase());
 
   var fechaFR   = (r['Fecha'] || '');
 

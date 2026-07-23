@@ -955,6 +955,18 @@ tbody tr:hover td{background:var(--cyan-light);}
 
 </select>
 
+<select id="dash-fil-estado" onchange="renderCarteraHome()" style="font-size:12px;font-weight:600;border-radius:7px;padding:5px 10px;border:1px solid #d0cec8">
+
+<option value="">Todos los estados</option>
+
+<option value="pendiente">🔴 Me deben (pendientes + vencidas)</option>
+
+<option value="vencida">⚠️ Solo vencidas</option>
+
+<option value="pagada">✅ Pagadas</option>
+
+</select>
+
 <input type="text" id="dash-fil-q" placeholder="N° factura o cliente..." oninput="renderCarteraHome()" style="font-size:12px;border-radius:7px;padding:5px 10px;border:1px solid #d0cec8;flex:1;min-width:150px">
 
 </div>
@@ -8789,6 +8801,8 @@ function factFiltrarLista() {
 
   var qFil = (g('dash-fil-q') ? g('dash-fil-q').value : '').toLowerCase();
 
+  var eFil = g('dash-fil-estado') ? g('dash-fil-estado').value : '';
+
   return FACTURAS.filter(function(f) {
 
     if (cFil && f.cliente !== cFil) return false;
@@ -8796,6 +8810,12 @@ function factFiltrarLista() {
     if (aFil && f.fecha.indexOf(aFil) < 0) return false;
 
     if (qFil && f.num.toLowerCase().indexOf(qFil) < 0 && f.cliente.toLowerCase().indexOf(qFil) < 0) return false;
+
+    if (eFil === 'pagada'    && !f.pagada) return false;
+
+    if (eFil === 'pendiente' && f.pagada)  return false;
+
+    if (eFil === 'vencida'   && (f.pagada || estadoFact(f) !== 'vencida')) return false;
 
     return true;
 

@@ -23636,9 +23636,25 @@ function frRender() {
 
   _FR_FUENTE_CACHE = {}; if(window._FR_EGRESOS_USADOS) window._FR_EGRESOS_USADOS = {};
 
+  window._FR_ABONO_CACHE = {}; window._FR_EGRESO_RESERVADO = {};
+
   // FILTRAR PRIMERO — luego calcular fuentes solo para los filtrados
 
   var filtered = frGetFiltered();
+
+  // Estado DEFINITIVO por fila — calculado una sola vez, en un solo orden.
+  // Badge, KPIs y filtro usan este mismo valor: imposible que difieran.
+  filtered.forEach(function(r){ r.__estadoReal = frEstadoReal(r); });
+
+  var _estSel = (document.getElementById('fr-fil-estado')||{}).value || '';
+  if (_estSel) {
+    filtered = filtered.filter(function(r){
+      if (_estSel === 'PAGADO')       return r.__estadoReal === 'PAGADO';
+      if (_estSel === 'PENDIENTE')    return r.__estadoReal !== 'PAGADO';
+      if (_estSel === 'SIN-EXTRACTO') return r.__estadoReal === 'SIN-EXTRACTO';
+      return true;
+    });
+  }
 
   
 
@@ -23678,7 +23694,7 @@ function frRender() {
 
     var tot    = frTotalVal(r);
 
-    var est    = frEstadoReal(r);
+    var est    = (r.__estadoReal !== undefined) ? r.__estadoReal : frEstadoReal(r);
 
     var ab     = frCalcularAbonado(r);
 
@@ -23754,7 +23770,7 @@ function frRender() {
 
     var tot = frTotalVal(r);
 
-    var est = frEstadoReal(r);
+    var est = (r.__estadoReal !== undefined) ? r.__estadoReal : frEstadoReal(r);
 
     var ab  = frCalcularAbonado(r);
 
@@ -23854,7 +23870,7 @@ function frRender() {
 
       var tot    = frTotalVal(r);
 
-      var est    = frEstadoReal(r);
+      var est    = (r.__estadoReal !== undefined) ? r.__estadoReal : frEstadoReal(r);
 
       var ab     = frCalcularAbonado(r);
 
@@ -23942,22 +23958,10 @@ function frGetFiltered() {
 
     if (mes  && fMesAnio !== mes) return false;
 
-    // Usar estado real (cruce TC + Egresos), no el campo del CSV
-
-    if (est) {
-
-      var estadoReal = frEstadoReal(r);
-
-      if (est === 'PAGADO' && estadoReal !== 'PAGADO') return false;
-
-      // PENDIENTE = la obligación existe y no hay confirmación de pago
-      // Incluye SIN-EXTRACTO: si no hay extracto ni egreso, igual se debe
-      if (est === 'PENDIENTE' && estadoReal === 'PAGADO') return false;
-
-      // SIN-EXTRACTO = solo los del período sin extracto cargado (subconjunto informativo)
-      if (est === 'SIN-EXTRACTO' && estadoReal !== 'SIN-EXTRACTO') return false;
-
-    }
+    // NOTA: el filtro por estado se aplica DESPUÉS, en frRender, sobre el
+    // estado definitivo (__estadoReal) calculado una sola vez por fila.
+    // Filtrar aquí generaba inconsistencias: el pool de extractos muta entre
+    // pasadas y una fila podía pasar el filtro como PENDIENTE y pintarse PAGADO.
 
     if (bus) {
 
@@ -24193,7 +24197,27 @@ function frCalcularAbonado(r) {
 
   var abonado   = 0;
 
-  // ── FUENTE 1: GASTOS_DATA — si el egreso existe, está pagado ──────────
+  // Clave única de esta factura radicada (para caché y reserva de egresos)
+  var _rowKey = ncomp + '|' + proveedor + '|' + total + '|' + (r['Fecha']||'');
+
+  // Caché: si ya se calculó el abonado de esta fila en este render, devolverlo
+  if (typeof window._FR_ABONO_CACHE === 'undefined') window._FR_ABONO_CACHE = {};
+  if (typeof window._FR_EGRESO_RESERVADO === 'undefined') window._FR_EGRESO_RESERVADO = {};
+  if (window._FR_ABONO_CACHE[_rowKey] !== undefined) return window._FR_ABONO_CACHE[_rowKey];
+
+  // Timestamp de la fecha de radicación (dd/MM/yyyy) — para validar fechas de egresos
+  function _tsFecha(s) {
+    var p = String(s||'').trim().split('/');
+    if (p.length < 3) return null;
+    var t = new Date(parseInt(p[2].substring(0,4)), parseInt(p[1])-1, parseInt(p[0])).getTime();
+    return isNaN(t) ? null : t;
+  }
+  var tsFactura = _tsFecha(r['Fecha']);
+
+  // ── FUENTE 1: GASTOS_DATA — reglas estrictas anti-fantasma ──────────
+  // A: comprobante exacto (referencia explícita) — la más confiable
+  // B: monto exacto + proveedor + egreso posterior o igual a la radicación
+  // C: pago parcial — proveedor + egreso POSTERIOR a la radicación + no usado por otra factura
 
   if (typeof GASTOS_DATA !== 'undefined' && GASTOS_DATA.length > 0) {
 
@@ -24203,6 +24227,9 @@ function frCalcularAbonado(r) {
 
     for (var i = 0; i < GASTOS_DATA.length; i++) {
 
+      // Un egreso solo puede abonar UNA factura — si otra fila ya lo reservó, saltarlo
+      if (window._FR_EGRESO_RESERVADO[i] !== undefined && window._FR_EGRESO_RESERVADO[i] !== _rowKey) continue;
+
       var gx2   = GASTOS_DATA[i];
 
       var gComp2 = String(gx2['N_Comprobante']||gx2['N Comprobante']||gx2['N_Factura']||gx2['Concepto']||'').toLowerCase();
@@ -24211,20 +24238,34 @@ function frCalcularAbonado(r) {
 
       var gTot2  = parseFloat(gx2['Total ($)']||gx2['Total_COP']||gx2['Total (COP)']||0);
 
-      // Modo A: N° comprobante exacto → sumar el valor real del egreso (puede ser pago parcial)
+      var tsEgreso = _tsFecha(gx2['Fecha']);
+
+      // Modo A: N° comprobante exacto — referencia explícita, sin restricción de fecha
       if (ncomp.length > 2 && gComp2.indexOf(ncomp.toLowerCase()) >= 0) {
         abonado += gTot2;
-        continue; // no break — puede haber más egresos con el mismo comprobante (abonos)
+        window._FR_EGRESO_RESERVADO[i] = _rowKey;
+        continue;
       }
 
-      // Modo B: monto exacto + proveedor → pago total confirmado
-      if (Math.abs(gTot2 - total) <= 100 && pWords.some(function(w){ return gProv2.indexOf(w)>=0; })) {
-        abonado += gTot2; continue;
+      var provMatch = pWords.length > 0 && pWords.some(function(w){ return gProv2.indexOf(w)>=0; });
+      if (!provMatch) continue;
+
+      // Fechas obligatorias para B y C: el egreso debe ser >= fecha de radicación.
+      // Un pago no puede abonar una factura que aún no existía.
+      var fechaOk = (tsFactura !== null && tsEgreso !== null && tsEgreso >= tsFactura);
+
+      // Modo B: monto exacto + proveedor + fecha válida → pago total
+      if (fechaOk && Math.abs(gTot2 - total) <= 100) {
+        abonado += gTot2;
+        window._FR_EGRESO_RESERVADO[i] = _rowKey;
+        continue;
       }
 
-      // Modo C: pago parcial — proveedor coincide y monto es menor al total (anticipo/abono)
-      if (gTot2 > 0 && gTot2 < total && pWords.some(function(w){ return gProv2.indexOf(w)>=0; })) {
-        abonado += gTot2; continue;
+      // Modo C: pago parcial — proveedor + monto menor + fecha válida
+      if (fechaOk && gTot2 > 0 && gTot2 < total) {
+        abonado += gTot2;
+        window._FR_EGRESO_RESERVADO[i] = _rowKey;
+        continue;
       }
 
     }
@@ -24309,7 +24350,9 @@ function frCalcularAbonado(r) {
 
   }
 
-  return Math.min(abonado, total);
+  var _abFinal = Math.min(abonado, total);
+  window._FR_ABONO_CACHE[_rowKey] = _abFinal;
+  return _abFinal;
 
 }
 
@@ -24879,7 +24922,8 @@ function frBadgeEstado(r) {
 
   var abonado = frCalcularAbonado(r);
 
-  var estado  = frEstadoReal(r);
+  // Preferir el estado definitivo calculado en frRender (consistencia filtro↔badge)
+  var estado  = (r.__estadoReal !== undefined) ? r.__estadoReal : frEstadoReal(r);
 
   // Badge de fuente bancaria
 
@@ -25057,7 +25101,7 @@ function frExportPDF() {
 
   datos.forEach(function(r){
 
-    var est = frEstadoReal(r);
+    var est = (r.__estadoReal !== undefined) ? r.__estadoReal : frEstadoReal(r);
 
     if (est === 'PAGADO') pagado += frTotalVal(r);
 
@@ -25113,7 +25157,7 @@ function frExportPDF() {
 
       var r = gd.items[ri];
 
-      var est = frEstadoReal(r);
+      var est = (r.__estadoReal !== undefined) ? r.__estadoReal : frEstadoReal(r);
 
       var fuente = frFuentePago(r);
 

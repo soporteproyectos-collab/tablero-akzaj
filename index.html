@@ -21,6 +21,8 @@ body{background:#f5f4f0;color:#54504F;min-height:100vh}
 #content{padding:0;max-width:100%;margin:0}
 
 .pg{display:none}
+#er-tabla-wrap thead th{position:sticky !important;top:0 !important;z-index:50 !important;background:#54504F !important;}
+#er-tabla-wrap thead th:first-child{left:0 !important;z-index:51 !important;}
 
 .pg.on{display:block}
 
@@ -14308,7 +14310,7 @@ function renderErDetalle() {
   // La tabla vive en su PROPIA área de scroll (vertical y horizontal).
   // El thead sticky con top:0 se pega al borde superior de esa área —
   // arriba de Ingresos, siempre visible al bajar, sin depender de medir el nav.
-  var html='<div style="overflow:auto;max-height:calc(100vh - 230px);border:1px solid #e0ddd8;border-radius:8px"><table style="width:100%;border-collapse:collapse;font-size:11px">';
+  var html='<div id="er-tabla-wrap" style="overflow:auto;max-height:calc(100vh - 230px);border:1px solid #e0ddd8;border-radius:8px"><table style="width:100%;border-collapse:collapse;font-size:11px">';
 
 
 
@@ -29270,6 +29272,8 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
+var ALZAK_BUILD = 'v23jul-1745';
+
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');
   if (!el) return;
@@ -29283,7 +29287,7 @@ function alzakActualizarIndicadorSync() {
   else if (mins < 60)  texto = 'sync: hace ' + mins + ' min';
   else if (mins < 1440) texto = 'sync: hace ' + Math.floor(mins/60) + ' h';
   else texto = 'sync: ' + ts.toLocaleDateString('es-CO', {day:'2-digit', month:'short'}) + ' ' + ts.toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'});
-  el.textContent = texto;
+  el.textContent = texto + ' · ' + (typeof ALZAK_BUILD!=='undefined'?ALZAK_BUILD:'');
   // Color: verde <30min, ámbar <24h, rojo más viejo (datos posiblemente obsoletos)
   el.style.color = mins < 30 ? 'rgba(74,222,128,0.8)' : (mins < 1440 ? 'rgba(255,255,255,0.45)' : '#ef4444');
   if (mins >= 1440) el.textContent = '⚠ ' + texto + ' — datos posiblemente viejos';

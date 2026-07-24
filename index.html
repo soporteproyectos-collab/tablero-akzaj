@@ -718,6 +718,14 @@ tbody tr:hover td{background:var(--cyan-light);}
 
 #home-split-left, #home-split-right { min-width: 320px; }
 
+/* Panel de conciliación (derecha): los gráficos van APILADOS a ancho completo
+   del panel — nunca dos por fila (se cortaban en el espacio angosto) */
+#home-split-right .charts-grid,
+#home-split-right .two-col { grid-template-columns: 1fr !important; }
+#home-split-right .charts-grid > div,
+#home-split-right .two-col > div { width: 100% !important; max-width: 100% !important; }
+#home-split-right canvas, #home-split-right svg { max-width: 100% !important; }
+
 .global-cards, .acct-cards { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important; }
 
 /* Smooth resize when dragging divider */
@@ -878,7 +886,7 @@ tbody tr:hover td{background:var(--cyan-light);}
 
   <!-- COLUMNA IZQUIERDA: Tablero financiero (scrollable) -->
 
-  <div id="home-split-left" style="flex:1.1;min-width:0;overflow-y:auto;padding:16px 14px 16px 20px;border-right:1px solid #e8e5e0">
+  <div id="home-split-left" style="flex:1.9;min-width:0;overflow-y:auto;padding:16px 14px 16px 20px;border-right:1px solid #e8e5e0">
 
     <div id="widget-resumen" style="margin-bottom:12px"></div>
 
@@ -29335,7 +29343,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v24jul-0915';
+var ALZAK_BUILD = 'v24jul-1550';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

@@ -27950,6 +27950,11 @@ function alzakGuardarParaEquipo() {
 
 function alzakGenerarInforme() {
 
+  // Confirmación inmediata de que el clic llegó
+  if (typeof mostrarToast === 'function') mostrarToast('📊 Generando informe...', '#0C447C', 1500);
+
+  try {
+
   var hoy = new Date();
 
   var mesActual = hoy.getMonth(); // 0-based (junio=5)
@@ -28625,6 +28630,12 @@ function alzakGenerarInforme() {
   if (v) { v.document.write(html); v.document.close(); }
 
   else mostrarToast('⚠️ Permite ventanas emergentes en Chrome para ver el informe', '#993C1D', 4000);
+
+  } catch(errInf) {
+    // Mostrar el error real para diagnóstico en vez de fallar en silencio
+    if (typeof mostrarToast === 'function') mostrarToast('❌ Error generando informe: ' + errInf.message, '#991B1B', 8000);
+    console.error('alzakGenerarInforme:', errInf);
+  }
 
 }
 
@@ -29343,7 +29354,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v24jul-1550';
+var ALZAK_BUILD = 'v24jul-1615';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

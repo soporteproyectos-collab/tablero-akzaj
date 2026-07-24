@@ -28251,6 +28251,29 @@ function alzakGenerarInforme() {
 
     }).reduce(function(a,r){return a+parseFloat(r['Total_COP']||r['Total ($)']||0);},0);
 
+  // ── COSTOS por causación (FR_DATA radicadas 2026) — misma lógica del ER ──
+  // Base gravable, solo gastos operativos, sin proyectadas de meses futuros
+  var totalCostos = 0;
+  if (typeof FR_DATA !== 'undefined') {
+    totalCostos = FR_DATA.filter(function(r){
+      var fp = (r['Fecha']||'').split('/');
+      if (fp.length < 3) return false;
+      if ((fp[2]||'').substring(0,4) !== '2026') return false;
+      if (typeof frEsProyectado === 'function' && frEsProyectado(r)) return false;
+      return (typeof frEsGastoOpPL === 'function') ? frEsGastoOpPL(r) : true;
+    }).reduce(function(a,r){
+      var v = r['Subtotal (COP)'] || r['Subtotal ($)'] || 0;
+      if (typeof v === 'string') v = v.replace(/[^0-9.]/g,'');
+      var p = parseFloat(v)||0;
+      if (p === 0) {
+        var t2 = parseFloat(r['Total (COP)']||r['Total ($)']||0);
+        var i2 = parseFloat(r['IVA (COP)']||0);
+        p = t2 > 0 ? (i2 > 0 ? t2 - i2 : t2) : 0;
+      }
+      return a + p;
+    }, 0);
+  }
+
   // Utilidad operacional = Ingresos 2026 - Costos radicados 2026
 
   // (coincide con Estado de Resultados — NO resta egresos que son pagos de caja)
@@ -29354,7 +29377,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v24jul-1615';
+var ALZAK_BUILD = 'v24jul-1625';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

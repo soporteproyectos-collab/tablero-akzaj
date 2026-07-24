@@ -21998,6 +21998,10 @@ function fcActualizar() {
 
   var detMes       = []; for (var i=0; i<12; i++) detMes.push([]);
 
+  // Detalle contextual por FILA y MES: qué facturas componen cada celda
+  var _FCD = { fact:[], pag:[], venc:[], cobro:[], prog:[], progCobro:[] };
+  for (var _k in _FCD) { for (var _i2=0; _i2<12; _i2++) _FCD[_k].push([]); }
+
   var hoyMs = new Date().getTime();
 
   if (typeof FACTURAS !== 'undefined') {
@@ -22085,17 +22089,22 @@ function fcActualizar() {
 
         mesEsperado[venceMes] += _fb2;
 
-      detMes[m].push({
-
+      var _det = {
         num: f.num||'—', cliente: f.cliente||'—',
-
         total: _fb2, pagada: !!f.pagada,
-
         vencida: !!vencida, vence: f.venceDisplay||f.vence||'',
-
         diasPago: diasP
+      };
 
-      });
+      detMes[m].push(_det);
+
+      // Clasificación por fila para el detalle contextual (fila + mes)
+      _FCD.fact[m].push(_det);                                     // emitidas en m
+      if (f.pagada) _FCD.pag[m].push(_det);                        // pagadas, emitidas en m
+      if (!f.pagada && venceAnio === anio && venceMes >= 0 && venceMes < 12) {
+        _FCD.cobro[venceMes].push(_det);                           // cobro esperado en venceMes
+        if (vencida) _FCD.venc[venceMes].push(_det);               // vencidas en venceMes
+      }
 
     });
 
@@ -22135,11 +22144,24 @@ function fcActualizar() {
 
           ingProgCobro[cobMs2] += v;
 
+        // Detalle contextual de programadas (emisión y cobro estimado)
+        var _dp2 = {
+          num: r.num || 'PROG', cliente: r.cliente || '—',
+          total: v, pagada: false, vencida: false,
+          vence: '', diasPago: dias2
+        };
+        _FCD.prog[m].push(_dp2);
+        if (cobA2 === anio && cobMs2 >= 0 && cobMs2 < 12) _FCD.progCobro[cobMs2].push(_dp2);
+
       }
 
     });
 
   } catch(e) {}
+
+  // Exponer datasets para el panel de detalle contextual
+  window._FC_DET = _FCD;
+  window._FC_MN  = MN;
 
   // ── Egresos ───────────────────────────────────────────
 
@@ -22200,7 +22222,7 @@ function fcActualizar() {
 
   MNC.forEach(function(m,i) {
 
-    html += '<th style="padding:9px 6px;text-align:right;cursor:pointer;'+(i===hoy?'background:#2a5298':'')+'" onclick="fcToggleDet('+i+')" title="Ver detalle '+MN[i]+'">'+m+'</th>';
+    html += '<th style="padding:9px 6px;text-align:right;cursor:pointer;'+(i===hoy?'background:#2a5298':'')+'" onclick="fcVerDetalle(\'fact\','+i+')" title="Ver facturación de '+MN[i]+'">'+m+'</th>';
 
   });
 
@@ -22208,19 +22230,19 @@ function fcActualizar() {
 
   var filas = [
 
-    { lbl:'🟢 Facturado',           vals:ingReal,     bg:'#F0FFF4', col:'#0C6E3D' },
+    { lbl:'🟢 Facturado',           vals:ingReal,     bg:'#F0FFF4', col:'#0C6E3D', key:'fact' },
 
-    { lbl:'✅ Pagado',              vals:ingPag,      bg:'#EBF8FF', col:'#0C447C' },
+    { lbl:'✅ Pagado',              vals:ingPag,      bg:'#EBF8FF', col:'#0C447C', key:'pag' },
 
-    { lbl:'🔴 Vencido sin cobrar',  vals:ingVenc,     bg:'#FFF5F5', col:'#C53030' },
+    { lbl:'🔴 Vencido sin cobrar',  vals:ingVenc,     bg:'#FFF5F5', col:'#C53030', key:'venc' },
 
-    { lbl:'⏱ Proyección cobro',     vals:ingCobro,    bg:'#FFFBEB', col:'#B7791F', italic:true },
+    { lbl:'⏱ Proyección cobro',     vals:ingCobro,    bg:'#FFFBEB', col:'#B7791F', italic:true, key:'cobro' },
 
     { sep:true },
 
-    { lbl:'🗓️ Programado a facturar', vals:ingProg,   bg:'#FAF5FF', col:'#553C9A' },
+    { lbl:'🗓️ Programado a facturar', vals:ingProg,   bg:'#FAF5FF', col:'#553C9A', key:'prog' },
 
-    { lbl:'⏱ Cobro estimado prog.', vals:ingProgCobro,bg:'#F0FFF4', col:'#276749', italic:true },
+    { lbl:'⏱ Cobro estimado prog.', vals:ingProgCobro,bg:'#F0FFF4', col:'#276749', italic:true, key:'progCobro' },
 
     { sep:true },
 
@@ -22246,7 +22268,7 @@ function fcActualizar() {
 
     f.vals.forEach(function(v,mi) {
 
-      html += '<td style="padding:8px 6px;text-align:right;cursor:pointer;'+(mi===hoy?'background:#e8f0fe':'')+'" onclick="fcToggleDet('+mi+')">'+fmS(v, f.col)+'</td>';
+      html += '<td style="padding:8px 6px;text-align:right;cursor:pointer;'+(mi===hoy?'background:#e8f0fe':'')+'" onclick="fcVerDetalle(\''+(f.key||'fact')+'\','+mi+')" title="Ver detalle">'+fmS(v, f.col)+'</td>';
 
     });
 
@@ -22282,7 +22304,7 @@ function fcActualizar() {
 
     totAcum += cajaTot;
 
-    html += '<td style="padding:9px 6px;text-align:right;cursor:pointer;'+(m===hoy?'background:#2a5298':'')+';color:'+col+'" onclick="fcToggleDet('+m+')">'+(cajaTot?'$'+Math.round(cajaTot).toLocaleString('es-CO'):'—')+'</td>';
+    html += '<td style="padding:9px 6px;text-align:right;cursor:pointer;'+(m===hoy?'background:#2a5298':'')+';color:'+col+'" onclick="fcVerDetalle(\'cobro\','+m+')">'+(cajaTot?'$'+Math.round(cajaTot).toLocaleString('es-CO'):'—')+'</td>';
 
   }
 
@@ -22290,61 +22312,10 @@ function fcActualizar() {
 
   html += '</tr>';
 
-  // Detalle por mes
+  // Panel ÚNICO de detalle contextual — se llena según (fila, mes) clickeados
+  html += '<tr id="fc-det-panel" style="display:none"><td colspan="14" style="padding:0"></td></tr>';
 
-  for (var m=0; m<12; m++) {
-
-    var facts = detMes[m];
-
-    html += '<tr id="fc-det-'+m+'" style="display:none"><td colspan="14" style="padding:0">';
-
-    html += '<div style="background:#f8faff;border-left:3px solid #1E3A5F;padding:10px 16px">';
-
-    html += '<div style="font-size:11px;font-weight:700;color:#1E3A5F;margin-bottom:8px">📋 Facturas '+MN[m]+' '+anio+'</div>';
-
-    if (!facts.length) {
-
-      html += '<div style="color:#aaa;font-size:11px">Sin facturas emitidas en este mes.</div>';
-
-    } else {
-
-      html += '<table style="width:100%;border-collapse:collapse;font-size:11px">';
-
-      html += '<tr style="background:#e8f0fe"><th style="padding:6px 10px;text-align:left">N° Factura</th><th style="padding:6px 10px;text-align:left">Cliente</th><th style="padding:6px 10px;text-align:right">Total</th><th style="padding:6px 10px;text-align:center">Vencimiento</th><th style="padding:6px 10px;text-align:center">Días pago</th><th style="padding:6px 10px;text-align:center">Estado</th></tr>';
-
-      facts.forEach(function(f) {
-
-        var col = f.pagada ? '#1D9E75' : (f.vencida ? '#C53030' : '#B7791F');
-
-        var lbl = f.pagada ? '✅ Pagada' : (f.vencida ? '🔴 Vencida' : '⏳ Pendiente');
-
-        html += '<tr style="border-bottom:1px solid #e8f0fe">';
-
-        html += '<td style="padding:6px 10px;font-weight:600;color:#0C447C">'+f.num+'</td>';
-
-        html += '<td style="padding:6px 10px">'+f.cliente+'</td>';
-
-        html += '<td style="padding:6px 10px;text-align:right;font-weight:700">'+fmV(f.total)+'</td>';
-
-        html += '<td style="padding:6px 10px;text-align:center;color:#666">'+f.vence+'</td>';
-
-        html += '<td style="padding:6px 10px;text-align:center;color:#666">'+f.diasPago+' días</td>';
-
-        html += '<td style="padding:6px 10px;text-align:center;color:'+col+';font-weight:600">'+lbl+'</td>';
-
-        html += '</tr>';
-
-      });
-
-      html += '</table>';
-
-    }
-
-    html += '</div></td></tr>';
-
-  }
-
-  html += '</tbody></table></div>';
+html += '</tbody></table></div>';
 
   el.innerHTML = html;
 
@@ -22472,13 +22443,68 @@ function fcActualizarFlujoPanelNeto() {
 
 }
 
-function fcToggleDet(m) {
+var _FC_DET_ACTIVO = null;
 
-  var row = document.getElementById('fc-det-'+m);
+function fcVerDetalle(tipo, m) {
+  var panel = document.getElementById('fc-det-panel');
+  if (!panel || !window._FC_DET) return;
+  var key = tipo + '-' + m;
 
-  if (row) row.style.display = (row.style.display === 'none') ? 'table-row' : 'none';
+  // Clic en la misma celda → cerrar
+  if (_FC_DET_ACTIVO === key && panel.style.display !== 'none') {
+    panel.style.display = 'none'; _FC_DET_ACTIVO = null; return;
+  }
+  _FC_DET_ACTIVO = key;
 
+  var MN = window._FC_MN || ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  var TITULOS = {
+    fact:      '📋 Facturas EMITIDAS en ',
+    pag:       '✅ Facturas PAGADAS emitidas en ',
+    venc:      '🔴 Facturas VENCIDAS sin cobrar a ',
+    cobro:     '⏱ Facturas que se espera COBRAR en ',
+    prog:      '🗓️ Programado a FACTURAR en ',
+    progCobro: '⏱ Cobro estimado de programadas en '
+  };
+  var lista = (window._FC_DET[tipo] && window._FC_DET[tipo][m]) || [];
+  var anio = new Date().getFullYear();
+
+  var h = '<div style="background:#f8faff;border-left:3px solid #1E3A5F;padding:12px 16px">';
+  h += '<div style="font-size:11px;font-weight:700;color:#1E3A5F;margin-bottom:8px">'
+     + (TITULOS[tipo]||'Detalle ') + MN[m] + ' ' + anio
+     + ' <span style="font-weight:400;color:#888">· ' + lista.length + ' factura(s) · valores en base gravable</span></div>';
+
+  if (!lista.length) {
+    h += '<div style="color:#aaa;font-size:11px">Sin facturas en esta celda.</div>';
+  } else {
+    h += '<table style="width:100%;border-collapse:collapse;font-size:11px">';
+    h += '<tr style="color:#888;text-align:left"><th style="padding:4px 8px">N° Factura</th><th style="padding:4px 8px">Cliente</th>'
+       + '<th style="padding:4px 8px;text-align:right">Base gravable</th><th style="padding:4px 8px">Vencimiento</th>'
+       + '<th style="padding:4px 8px">Días pago</th><th style="padding:4px 8px">Estado</th></tr>';
+    var tot = 0;
+    lista.forEach(function(f) {
+      tot += (f.total||0);
+      var est = f.pagada ? '<span style="color:#0C6E3D">✅ Pagada</span>'
+              : (f.vencida ? '<span style="color:#C53030">🔴 Vencida</span>'
+              : '<span style="color:#B7791F">⏳ Pendiente</span>');
+      h += '<tr style="border-top:1px solid #e8eef8">'
+         + '<td style="padding:5px 8px;font-weight:700;color:#0C447C">' + f.num + '</td>'
+         + '<td style="padding:5px 8px">' + f.cliente + '</td>'
+         + '<td style="padding:5px 8px;text-align:right;font-weight:700">$' + Math.round(f.total).toLocaleString('es-CO') + '</td>'
+         + '<td style="padding:5px 8px">' + (f.vence||'—') + '</td>'
+         + '<td style="padding:5px 8px">' + (f.diasPago ? f.diasPago + ' días' : '—') + '</td>'
+         + '<td style="padding:5px 8px">' + est + '</td></tr>';
+    });
+    h += '<tr style="border-top:2px solid #1E3A5F;font-weight:700"><td style="padding:6px 8px" colspan="2">TOTAL</td>'
+       + '<td style="padding:6px 8px;text-align:right">$' + Math.round(tot).toLocaleString('es-CO') + '</td><td colspan="3"></td></tr>';
+    h += '</table>';
+  }
+  h += '</div>';
+
+  panel.firstElementChild.innerHTML = h;
+  panel.style.display = '';
+  panel.scrollIntoView({behavior:'smooth', block:'nearest'});
 }
+
 
 // ── Sincronizar FP_DATA con Google Sheets ────────────────
 
@@ -29280,7 +29306,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v23jul-1745';
+var ALZAK_BUILD = 'v24jul-0900';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

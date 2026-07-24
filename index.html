@@ -24,6 +24,35 @@ body{background:#f5f4f0;color:#54504F;min-height:100vh}
 #er-tabla-wrap thead th{position:sticky !important;top:0 !important;z-index:50 !important;background:#54504F !important;}
 #er-tabla-wrap thead th:first-child{left:0 !important;z-index:51 !important;}
 
+/* ══════════════════════════════════════════════════════════
+   RESPONSIVE — solo actúa bajo 1100px de ancho.
+   El layout de escritorio (monitor 27") NO se toca.
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 1100px) {
+  /* Home: las dos columnas (Tablero | Conciliación) se apilan */
+  #home-split{flex-direction:column !important;height:auto !important;overflow:visible !important;}
+  #home-split-left,#home-split-right{width:100% !important;max-width:100% !important;flex:none !important;height:auto !important;overflow:visible !important;}
+
+  /* Header y barra de navegación: envolver en varias líneas */
+  #main-header{height:auto !important;min-height:56px;padding:8px 14px !important;flex-wrap:wrap !important;gap:6px !important;}
+  #tab-nav{flex-wrap:wrap !important;padding:6px 10px !important;}
+  #tab-nav button{font-size:10px !important;padding:5px 10px !important;}
+
+  /* Grids de KPIs: de 4 columnas a 2 */
+  .g4{grid-template-columns:repeat(2,1fr) !important;}
+
+  /* Tabla ER: menos alto reservado */
+  #er-tabla-wrap{max-height:70vh !important;}
+}
+
+@media (max-width: 760px) {
+  /* Móvil: KPIs a una columna, tipografía compacta */
+  .g4{grid-template-columns:1fr !important;}
+  #main-header img{max-height:40px !important;}
+  .met{min-width:130px !important;padding:10px 12px !important;}
+  #sync-indicator{display:none !important;}
+}
+
 .pg.on{display:block}
 
 .card{background:#fff;border:0.5px solid #e0ddd8;border-radius:12px;padding:14px 16px;margin-bottom:10px}
@@ -29306,7 +29335,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v24jul-0900';
+var ALZAK_BUILD = 'v24jul-0915';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

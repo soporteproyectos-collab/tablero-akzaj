@@ -27963,6 +27963,19 @@ function alzakGenerarInforme() {
 
   var fechaStr = hoy.getDate() + ' de ' + MN[mesActual] + ' de ' + hoy.getFullYear();
 
+  // Marca de frescura de datos para el encabezado del informe
+  var _syncStamp = '';
+  try {
+    var _ls = localStorage.getItem('alzak_last_sync');
+    if (_ls) {
+      var _d = new Date(_ls);
+      _syncStamp = 'Datos: Google Sheets · última sincronización ' +
+        _d.toLocaleDateString('es-CO',{day:'2-digit',month:'short'}) + ' ' +
+        _d.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}) +
+        (typeof ALZAK_BUILD!=='undefined' ? ' · ' + ALZAK_BUILD : '');
+    }
+  } catch(e) {}
+
   var hoyISO = hoy.getFullYear()+'-'+('0'+(mesActual+1)).slice(-2)+'-'+('0'+hoy.getDate()).slice(-2);
 
   function fm(n) { return '$' + Math.round(n||0).toLocaleString('es-CO'); }
@@ -28009,9 +28022,9 @@ function alzakGenerarInforme() {
 
       totalRteIVA += (f.reteiva||0);
 
-      if (f.pagada) { totalCobrado += (f.total||0); nPagadas++; }
+      if (f.pagada) { totalCobrado += (f.bruto||f.total||0); nPagadas++; }
 
-      else totalPendiente += (f.total||0);
+      else totalPendiente += (f.bruto||f.total||0);
 
       nFacturas++;
 
@@ -28324,7 +28337,7 @@ function alzakGenerarInforme() {
 
   var html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">'
 
-    +'<title>Informe Ejecutivo ALZAK — '+fechaStr+'</title>'
+    +'<title>Informe Ejecutivo ALZAK — '+fechaStr+'</title>'+(_syncStamp?'<div style="font-size:10px;color:#999;margin-top:2px">'+_syncStamp+'</div>':'')
 
     +'<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">'
 
@@ -28408,7 +28421,7 @@ function alzakGenerarInforme() {
 
     +'<h1>ALZAK GROUP SAS</h1>'
 
-    +'<p>NIT 900.898.741-8 · Cartagena · Corte: '+fechaStr+' · Acumulado Enero–'+MN[mesActual]+' 2026</p></div>'
+    +'<p>NIT 900.898.741-8 · Cartagena · Corte: '+fechaStr+' · Acumulado Enero–'+MN[mesActual]+' 2026</p>'+(_syncStamp?'<p style="font-size:10px;color:#999;margin-top:2px">'+_syncStamp+'</p>':'')+'</div>'
 
     +'<div style="text-align:right;font-size:12px">'+semaforo+' Estado general<br><strong>'+MN[mesActual]+' '+hoy.getFullYear()+'</strong></div>'
 
@@ -29377,7 +29390,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v24jul-1625';
+var ALZAK_BUILD = 'v24jul-1700';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

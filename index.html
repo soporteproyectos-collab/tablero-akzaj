@@ -22018,7 +22018,10 @@ function fcActualizar() {
 
       if (m < 0 || m > 11) return;
 
-      ingReal[m] += (f.total||0);
+      // BASE GRAVABLE siempre — el IVA no es caja propia (se declara a la DIAN)
+      var _fb2 = (f.bruto || f.total || 0);
+
+      ingReal[m] += _fb2;
 
       // Calcular mes de vencimiento real (según días de pago del cliente)
 
@@ -22054,13 +22057,13 @@ function fcActualizar() {
 
         // Pagada: cuenta en el mes de emisión
 
-        ingPag[m] += (f.total||0);
+        ingPag[m] += _fb2;
 
         // También suma al mes de vencimiento como "ya cobrado"
 
         if (venceAnio === anio && venceMes >= 0 && venceMes < 12)
 
-          mesPagado[venceMes] += (f.total||0);
+          mesPagado[venceMes] += _fb2;
 
       } else {
 
@@ -22068,9 +22071,9 @@ function fcActualizar() {
 
         if (venceAnio === anio && venceMes >= 0 && venceMes < 12) {
 
-          ingCobro[venceMes] += (f.total||0);
+          ingCobro[venceMes] += _fb2;
 
-          if (vencida) ingVenc[venceMes] += (f.total||0);
+          if (vencida) ingVenc[venceMes] += _fb2;
 
         }
 
@@ -22080,13 +22083,13 @@ function fcActualizar() {
 
       if (venceAnio === anio && venceMes >= 0 && venceMes < 12)
 
-        mesEsperado[venceMes] += (f.total||0);
+        mesEsperado[venceMes] += _fb2;
 
       detMes[m].push({
 
         num: f.num||'—', cliente: f.cliente||'—',
 
-        total: f.total||0, pagada: !!f.pagada,
+        total: _fb2, pagada: !!f.pagada,
 
         vencida: !!vencida, vence: f.venceDisplay||f.vence||'',
 
@@ -22148,13 +22151,18 @@ function fcActualizar() {
 
       var cat = (r['Categoria']||r['Categoría']||'').toLowerCase();
 
-      // Excluir solo movimientos que no son salidas reales de caja
-
+      // Excluir movimientos que no son salidas operativas de caja
       if (cat.indexOf('traslado')>=0) return;
-
       if (cat.indexOf('inversión')>=0 || cat.indexOf('inversion')>=0) return;
-
       if ((r['Tipo_Movimiento']||'').toLowerCase() === 'traslado') return;
+
+      // SOLO obligaciones 2026: excluir pagos de deudas de años anteriores,
+      // préstamos y obligaciones DIAN — para leer la caja operativa real del año
+      if (cat.indexOf('préstamo')>=0 || cat.indexOf('prestamo')>=0) return;
+      if (cat.indexOf('dian')>=0 || cat.indexOf('tributaria')>=0) return;
+      if ((r['Tipo_Movimiento']||'').toLowerCase() === 'otro') return;
+      var _conc25 = (r['Concepto']||'').toLowerCase();
+      if (_conc25.indexOf('2025') >= 0) return; // pago de obligación causada en 2025
 
       var dp = (r['Fecha']||'').split('/');
 
@@ -22216,7 +22224,7 @@ function fcActualizar() {
 
     { sep:true },
 
-    { lbl:'🔴 Egresos operativos',  vals:egr.map(function(v){return -v;}), bg:'#FFF5F5', col:'#C53030' },
+    { lbl:'🔴 Egresos operativos <span style="font-weight:400;font-size:9px;color:#999">(solo obligaciones 2026 · sin préstamos, DIAN ni deudas 2025)</span>',  vals:egr.map(function(v){return -v;}), bg:'#FFF5F5', col:'#C53030' },
 
   ];
 

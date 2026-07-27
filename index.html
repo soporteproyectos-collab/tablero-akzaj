@@ -23742,9 +23742,26 @@ function frRender() {
 
   var filtered = frGetFiltered();
 
-  // Estado DEFINITIVO por fila — calculado una sola vez, en un solo orden.
-  // Badge, KPIs y filtro usan este mismo valor: imposible que difieran.
-  filtered.forEach(function(r){ r.__estadoReal = frEstadoReal(r); });
+  // Estado DEFINITIVO calculado sobre TODAS las radicadas (no solo las filtradas),
+  // en orden CRONOLÓGICO de radicación (FIFO): cada pago se asigna primero a la
+  // factura más antigua del proveedor. Así el estado NUNCA depende del filtro de
+  // vista — antes, filtrar por "julio" dejaba a las cuentas de junio fuera del
+  // cruce y las de julio se apropiaban de pagos ajenos (contratistas con
+  // mensualidades de igual monto).
+  var _todasFR = (typeof FR_DATA !== 'undefined' ? FR_DATA.slice() : []);
+  _todasFR = _todasFR.filter(function(r){
+    // Las proyectadas no reservan pagos reales
+    return !(typeof frEsProyectado === 'function' && frEsProyectado(r));
+  });
+  _todasFR.sort(function(a, b){
+    function _ts(r){
+      var p = (r['Fecha']||'').split('/');
+      if (p.length < 3) return 0;
+      return new Date(parseInt(p[2].substring(0,4)), parseInt(p[1])-1, parseInt(p[0])).getTime() || 0;
+    }
+    return _ts(a) - _ts(b);
+  });
+  _todasFR.forEach(function(r){ r.__estadoReal = frEstadoReal(r); });
 
   var _estSel = (document.getElementById('fr-fil-estado')||{}).value || '';
   if (_estSel) {
@@ -29390,7 +29407,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v24jul-1700';
+var ALZAK_BUILD = 'v27jul-1710';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

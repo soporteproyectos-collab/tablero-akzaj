@@ -23722,8 +23722,9 @@ function frEstadoReal(r) {
   var fuente = frFuentePago(r);
   if (fuente !== null) return 'PAGADO';        // Extracto confirmó pago completo por monto
 
-  if (!frPeriodoTieneExtracto(r)) return 'SIN-EXTRACTO';
-
+  // Sin evidencia de pago (ni egreso ni extracto) → PENDIENTE, siempre.
+  // "Sin extracto del período" es solo una nota informativa (r.__sinExtracto),
+  // no un estado: la obligación no pagada es pendiente, haya o no extracto.
   return 'PENDIENTE';
 
 }
@@ -23761,14 +23762,18 @@ function frRender() {
     }
     return _ts(a) - _ts(b);
   });
-  _todasFR.forEach(function(r){ r.__estadoReal = frEstadoReal(r); });
+  _todasFR.forEach(function(r){
+    r.__estadoReal  = frEstadoReal(r);
+    r.__sinExtracto = (r.__estadoReal !== 'PAGADO') &&
+                      (typeof frPeriodoTieneExtracto === 'function' && !frPeriodoTieneExtracto(r));
+  });
 
   var _estSel = (document.getElementById('fr-fil-estado')||{}).value || '';
   if (_estSel) {
     filtered = filtered.filter(function(r){
       if (_estSel === 'PAGADO')       return r.__estadoReal === 'PAGADO';
       if (_estSel === 'PENDIENTE')    return r.__estadoReal !== 'PAGADO';
-      if (_estSel === 'SIN-EXTRACTO') return r.__estadoReal === 'SIN-EXTRACTO';
+      if (_estSel === 'SIN-EXTRACTO') return r.__estadoReal !== 'PAGADO' && r.__sinExtracto;
       return true;
     });
   }
@@ -23823,9 +23828,7 @@ function frRender() {
 
     else if (est === 'ABONO')   totalPagado  += ab;
 
-    else if (est === 'SIN-EXTRACTO') { totalSinExtr += tot; totalDeuda += tot; }
-
-    else                        totalDeuda   += tot;
+    else { totalDeuda += tot; if (r.__sinExtracto) totalSinExtr += tot; }
 
     if (frEsDIAN && frEsDIAN(r)) nDIAN++;
 
@@ -23859,7 +23862,7 @@ function frRender() {
 
     + kpiCard('🔴 Lo que debes hoy', totalDeuda, 'Sin confirmación de pago (ni extracto ni egresos)', '#FEE2E2', '#991B1B', "frFiltrarKPI('PENDIENTE')")
 
-    + kpiCard('⏳ Sin extracto', totalSinExtr, 'Incluido en lo que debes · Cargar extracto', '#F8FAFC', '#64748B', "frFiltrarKPI('SIN-EXTRACTO')")
+    + kpiCard('⏳ Pendientes sin extracto', totalSinExtr, 'Subconjunto de lo que debes · Cargar extracto del período', '#F8FAFC', '#64748B', "frFiltrarKPI('SIN-EXTRACTO')")
 
     + (nProyectados > 0 ? '<div style="grid-column:1/-1;text-align:center;padding:6px 12px;background:#F3F0FF;border-radius:8px;margin-top:4px;font-size:11px;color:#7C3AED;font-weight:600;">📈 '+nProyectados+' registros proyectados ('+frFmt(totalProyectado)+') no incluidos en totales — solo aparecen en Estado de Resultados</div>' : '');
 
@@ -24724,6 +24727,18 @@ function frFuentePago(r) {
 
   if (fp.length >= 3) { frMes = parseInt(fp[1])-1; frAnio = parseInt(fp[2]); }
 
+  // Timestamp de radicación — un pago anterior a la radicación NO puede pagarla
+  function _tsF(s) {
+    var p = String(s||'').trim().split('/');
+    if (p.length < 3) return null;
+    var t = new Date(parseInt(p[2].substring(0,4)), parseInt(p[1])-1, parseInt(p[0])).getTime();
+    return isNaN(t) ? null : t;
+  }
+  var tsRad = _tsF(fechaFR);
+
+  // Clave de fila IDÉNTICA a la de frCalcularAbonado — para respetar sus reservas
+  var _rowKeyFP = ncomp + '|' + proveedor + '|' + total + '|' + fechaFR;
+
   // ── FUENTE 1: GASTOS_DATA (CSV egresos = reporte de todos los pagos bancarios)
 
   // El CSV de egresos ES la fuente de verdad de pagos — cualquier registro ahí = PAGADO
@@ -24751,6 +24766,11 @@ function frFuentePago(r) {
       var egresoId = i + '|' + (GASTOS_DATA[i]['N_Comprobante']||GASTOS_DATA[i]['N Comprobante']||i);
 
       if (window._FR_EGRESOS_USADOS[egresoId]) continue;
+
+      // Respetar las reservas del cruce de abonos (frCalcularAbonado):
+      // si OTRA factura ya reclamó este egreso vía FIFO, aquí no está disponible
+      if (window._FR_EGRESO_RESERVADO && window._FR_EGRESO_RESERVADO[i] !== undefined
+          && window._FR_EGRESO_RESERVADO[i] !== _rowKeyFP) continue;
 
       var gx   = GASTOS_DATA[i];
 
@@ -24798,9 +24818,15 @@ function frFuentePago(r) {
 
       }
 
-      // MODO A2: monto exacto + proveedor coincide
+      // Fecha del egreso: obligatoria para matches por MONTO (A2 y B).
+      // Un pago efectuado ANTES de radicar la factura pertenece a otra obligación
+      // (mensualidades de contratistas con montos idénticos).
+      var _tsEgr = _tsF(gx['Fecha']);
+      var _fechaOkFP = (tsRad !== null && _tsEgr !== null && _tsEgr >= tsRad);
 
-      if (Math.abs(gTot - total) <= 500 && gProv.length > 3) {
+      // MODO A2: monto exacto + proveedor coincide + fecha válida
+
+      if (_fechaOkFP && Math.abs(gTot - total) <= 500 && gProv.length > 3) {
 
         if (provWords.length > 0 && provWords.some(function(w){ return gProv.indexOf(w) >= 0; })) {
 
@@ -24814,9 +24840,9 @@ function frFuentePago(r) {
 
       }
 
-      // MODO B: monto exacto (±100) + proveedor
+      // MODO B: monto exacto (±100) + proveedor + fecha válida
 
-      if (Math.abs(gTot - total) <= 100 && gProv.length > 3) {
+      if (_fechaOkFP && Math.abs(gTot - total) <= 100 && gProv.length > 3) {
 
         if (provWords.some(function(w){ return gProv.indexOf(w) >= 0; })) {
 
@@ -24855,6 +24881,12 @@ function frFuentePago(r) {
       var _mv2 = _FR_MOVS_POOL[_mi2];
 
       if (_mv2.usado || Math.abs(_mv2.v - total) > 100) continue;
+
+      // Fecha del movimiento: debe ser >= radicación (los movs del pool
+      // vienen dd/MM/yyyy). Un débito bancario de junio no puede pagar
+      // una cuenta radicada en julio — es el desembolso de otra mensualidad.
+      var _tsMv2 = _tsF(_mv2.f);
+      if (tsRad !== null && _tsMv2 !== null && _tsMv2 < tsRad) continue;
 
       var _desc2 = (_mv2.d||'').toUpperCase();
 
@@ -24937,6 +24969,10 @@ function frFuentePago(r) {
     var diff = Math.abs(tc.car - total);
 
     if (diff > Math.max(100, tolTC)) continue;
+
+    // Fecha del cargo TC: debe ser >= radicación (mismo principio anti-mensualidades)
+    var _tsTC = _tsF(tc.f);
+    if (tsRad !== null && _tsTC !== null && _tsTC < tsRad) continue;
 
     var provMatch = false;
 
@@ -25113,9 +25149,11 @@ function frBadgeEstado(r) {
 
   }
 
-  if (estado === 'SIN-EXTRACTO') {
+  if (estado === 'PENDIENTE' && r.__sinExtracto) {
 
-    return '<span style="background:#F1F5F9;color:#64748B;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;" title="Cargar extracto bancario del período para verificar">⏳ Sin extracto</span>';
+    // PENDIENTE es el estado; "sin extracto" es solo la nota del período
+    return '<span style="background:#FEE2E2;color:#991B1B;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;">PENDIENTE</span>'
+         + ' <span style="background:#F1F5F9;color:#94A3B8;font-size:8px;font-weight:600;padding:2px 6px;border-radius:10px;" title="Aún no hay extracto bancario de este período — el estado se confirmará al cargarlo">⏳ sin extracto</span>';
 
   }
 
@@ -25259,7 +25297,7 @@ function frExportPDF() {
 
     if (est === 'PAGADO') pagado += frTotalVal(r);
 
-    else if (est === 'SIN-EXTRACTO') sinExtracto += frTotalVal(r);
+    else if (r.__sinExtracto) sinExtracto += frTotalVal(r);
 
     else pendiente += frTotalVal(r);
 
@@ -25317,11 +25355,11 @@ function frExportPDF() {
 
       var fLabel = fuente ? fuente.label : '';
 
-      var estColor = est==='PAGADO' ? '#166534' : est==='SIN-EXTRACTO' ? '#64748B' : '#991B1B';
+      var estColor = est==='PAGADO' ? '#166534' : '#991B1B';
 
-      var estBg    = est==='PAGADO' ? '#DCFCE7' : est==='SIN-EXTRACTO' ? '#F1F5F9' : '#FEE2E2';
+      var estBg    = est==='PAGADO' ? '#DCFCE7' : '#FEE2E2';
 
-      var estText  = est==='PAGADO' ? 'PAGADO' : est==='SIN-EXTRACTO' ? '⏳ Sin extracto' : 'PENDIENTE';
+      var estText  = est==='PAGADO' ? 'PAGADO' : ('PENDIENTE' + (r.__sinExtracto ? ' ⏳' : ''));
 
       filasGrupos += '<tr style="border-bottom:1px solid #f5f4f0">'
 
@@ -29407,7 +29445,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v27jul-1710';
+var ALZAK_BUILD = 'v27jul-1740';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

@@ -2566,6 +2566,7 @@ function alzakCambiarOrg(orgKey) {
   // Limpiar datos anteriores (incluye caché de localStorage para evitar mezcla entre orgs)
 
   FR_DATA = []; GASTOS_DATA = []; FACTURAS = []; FP_DATA = []; GP_DATA = [];
+  if (typeof P !== 'undefined') P.length = 0; // Limpiar períodos de conciliación
   try { localStorage.removeItem(_orgKey('alzak_fp_2026')); localStorage.removeItem('alzak_fp2026_' + orgKey); } catch(e) {}
 
   // Recargar
@@ -19845,6 +19846,9 @@ var P=[];
 
 (function buildPFromDATA() {
 
+  // Foundation no usa DATA hardcodeado de GROUP — su conciliación viene del GAS
+  if (typeof ALZAK_ORG_ACTIVA !== 'undefined' && ALZAK_ORG_ACTIVA === 'FOUNDATION') return;
+
   if (typeof DATA === 'undefined' || !Object.keys(DATA).length) return;
 
   var MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -20761,7 +20765,7 @@ function renderGlobal(p){
 
   }),{ing:0,int:0,intAh:0,intBl:0,rend:0,eg:0,imp:0});
 
-  document.getElementById('g-title').textContent='ALZAK GROUP SAS — Todas las cuentas';
+  document.getElementById('g-title').textContent=(typeof ALZAK_ORG_ACTIVA!=='undefined'&&ALZAK_ORG_ACTIVA==='FOUNDATION'?'ALZAK Foundation — Todas las cuentas':'ALZAK GROUP SAS — Todas las cuentas');
 
   document.getElementById('g-periodo').textContent=p.desde+' al '+p.hasta;
 
@@ -29812,7 +29816,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v28jul-2100';
+var ALZAK_BUILD = 'v28jul-2115';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

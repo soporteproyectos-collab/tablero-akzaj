@@ -23703,6 +23703,73 @@ function frPeriodoTieneExtracto(r) {
 
 }
 
+// ══ AUDITORÍA DE CRUCE: explica por qué una factura está en su estado ══
+function frAuditar(numComp) {
+  if (typeof FR_DATA === 'undefined') return;
+  var r = null;
+  for (var i = 0; i < FR_DATA.length; i++) {
+    var nc = String(FR_DATA[i]['N Comprobante']||FR_DATA[i]['N_Comprobante']||'');
+    if (nc === numComp) { r = FR_DATA[i]; break; }
+  }
+  if (!r) { alert('No encontré la factura ' + numComp); return; }
+
+  // Recalcular TODO el cruce desde cero (mismo pipeline de frRender),
+  // con trazabilidad activa solo para esta fila
+  window._FR_ABONO_CACHE = {}; window._FR_EGRESO_RESERVADO = {};
+  if (window._FR_EGRESOS_USADOS) window._FR_EGRESOS_USADOS = {};
+  window._FR_DESEMB = [];
+  if (typeof _FR_FUENTE_CACHE !== 'undefined') _FR_FUENTE_CACHE = {};
+  if (typeof frResetPool === 'function') try { frResetPool(); } catch(e) {}
+
+  r.__auditar = true;
+  window._FR_TRACE_RESULT = null;
+
+  var _todas = FR_DATA.slice().filter(function(x){
+    return !(typeof frEsProyectado === 'function' && frEsProyectado(x));
+  });
+  _todas.sort(function(a, b){
+    function _ts(x){ var p=(x['Fecha']||'').split('/'); if(p.length<3) return 0;
+      return new Date(parseInt(p[2].substring(0,4)), parseInt(p[1])-1, parseInt(p[0])).getTime()||0; }
+    return _ts(a) - _ts(b);
+  });
+  var estado = '';
+  _todas.forEach(function(x){
+    var e = frEstadoReal(x);
+    if (x === r) estado = e;
+  });
+  var fuente = null;
+  try { fuente = frFuentePago(r); } catch(e) {}
+  delete r.__auditar;
+
+  var tr = window._FR_TRACE_RESULT;
+  var lineas = [];
+  lineas.push('🔍 AUDITORÍA · ' + numComp + ' · ' + (r['Proveedor / Beneficiario']||''));
+  lineas.push('Radicada: ' + (r['Fecha']||'') + ' · Total: $' + Number(frTotalVal(r)).toLocaleString('es-CO'));
+  lineas.push('ESTADO: ' + estado + (fuente ? ' · Fuente: ' + (fuente.label||fuente.tipo) : ''));
+  lineas.push('─────────────────────────────────');
+  if (tr && tr.eventos.length) {
+    lineas.push('Abonado por egresos: $' + Number(tr.abonado).toLocaleString('es-CO') + ' de $' + Number(tr.total).toLocaleString('es-CO'));
+    lineas = lineas.concat(tr.eventos);
+  } else {
+    lineas.push('Ningún egreso del Sheet coincidió (ni comprobante, ni monto+proveedor+fecha).');
+    lineas.push(fuente ? 'El estado proviene de extracto bancario / TC.' : 'Tampoco hubo match en extractos bancarios ni TC → ' + estado + '.');
+  }
+  lineas.push('─────────────────────────────────');
+  lineas.push('Reglas: A=comprobante explícito · B=monto exacto+proveedor+fecha(−15d) · C=abono parcial (mismo año, pago de servicio)');
+
+  // Modal simple
+  var old = document.getElementById('fr-audit-modal');
+  if (old) old.remove();
+  var m = document.createElement('div');
+  m.id = 'fr-audit-modal';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+  m.innerHTML = '<div style="background:#fff;border-radius:12px;max-width:760px;width:100%;max-height:82vh;overflow:auto;padding:20px 24px;font-family:Menlo,monospace;font-size:11.5px;line-height:1.65;white-space:pre-wrap">'
+    + lineas.map(function(l){ return l.replace(/</g,'&lt;'); }).join('\n')
+    + '\n\n<button onclick="document.getElementById(\'fr-audit-modal\').remove();frRender();" style="margin-top:10px;padding:8px 18px;border:none;border-radius:8px;background:#1E3A5F;color:#fff;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif">Cerrar y recalcular tablero</button></div>';
+  m.onclick = function(e){ if (e.target === m) { m.remove(); frRender(); } };
+  document.body.appendChild(m);
+}
+
 function frEstadoReal(r) {
 
   var total = frTotalVal(r);
@@ -24339,13 +24406,16 @@ function frCalcularAbonado(r) {
 
   var abonado   = 0;
 
+  // Trazabilidad: cuando r.__auditar está activo, registrar cada decisión
+  var _tr = r.__auditar ? [] : null;
+
   // Clave única de esta factura radicada (para caché y reserva de egresos)
   var _rowKey = ncomp + '|' + proveedor + '|' + total + '|' + (r['Fecha']||'');
 
   // Caché: si ya se calculó el abonado de esta fila en este render, devolverlo
   if (typeof window._FR_ABONO_CACHE === 'undefined') window._FR_ABONO_CACHE = {};
   if (typeof window._FR_EGRESO_RESERVADO === 'undefined') window._FR_EGRESO_RESERVADO = {};
-  if (window._FR_ABONO_CACHE[_rowKey] !== undefined) return window._FR_ABONO_CACHE[_rowKey];
+  if (!_tr && window._FR_ABONO_CACHE[_rowKey] !== undefined) return window._FR_ABONO_CACHE[_rowKey];
 
   // Timestamp de la fecha de radicación (dd/MM/yyyy) — para validar fechas de egresos
   function _tsFecha(s) {
@@ -24377,7 +24447,12 @@ function frCalcularAbonado(r) {
     for (var i = 0; i < GASTOS_DATA.length; i++) {
 
       // Un egreso solo puede abonar UNA factura — si otra fila ya lo reservó, saltarlo
-      if (window._FR_EGRESO_RESERVADO[i] !== undefined && window._FR_EGRESO_RESERVADO[i] !== _rowKey) continue;
+      if (window._FR_EGRESO_RESERVADO[i] !== undefined && window._FR_EGRESO_RESERVADO[i] !== _rowKey) {
+        if (_tr && Math.abs(parseFloat(GASTOS_DATA[i]['Total ($)']||GASTOS_DATA[i]['Total_COP']||0) - total) <= total*0.5) {
+          _tr.push('⛔ Egreso #'+i+' ('+String(GASTOS_DATA[i]['Fecha']||'')+' $'+parseFloat(GASTOS_DATA[i]['Total ($)']||0).toLocaleString('es-CO')+' "'+String(GASTOS_DATA[i]['Concepto']||'').substring(0,50)+'") RESERVADO por: '+window._FR_EGRESO_RESERVADO[i]);
+        }
+        continue;
+      }
 
       var gx2   = GASTOS_DATA[i];
 
@@ -24414,6 +24489,7 @@ function frCalcularAbonado(r) {
         abonado += gTot2;
         window._FR_EGRESO_RESERVADO[i] = _rowKey;
         if (window._FR_DESEMB && tsEgreso !== null) window._FR_DESEMB.push({v: gTot2, ts: tsEgreso, src: 'egreso'});
+        if (_tr) _tr.push('✅ MODO A (comprobante explícito): egreso '+String(gx2['Fecha'])+' $'+gTot2.toLocaleString('es-CO')+' — "'+String(gx2['Concepto']||'').substring(0,60)+'"');
         continue;
       }
 
@@ -24431,13 +24507,20 @@ function frCalcularAbonado(r) {
       // Si un MOVIMIENTO BANCARIO con este mismo monto/fecha ya pagó otra factura,
       // este egreso es el registro contable del MISMO desembolso — no está disponible
       if (typeof window._FR_MISMO_DESEMB === 'function' && tsEgreso !== null &&
-          window._FR_MISMO_DESEMB(gTot2, tsEgreso, 'extracto')) continue;
+          window._FR_MISMO_DESEMB(gTot2, tsEgreso, 'extracto')) {
+        if (_tr) _tr.push('⛔ Egreso '+String(gx2['Fecha'])+' $'+gTot2.toLocaleString('es-CO')+': es el MISMO desembolso de un movimiento bancario ya aplicado');
+        continue;
+      }
+
+      if (_tr && provMatch) _tr.push('· Candidato (proveedor coincide): '+String(gx2['Fecha'])+' $'+gTot2.toLocaleString('es-CO')+' "'+String(gx2['Concepto']||'').substring(0,50)+'"'+(provMatchFuerte?' [fuerte]':' [débil]'));
 
       // Fechas obligatorias para B y C: el egreso debe ser >= fecha de radicación.
       // Un pago no puede abonar una factura que aún no existía.
       // Tolerancia -15 días: es común pagar la cuenta al recibirla y radicarla
       // días después (pensiones: pagas el 1°, radicas el 13). Mensualidades (~30 días) siguen protegidas por FIFO + reservas.
       var fechaOk = (tsFactura !== null && tsEgreso !== null && tsEgreso >= tsFactura - 15*24*60*60*1000);
+
+      if (_tr && provMatch && !fechaOk) { _tr.push('   ⛔ descartado: fecha del egreso fuera de rango (anterior a radicación -15d o sin fecha)'); }
 
       // Modo B: monto exacto + proveedor + fecha válida → pago total.
       // CROSS-AÑO: si la radicada es de un año anterior al pago (deuda vieja),
@@ -24448,10 +24531,12 @@ function frCalcularAbonado(r) {
       var _anioEgrB = parseInt(((gx2['Fecha']||'').split('/')[2]||'').substring(0,4)) || 0;
       var _crossOkB = (_anioRadB === _anioEgrB) ||
                       (_anioRadB > 0 && gComp2.indexOf(String(_anioRadB)) >= 0);
+      if (_tr && provMatch && fechaOk && !_crossOkB && Math.abs(gTot2 - total) <= 100) _tr.push('   ⛔ descartado Modo B: deuda de otro año sin señal del año en el concepto');
       if (fechaOk && _crossOkB && Math.abs(gTot2 - total) <= 100) {
         abonado += gTot2;
         window._FR_EGRESO_RESERVADO[i] = _rowKey;
         if (window._FR_DESEMB && tsEgreso !== null) window._FR_DESEMB.push({v: gTot2, ts: tsEgreso, src: 'egreso'});
+        if (_tr) _tr.push('✅ MODO B (monto exacto + proveedor + fecha): egreso '+String(gx2['Fecha'])+' $'+gTot2.toLocaleString('es-CO'));
         continue;
       }
 
@@ -24470,10 +24555,12 @@ function frCalcularAbonado(r) {
       var _anioEgr2 = parseInt(((gx2['Fecha']||'').split('/')[2]||'').substring(0,4)) || 0;
       var _mismoAnio = (_anioRad2 > 0 && _anioEgr2 > 0 && _anioRad2 === _anioEgr2);
 
+      if (_tr && provMatchFuerte && fechaOk && gTot2 > 0 && gTot2 < total && (!_mismoAnio || !_esPagoServicio)) _tr.push('   ⛔ descartado Modo C: '+(!_mismoAnio?'año distinto':'egreso no es pago de servicio (gasto operativo)'));
       if (fechaOk && _mismoAnio && provMatchFuerte && _esPagoServicio && gTot2 > 0 && gTot2 < total) {
         abonado += gTot2;
         window._FR_EGRESO_RESERVADO[i] = _rowKey;
         if (window._FR_DESEMB && tsEgreso !== null) window._FR_DESEMB.push({v: gTot2, ts: tsEgreso, src: 'egreso'});
+        if (_tr) _tr.push('✅ MODO C (abono parcial): egreso '+String(gx2['Fecha'])+' $'+gTot2.toLocaleString('es-CO'));
         continue;
       }
 
@@ -24561,6 +24648,7 @@ function frCalcularAbonado(r) {
 
   var _abFinal = Math.min(abonado, total);
   window._FR_ABONO_CACHE[_rowKey] = _abFinal;
+  if (_tr) window._FR_TRACE_RESULT = { rowKey: _rowKey, abonado: _abFinal, total: total, eventos: _tr };
   return _abFinal;
 
 }
@@ -25444,6 +25532,7 @@ function frExportPDF() {
       var estBg    = est==='PAGADO' ? '#DCFCE7' : '#FEE2E2';
 
       var estText  = est==='PAGADO' ? 'PAGADO' : ('PENDIENTE' + (r.__sinExtracto ? ' ⏳' : ''));
+      var _ncAud   = String(r['N Comprobante']||r['N_Comprobante']||'').replace(/'/g,"\\'");
 
       filasGrupos += '<tr style="border-bottom:1px solid #f5f4f0">'
 
@@ -25464,6 +25553,7 @@ function frExportPDF() {
         +'<td style="text-align:center">'
 
           +'<span style="background:'+estBg+';color:'+estColor+';padding:2px 7px;border-radius:10px;font-weight:700;font-size:9px">'+estText+'</span>'
+          +' <span onclick="frAuditar(\''+_ncAud+'\')" style="cursor:pointer;font-size:10px;opacity:.45" title="Auditar: por qué está en este estado y dónde está su pago">🔍</span>'
 
           +(fLabel ? ' <span style="background:#1a1a1a;color:#fff;padding:1px 5px;border-radius:4px;font-size:8px;font-weight:700">'+esc(fLabel)+'</span>' : '')
 
@@ -29529,7 +29619,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v28jul-1030';
+var ALZAK_BUILD = 'v28jul-1115';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

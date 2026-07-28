@@ -23822,6 +23822,42 @@ function frRender() {
     return false;
   };
 
+  // PRE-RESERVA MODO A: antes de iniciar el FIFO, escanear todos los egresos
+  // cuyo Concepto mencione EXPLÍCITAMENTE el N° de comprobante de una radicada.
+  // Esto evita que una factura anterior en FIFO (mismo proveedor) robe el egreso
+  // que fue creado específicamente para otra factura posterior.
+  // Ejemplo: DAFA349 no puede apropiarse del egreso "Pago factura DAFA350"
+  // aunque se procese primero en orden cronológico.
+  if (typeof FR_DATA !== 'undefined' && typeof GASTOS_DATA !== 'undefined') {
+    // Mapa de N_Comprobante de cada radicada → su rowKey
+    var _frCompMap = {};
+    FR_DATA.forEach(function(r) {
+      if (typeof frEsProyectado === 'function' && frEsProyectado(r)) return;
+      var nc = _sinTildes(String(r['N Comprobante']||r['N_Comprobante']||'').trim().toLowerCase());
+      if (nc.length > 2) {
+        var rk = nc + '|' + _sinTildes((r['Proveedor / Beneficiario']||'').toUpperCase()) + '|' + Math.round(frTotalVal(r)) + '|' + (r['Fecha']||'');
+        _frCompMap[nc] = rk;
+      }
+    });
+    // Escanear egresos buscando referencias explícitas en Concepto + Observaciones
+    GASTOS_DATA.forEach(function(g, gi) {
+      if ((g['Tipo_Movimiento']||'').trim() === 'Traslado') return;
+      var haystack = _sinTildes((String(g['Concepto']||'') + ' ' + String(g['Observaciones']||'')).toLowerCase());
+      Object.keys(_frCompMap).forEach(function(nc) {
+        try {
+          var esc = nc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          var re = new RegExp('(^|[^a-z0-9])' + esc + '([\\s.,;:()\\/\\\\\\-]|$)');
+          if (re.test(haystack)) {
+            // Solo pre-reservar si aún no está reclamado por nadie
+            if (window._FR_EGRESO_RESERVADO[gi] === undefined) {
+              window._FR_EGRESO_RESERVADO[gi] = _frCompMap[nc];
+            }
+          }
+        } catch(e) {}
+      });
+    });
+  }
+
   // FILTRAR PRIMERO — luego calcular fuentes solo para los filtrados
 
   var filtered = frGetFiltered();
@@ -29625,7 +29661,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v28jul-1715';
+var ALZAK_BUILD = 'v28jul-1800';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

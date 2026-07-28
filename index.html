@@ -1255,7 +1255,8 @@ body[data-org="FOUNDATION"] .alzak-toast {
 
 <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
 
-<select id="gd-fil-mes" onchange="renderGastosDashboard()" style="font-size:12px;padding:7px 10px;border:1px solid #d0cec8;border-radius:8px;font-family:'Montserrat',Helvetica,Arial,sans-serif">
+<select id="gd-fil-anio" onchange="renderGastosDashboard()" style="font-size:12px;padding:7px 10px;border:1px solid #d0cec8;border-radius:8px;font-family:'Montserrat',Helvetica,Arial,sans-serif"><option value="2026">2026</option><option value="2025">2025</option><option value="">Todos los años</option></select>
+      <select id="gd-fil-mes" onchange="renderGastosDashboard()" style="font-size:12px;padding:7px 10px;border:1px solid #d0cec8;border-radius:8px;font-family:'Montserrat',Helvetica,Arial,sans-serif">
 
 <option value="">Todos los meses</option>
 
@@ -16701,6 +16702,21 @@ function renderGastosDashboard() {
 
 }
 
+  // Año activo: 2026 por defecto, o el que seleccione el usuario
+  // Los egresos de 2025 NO se mezclan con 2026 a menos que el usuario lo filtre explícitamente
+  var _anioActivo = filAnio || '2026';
+  var _esOpDashOrig = esOpDash;
+  esOpDash = function(r) {
+    if (!_esOpDashOrig(r)) return false;
+    var fechaR = String(r['Fecha']||'');
+    // Extraer año — formato dd/MM/yyyy o yyyy-MM-dd
+    var anioR = '';
+    if (fechaR.indexOf('/') >= 0) { var p = fechaR.split('/'); anioR = p[2]||''; }
+    else if (fechaR.indexOf('-') >= 0) { anioR = fechaR.substring(0,4); }
+    if (anioR && anioR.length === 4 && anioR !== _anioActivo) return false;
+    return true;
+  };
+
   var totalAll=GASTOS_DATA.filter(esOpDash).reduce(function(a,r){return a+parseFloat(r['Total_COP']||0);},0);
 
   var totalDIAN=GASTOS_DATA.filter(function(r){
@@ -29834,7 +29850,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v28jul-2130';
+var ALZAK_BUILD = 'v28jul-2145';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

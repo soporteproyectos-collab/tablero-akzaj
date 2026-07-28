@@ -732,6 +732,66 @@ tbody tr:hover td{background:var(--cyan-light);}
 
 #home-split-left, #home-split-right { transition: flex 0.1s ease; }
 
+/* ===== TEMA ALZAK FOUNDATION ===== */
+/* Se activa cuando body tiene data-org="FOUNDATION" */
+
+body[data-org="FOUNDATION"] #main-header {
+  background: #004D2C !important;
+  border-bottom: 3px solid #00A65E !important;
+}
+
+body[data-org="FOUNDATION"] #tab-nav {
+  background: #004D2C !important;
+}
+
+body[data-org="FOUNDATION"] #tab-nav button {
+  color: rgba(255,255,255,0.75);
+}
+
+body[data-org="FOUNDATION"] #tab-nav button.active,
+body[data-org="FOUNDATION"] #tab-nav button:hover {
+  background: #00A65E !important;
+  color: #fff !important;
+}
+
+body[data-org="FOUNDATION"] .org-badge {
+  background: #00A65E !important;
+}
+
+/* Acento verde Foundation en KPI cards */
+body[data-org="FOUNDATION"] .kpi-val,
+body[data-org="FOUNDATION"] .met-v {
+  color: #00A65E;
+}
+
+/* Borde lateral verde Foundation en secciones */
+body[data-org="FOUNDATION"] .section-header,
+body[data-org="FOUNDATION"] .mod-header {
+  border-left: 4px solid #00A65E !important;
+}
+
+/* Botones primarios con color Foundation */
+body[data-org="FOUNDATION"] .btn-primary,
+body[data-org="FOUNDATION"] button[onclick*="alzakCargar"] {
+  background: #00A65E !important;
+  border-color: #00A65E !important;
+}
+
+/* Selector de org con fondo suave Foundation */
+body[data-org="FOUNDATION"] #org-selector {
+  background: #E6F7F0 !important;
+  color: #004D2C !important;
+  border-color: #00A65E !important;
+  font-weight: 700;
+}
+
+/* Toast y badges con color Foundation */
+body[data-org="FOUNDATION"] .alzak-toast {
+  background: #004D2C !important;
+  border-left: 4px solid #00A65E !important;
+}
+
+
 </style>
 
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -2423,11 +2483,17 @@ var ALZAK_ORGS = {
 
     nombre:       'ALZAK Foundation',
 
-    color:        '#27AE60',
+    color:        '#00A65E',
+
+    colorDark:    '#007A44',
+
+    colorLight:   '#E6F7F0',
+
+    navBg:        '#004D2C',
 
     logo:         ALZAK_LOGO_FOUNDATION,
 
-    headerBg:     '#1A5C35',
+    headerBg:     '#004D2C',
 
     facturacion:  '1QZ-ME3ApxGguqS-Zh-r_bZmcuoXSaxndlV1d5_1oAic',
 
@@ -2458,34 +2524,37 @@ function alzakCambiarOrg(orgKey) {
   document.title = 'Tablero ' + org.nombre;
 
   // Actualizar fondo del header
-
   var header = document.getElementById('main-header');
-
   if (header) header.style.background = org.headerBg;
 
+  // Actualizar nav
+  var nav = document.getElementById('tab-nav');
+  if (nav) nav.style.background = org.navBg || '#333';
+
   // Actualizar logo
-
   var logoImg = document.getElementById('header-logo-img');
-
   if (logoImg) logoImg.src = org.logo;
 
   // Actualizar color del selector
-
   var sel = document.getElementById('org-selector');
+  if (sel) {
+    sel.style.borderColor = org.color;
+    sel.style.color = org.color;
+    sel.style.background = (org.colorLight || 'rgba(255,255,255,0.1)');
+  }
 
-  if (sel) { sel.style.borderColor = org.color; sel.style.color = org.color; }
+  // Borde inferior del header con color de org
+  if (header) header.style.borderBottom = '3px solid ' + org.color;
 
   // Actualizar título de facturación
-
   var facTitle = document.getElementById('fac-org-title');
-
   if (facTitle) {
-
     facTitle.textContent = '📄 Facturación ' + org.nombre;
-
     facTitle.style.color = org.color;
-
   }
+
+  // Badge de org activa en el body para CSS theming
+  document.body.setAttribute('data-org', orgKey);
 
   // Limpiar datos anteriores
 
@@ -19557,6 +19626,9 @@ function tabPres() {
 
 document.addEventListener('DOMContentLoaded', function() {
 
+  // Aplicar tema de org al iniciar
+  document.body.setAttribute('data-org', ALZAK_ORG_ACTIVA || 'GROUP');
+
   var nav = document.getElementById('tab-nav');
 
   if (nav) nav.style.display = 'flex';
@@ -29722,7 +29794,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v28jul-1900';
+var ALZAK_BUILD = 'v28jul-1930';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

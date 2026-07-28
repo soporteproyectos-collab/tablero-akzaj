@@ -11795,7 +11795,7 @@ function renderResumenTablero() {
         return htmlU;
       })()
 
-    + (ALZAK_ORG_ACTIVA==='FOUNDATION' ? '' : card('🏛','Gravamen 4x1000', gmf4x1000,'#6EA1BA','#EBF6FA', gmf_fuente,'GMF acumulado Ene–Mar 2026'))
+    + card('🏛','Gravamen 4x1000', ALZAK_ORG_ACTIVA==='FOUNDATION'?0:gmf4x1000,'#6EA1BA','#EBF6FA', ALZAK_ORG_ACTIVA==='FOUNDATION'?'Sin datos bancarios Foundation':'GMF acumulado Ene–Mar 2026', ALZAK_ORG_ACTIVA==='FOUNDATION'?'Pendiente conciliación':'GMF acumulado Ene–Mar 2026')
 
     +'</div>'
 
@@ -11852,7 +11852,7 @@ function renderResumenTablero() {
 
         var rendTotal = rendFid + rendBold + rendBcol;
 
-        if (rendTotal === 0 || ALZAK_ORG_ACTIVA==='FOUNDATION') return '';
+        if (rendTotal === 0) return '';
 
         var detalle = [];
 
@@ -29805,7 +29805,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v28jul-2010';
+var ALZAK_BUILD = 'v28jul-2020';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

@@ -920,7 +920,7 @@ body[data-org="FOUNDATION"] .alzak-toast {
 
 <div id="tab-nav" style="background:#333;padding:8px 28px;gap:8px;align-items:center;display:none;position:sticky;top:0;z-index:999;">
 
-  <button id="tab-home-btn" onclick="tabHome()" style="padding:6px 18px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif;background:#5DC3DA;color:#fff;">&#127968; Tablero</button>
+  <button id="tab-home-btn" onclick="tabHome()" style="padding:6px 18px;border-radius:20px;border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif;background:#F59E0B;color:#fff;">&#127968; Tablero</button>
 
   <button id="tab-sync-btn" onclick="alzakCargarDatosSheets()" title="Sincronizar datos desde Google Sheets" style="padding:6px 14px;border-radius:20px;border:1px solid rgba(93,195,218,0.4);cursor:pointer;font-size:11px;font-weight:700;font-family:'Montserrat',Helvetica,Arial,sans-serif;background:rgba(93,195,218,0.15);color:#5DC3DA;">&#128260; Sincronizar</button>
 
@@ -11731,7 +11731,7 @@ function renderResumenTablero() {
 
     +'<div>'
 
-    +'<div style="font-size:15px;font-weight:700;color:#54504F">Resumen del Tablero</div>'
+    +'<div style="font-size:15px;font-weight:700;color:' + (ALZAK_ORG_ACTIVA==='FOUNDATION'?'#004D2C':'#54504F') + '">Resumen del Tablero</div>'
 
     +'<div id="rs-fecha" style="font-size:11px;color:#aaa;margin-top:1px"></div>'
 
@@ -11786,7 +11786,7 @@ function renderResumenTablero() {
         return htmlU;
       })()
 
-    + card('🏛','Gravamen 4x1000', gmf4x1000,'#6EA1BA','#EBF6FA', gmf_fuente,'GMF acumulado Ene–Mar 2026')
+    + (ALZAK_ORG_ACTIVA==='FOUNDATION' ? '' : card('🏛','Gravamen 4x1000', gmf4x1000,'#6EA1BA','#EBF6FA', gmf_fuente,'GMF acumulado Ene–Mar 2026'))
 
     +'</div>'
 
@@ -11812,6 +11812,8 @@ function renderResumenTablero() {
         return card('🗓️','Programado 2026', totalProg,'#553C9A','#F5F3FF', nProg+' facturas programadas','');
 
       })()
+
+    + (ALZAK_ORG_ACTIVA==='FOUNDATION'?'':'')
 
     + (function(){
 
@@ -11841,7 +11843,7 @@ function renderResumenTablero() {
 
         var rendTotal = rendFid + rendBold + rendBcol;
 
-        if (rendTotal === 0) return '';
+        if (rendTotal === 0 || ALZAK_ORG_ACTIVA==='FOUNDATION') return '';
 
         var detalle = [];
 
@@ -29794,7 +29796,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v28jul-1930';
+var ALZAK_BUILD = 'v28jul-2000';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

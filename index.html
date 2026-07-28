@@ -23739,6 +23739,22 @@ function frRender() {
 
   window._FR_ABONO_CACHE = {}; window._FR_EGRESO_RESERVADO = {};
 
+  // Registro de DESEMBOLSOS ya aplicados (monto + fecha aprox). El mismo pago
+  // existe DOS veces como evidencia: el egreso del Sheet y su reflejo en el
+  // extracto bancario. Sin este registro, una cuenta se pagaba con el egreso
+  // y la siguiente mensualidad (monto idéntico) se pagaba con el movimiento
+  // bancario del MISMO desembolso — corrimiento en cadena.
+  window._FR_DESEMB = [];
+  window._FR_MISMO_DESEMB = function(v, ts, src) {
+    if (!window._FR_DESEMB || ts === null) return false;
+    for (var d = 0; d < window._FR_DESEMB.length; d++) {
+      var x = window._FR_DESEMB[d];
+      if (x.src !== src) continue;
+      if (Math.abs(x.v - v) <= 100 && x.ts !== null && Math.abs(x.ts - ts) <= 6*24*60*60*1000) return true;
+    }
+    return false;
+  };
+
   // FILTRAR PRIMERO — luego calcular fuentes solo para los filtrados
 
   var filtered = frGetFiltered();
@@ -24397,6 +24413,7 @@ function frCalcularAbonado(r) {
       if (_ncompRe && _ncompRe.test(gComp2)) {
         abonado += gTot2;
         window._FR_EGRESO_RESERVADO[i] = _rowKey;
+        if (window._FR_DESEMB && tsEgreso !== null) window._FR_DESEMB.push({v: gTot2, ts: tsEgreso, src: 'egreso'});
         continue;
       }
 
@@ -24410,6 +24427,11 @@ function frCalcularAbonado(r) {
       // Evita falsos positivos por apellidos comunes (HERNANDEZ, GARCIA...)
       var provMatchFuerte = (_nMatch >= 2) || (pWords.length === 1 && _nMatch === 1);
       if (!provMatch) continue;
+
+      // Si un MOVIMIENTO BANCARIO con este mismo monto/fecha ya pagó otra factura,
+      // este egreso es el registro contable del MISMO desembolso — no está disponible
+      if (typeof window._FR_MISMO_DESEMB === 'function' && tsEgreso !== null &&
+          window._FR_MISMO_DESEMB(gTot2, tsEgreso, 'extracto')) continue;
 
       // Fechas obligatorias para B y C: el egreso debe ser >= fecha de radicación.
       // Un pago no puede abonar una factura que aún no existía.
@@ -24429,8 +24451,15 @@ function frCalcularAbonado(r) {
       if (fechaOk && _crossOkB && Math.abs(gTot2 - total) <= 100) {
         abonado += gTot2;
         window._FR_EGRESO_RESERVADO[i] = _rowKey;
+        if (window._FR_DESEMB && tsEgreso !== null) window._FR_DESEMB.push({v: gTot2, ts: tsEgreso, src: 'egreso'});
         continue;
       }
+
+      // Modo C solo aplica a egresos que SON pagos de servicios (honorarios,
+      // cuentas de cobro, viáticos, facturas) — no a gastos operativos pagados
+      // POR la misma persona (NRAZ paga gasolina ≠ abono a sus honorarios)
+      var _esPagoServicio = /HONORARIO|CUENTA DE COBRO|VIATICO|ANTICIPO|ABONO|PAGO PARCIAL|PAGO FINAL|MATRICULA|PENSION|MENSUALIDAD/.test(gConc2) ||
+                            /N[oó]mina|Honorario/i.test(String(gx2['Categoría']||gx2['Categoria']||''));
 
       // Modo C: pago parcial — match FUERTE de proveedor + monto menor + fecha válida
       // + MISMO AÑO: una deuda radicada en 2025 NO absorbe pagos de 2026 como
@@ -24441,9 +24470,10 @@ function frCalcularAbonado(r) {
       var _anioEgr2 = parseInt(((gx2['Fecha']||'').split('/')[2]||'').substring(0,4)) || 0;
       var _mismoAnio = (_anioRad2 > 0 && _anioEgr2 > 0 && _anioRad2 === _anioEgr2);
 
-      if (fechaOk && _mismoAnio && provMatchFuerte && gTot2 > 0 && gTot2 < total) {
+      if (fechaOk && _mismoAnio && provMatchFuerte && _esPagoServicio && gTot2 > 0 && gTot2 < total) {
         abonado += gTot2;
         window._FR_EGRESO_RESERVADO[i] = _rowKey;
+        if (window._FR_DESEMB && tsEgreso !== null) window._FR_DESEMB.push({v: gTot2, ts: tsEgreso, src: 'egreso'});
         continue;
       }
 
@@ -24933,6 +24963,11 @@ function frFuentePago(r) {
       var _tsMv2 = _tsF(_mv2.f);
       if (tsRad !== null && _tsMv2 !== null && _tsMv2 < tsRad - 15*24*60*60*1000) continue;
 
+      // Si un EGRESO con este mismo monto/fecha ya pagó una factura, este
+      // movimiento bancario es el reflejo del MISMO desembolso — saltarlo
+      if (typeof window._FR_MISMO_DESEMB === 'function' && _tsMv2 !== null &&
+          window._FR_MISMO_DESEMB(_mv2.v, _tsMv2, 'egreso')) continue;
+
       var _desc2 = (_mv2.d||'').toUpperCase();
 
       // Verificar que alguna palabra clave del proveedor aparece en la descripción del extracto
@@ -24965,7 +25000,11 @@ function frFuentePago(r) {
 
       }
 
-      if (_descMatch) { _mv2.usado = true; poolMatch = _mv2; break; }
+      if (_descMatch) {
+        _mv2.usado = true; poolMatch = _mv2;
+        if (window._FR_DESEMB && _tsMv2 !== null) window._FR_DESEMB.push({v: _mv2.v, ts: _tsMv2, src: 'extracto'});
+        break;
+      }
 
     }
 
@@ -29490,7 +29529,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v28jul-0950';
+var ALZAK_BUILD = 'v28jul-1030';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

@@ -23829,28 +23829,67 @@ function frRender() {
   // Ejemplo: DAFA349 no puede apropiarse del egreso "Pago factura DAFA350"
   // aunque se procese primero en orden cronológico.
   function _snt(s) { try { return String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,''); } catch(e) { return String(s); } }
+  // Normaliza un comprobante: quita espacios/guiones para comparación flexible
+  // "DTL-007-26" → "dtl00726", "FEF 2112" → "fef2112", "ALM-004-26" → "alm00426"
+  function _normComp(s) { return _snt(String(s)).toLowerCase().replace(/[\s\-_]/g,''); }
+
   if (typeof FR_DATA !== 'undefined' && typeof GASTOS_DATA !== 'undefined') {
     // Mapa de N_Comprobante de cada radicada → su rowKey
-    var _frCompMap = {};
+    // Guardamos tanto la versión original como la normalizada para matcheo flexible
+    var _frCompMap = {}; // nc_original → rowKey
     FR_DATA.forEach(function(r) {
       if (typeof frEsProyectado === 'function' && frEsProyectado(r)) return;
-      var nc = _snt(String(r['N Comprobante']||r['N_Comprobante']||'').trim().toLowerCase());
+      var ncRaw = String(r['N Comprobante']||r['N_Comprobante']||'').trim();
+      var nc = _snt(ncRaw).toLowerCase();
       if (nc.length > 2) {
         var rk = nc + '|' + _snt((r['Proveedor / Beneficiario']||'').toUpperCase()) + '|' + Math.round(frTotalVal(r)) + '|' + (r['Fecha']||'');
         _frCompMap[nc] = rk;
       }
     });
-    // Escanear egresos buscando referencias explícitas en Concepto + Observaciones
+
+    // Para cada egreso, construir variantes del haystack:
+    // 1. texto original normalizado sin tildes
+    // 2. texto con guiones/espacios colapsados (para FEF2112 ↔ FEF 2112)
     GASTOS_DATA.forEach(function(g, gi) {
       if ((g['Tipo_Movimiento']||'').trim() === 'Traslado') return;
-      var haystack = _snt((String(g['Concepto']||'') + ' ' + String(g['Observaciones']||'')).toLowerCase());
+      var raw = String(g['Concepto']||'') + ' ' + String(g['Observaciones']||'');
+      var haystack    = _snt(raw).toLowerCase();
+      var haystackNrm = _normComp(raw); // sin espacios ni guiones
+
       Object.keys(_frCompMap).forEach(function(nc) {
+        if (window._FR_EGRESO_RESERVADO[gi] !== undefined) return; // ya reservado
         try {
+          // Match 1: exacto con límites de token (el de siempre)
           var esc = nc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          var re = new RegExp('(^|[^a-z0-9])' + esc + '([\\s.,;:()\\/\\\\\\-]|$)');
-          if (re.test(haystack)) {
-            if (window._FR_EGRESO_RESERVADO[gi] === undefined) {
-              window._FR_EGRESO_RESERVADO[gi] = _frCompMap[nc];
+          var re1 = new RegExp('(^|[^a-z0-9])' + esc + '([\\s.,;:()\\/\\\\\\-]|$)');
+          if (re1.test(haystack)) {
+            window._FR_EGRESO_RESERVADO[gi] = _frCompMap[nc]; return;
+          }
+          // Match 2: normalizado sin guiones/espacios
+          // "dtl-007-26" → "dtl00726" debe encontrarse en "dtl 007" → "dtl007"
+          // Pero necesitamos que sea un prefijo completo para evitar falsos positivos
+          var ncNrm = _normComp(nc);
+          if (ncNrm.length > 3) {
+            // El haystack normalizado debe contener ncNrm como token completo
+            var re2 = new RegExp('(^|[^a-z0-9])' + ncNrm.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '([^a-z0-9]|$)');
+            if (re2.test(haystackNrm)) {
+              window._FR_EGRESO_RESERVADO[gi] = _frCompMap[nc]; return;
+            }
+            // Match 3: prefijo — "dtl00726" empieza con "dtl007" (el egreso omite el año -26)
+            // Solo si el prefijo tiene ≥6 chars para evitar falsos (ej "dtl" solo no basta)
+            var parts = nc.split(/[\-\s]/);
+            if (parts.length >= 2) {
+              // Prefijo = todo menos el último segmento si ese último es el año (2 dígitos)
+              var lastPart = parts[parts.length-1];
+              if (/^\d{2}$/.test(lastPart)) {
+                var prefix = _normComp(parts.slice(0,-1).join('-'));
+                if (prefix.length >= 4) {
+                  var re3 = new RegExp('(^|[^a-z0-9])' + prefix.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '([^a-z0-9]|$)');
+                  if (re3.test(haystackNrm)) {
+                    window._FR_EGRESO_RESERVADO[gi] = _frCompMap[nc]; return;
+                  }
+                }
+              }
             }
           }
         } catch(e) {}
@@ -24516,15 +24555,37 @@ function frCalcularAbonado(r) {
       // Modo A: N° comprobante exacto — referencia explícita, sin restricción de fecha.
       // Match con LÍMITES de token: "cc-001" NO matchea "cc-001-a" (el prefijo de una
       // cuenta vieja no puede robarse el pago de la cuenta nueva del mismo proveedor).
-      var _ncompRe = null;
+      // Modo A: 3 variantes para tolerar diferencias de formato en el Concepto:
+      // 1. Exacto con límites de token
+      // 2. Sin guiones/espacios (FEF 2112 ↔ FEF2112, ALM 004 ↔ ALM-004-26)
+      // 3. Prefijo sin sufijo de año (DTL-007-26 → DTL007 matchea "DTL 007")
+      var _modoAMatch = false;
       if (ncomp.length > 2) {
         try {
-          var _esc = ncomp.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          // Cierre SIN guion: "cc-001" no debe matchear dentro de "cc-001-a"
-          _ncompRe = new RegExp('(^|[^a-z0-9])' + _esc + '([\\s.,;:()\\[\\]/\\\\]|$)');
-        } catch(e) { _ncompRe = null; }
+          var _e1 = ncomp.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+          if (new RegExp('(^|[^a-z0-9])'+_e1+'([\\s.,;:()\\/\\\\\\[\\]]|$)').test(gComp2)) _modoAMatch = true;
+          if (!_modoAMatch) {
+            var _ncN = ncomp.replace(/[\s\-_]/g,'');
+            var _gN  = gComp2.replace(/[\s\-_]/g,'');
+            if (_ncN.length > 3) {
+              var _e2 = _ncN.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+              if (new RegExp('(^|[^a-z0-9])'+_e2+'([^a-z0-9]|$)').test(_gN)) _modoAMatch = true;
+            }
+          }
+          if (!_modoAMatch) {
+            var _nPts = ncomp.split(/[\-\s]/);
+            if (_nPts.length >= 2 && /^\d{2}$/.test(_nPts[_nPts.length-1])) {
+              var _pfx = _nPts.slice(0,-1).join('').replace(/[\s\-_]/g,'');
+              if (_pfx.length >= 4) {
+                var _gN2 = gComp2.replace(/[\s\-_]/g,'');
+                var _e3  = _pfx.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+                if (new RegExp('(^|[^a-z0-9])'+_e3+'([^a-z0-9]|$)').test(_gN2)) _modoAMatch = true;
+              }
+            }
+          }
+        } catch(e) {}
       }
-      if (_ncompRe && _ncompRe.test(gComp2)) {
+      if (_modoAMatch) {
         abonado += gTot2;
         window._FR_EGRESO_RESERVADO[i] = _rowKey;
         if (window._FR_DESEMB && tsEgreso !== null) window._FR_DESEMB.push({v: gTot2, ts: tsEgreso, src: 'egreso'});
@@ -29661,7 +29722,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v28jul-1810';
+var ALZAK_BUILD = 'v28jul-1900';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

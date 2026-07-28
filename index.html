@@ -3068,7 +3068,7 @@ function alzakCargarDatosSheets(callback) {
 
     setTimeout(function() {
 
-      fetch(ALZAK_GS_URL + '?tab=_sync_extractos')
+      fetch(ALZAK_GS_URL + '?tab=_sync_extractos&sheetFac=' + encodeURIComponent(alzakGetOrgActiva().facturacion))
 
         .then(function(r){ return r.json().catch(function(){ return {}; }); })
 
@@ -3080,7 +3080,7 @@ function alzakCargarDatosSheets(callback) {
 
             // Recargar solo conciliación
 
-            fetch(ALZAK_GS_URL + '?tab=_conciliacion')
+            fetch(ALZAK_GS_URL + '?tab=_conciliacion&sheetFac=' + encodeURIComponent(alzakGetOrgActiva().facturacion))
 
               .then(function(r2){ return r2.json().catch(function(){ return {}; }); })
 
@@ -20311,7 +20311,7 @@ function alzakCargarConcGAS(callback) {
 
   if (typeof ALZAK_GS_URL === 'undefined') { if (callback) callback(0); return; }
 
-  fetch(ALZAK_GS_URL + '?tab=_conciliacion')
+  fetch(ALZAK_GS_URL + '?tab=_conciliacion&sheetFac=' + encodeURIComponent(alzakGetOrgActiva().facturacion))
 
     .then(function(r){ return r.json(); })
 
@@ -29101,7 +29101,7 @@ function alzakSyncDrive() {
 
   mostrarToast('☁️ Leyendo extractos PDF de Drive... (puede tardar ~1 min)', '#1565C0', 8000);
 
-  fetch(ALZAK_GS_URL + '?tab=_sync_extractos')
+  fetch(ALZAK_GS_URL + '?tab=_sync_extractos&sheetFac=' + encodeURIComponent(alzakGetOrgActiva().facturacion))
 
     .then(function(r){ return r.json(); })
 
@@ -29812,7 +29812,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v28jul-2030';
+var ALZAK_BUILD = 'v28jul-2100';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

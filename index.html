@@ -24383,8 +24383,18 @@ function frCalcularAbonado(r) {
 
       var tsEgreso = _tsFecha(gx2['Fecha']);
 
-      // Modo A: N° comprobante exacto — referencia explícita, sin restricción de fecha
-      if (ncomp.length > 2 && gComp2.indexOf(ncomp.toLowerCase()) >= 0) {
+      // Modo A: N° comprobante exacto — referencia explícita, sin restricción de fecha.
+      // Match con LÍMITES de token: "cc-001" NO matchea "cc-001-a" (el prefijo de una
+      // cuenta vieja no puede robarse el pago de la cuenta nueva del mismo proveedor).
+      var _ncompRe = null;
+      if (ncomp.length > 2) {
+        try {
+          var _esc = ncomp.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          // Cierre SIN guion: "cc-001" no debe matchear dentro de "cc-001-a"
+          _ncompRe = new RegExp('(^|[^a-z0-9])' + _esc + '([\\s.,;:()\\[\\]/\\\\]|$)');
+        } catch(e) { _ncompRe = null; }
+      }
+      if (_ncompRe && _ncompRe.test(gComp2)) {
         abonado += gTot2;
         window._FR_EGRESO_RESERVADO[i] = _rowKey;
         continue;
@@ -24403,10 +24413,20 @@ function frCalcularAbonado(r) {
 
       // Fechas obligatorias para B y C: el egreso debe ser >= fecha de radicación.
       // Un pago no puede abonar una factura que aún no existía.
-      var fechaOk = (tsFactura !== null && tsEgreso !== null && tsEgreso >= tsFactura);
+      // Tolerancia -15 días: es común pagar la cuenta al recibirla y radicarla
+      // días después (pensiones: pagas el 1°, radicas el 13). Mensualidades (~30 días) siguen protegidas por FIFO + reservas.
+      var fechaOk = (tsFactura !== null && tsEgreso !== null && tsEgreso >= tsFactura - 15*24*60*60*1000);
 
-      // Modo B: monto exacto + proveedor + fecha válida → pago total
-      if (fechaOk && Math.abs(gTot2 - total) <= 100) {
+      // Modo B: monto exacto + proveedor + fecha válida → pago total.
+      // CROSS-AÑO: si la radicada es de un año anterior al pago (deuda vieja),
+      // el concepto del egreso debe mencionar ese año ("noviembre 2025") o el
+      // comprobante — así los pagos de mensualidades 2026 con montos idénticos
+      // no son capturados por la cartera 2025.
+      var _anioRadB = parseInt(((r['Fecha']||'').split('/')[2]||'').substring(0,4)) || 0;
+      var _anioEgrB = parseInt(((gx2['Fecha']||'').split('/')[2]||'').substring(0,4)) || 0;
+      var _crossOkB = (_anioRadB === _anioEgrB) ||
+                      (_anioRadB > 0 && gComp2.indexOf(String(_anioRadB)) >= 0);
+      if (fechaOk && _crossOkB && Math.abs(gTot2 - total) <= 100) {
         abonado += gTot2;
         window._FR_EGRESO_RESERVADO[i] = _rowKey;
         continue;
@@ -24798,7 +24818,17 @@ function frFuentePago(r) {
 
       var gCompFull = gComp + ' ' + gConcepto + ' ' + gObs;
 
-      if (ncomp.length > 2 && gCompFull.indexOf(ncomp.toLowerCase()) >= 0) {
+      // Match de comprobante con LÍMITES de token (cierre sin guion):
+      // "cc-001" NO debe matchear dentro de "cc-001-a" — el prefijo de una cuenta
+      // vieja no puede apropiarse del pago de la cuenta nueva.
+      function _compMatchFP(needle, hay) {
+        try {
+          var esc = needle.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          return new RegExp('(^|[^a-z0-9])' + esc + '([\\s.,;:()\\[\\]/\\\\]|$)').test(hay);
+        } catch(e) { return hay.indexOf(needle.toLowerCase()) >= 0; }
+      }
+
+      if (ncomp.length > 2 && _compMatchFP(ncomp, gCompFull)) {
 
         window._FR_EGRESOS_USADOS[egresoId] = _ck;
 
@@ -24814,7 +24844,7 @@ function frFuentePago(r) {
 
         var ncompParts = ncomp.split(/[\/\s\-]+/).filter(function(p){ return p.length > 3; });
 
-        if (ncompParts.some(function(p){ return gCompFull.indexOf(p) >= 0; })) {
+        if (ncompParts.some(function(p){ return _compMatchFP(p, gCompFull); })) {
 
           window._FR_EGRESOS_USADOS[egresoId] = _ck;
 
@@ -24830,7 +24860,14 @@ function frFuentePago(r) {
       // Un pago efectuado ANTES de radicar la factura pertenece a otra obligación
       // (mensualidades de contratistas con montos idénticos).
       var _tsEgr = _tsF(gx['Fecha']);
-      var _fechaOkFP = (tsRad !== null && _tsEgr !== null && _tsEgr >= tsRad);
+      var _fechaOkFP = (tsRad !== null && _tsEgr !== null && _tsEgr >= tsRad - 15*24*60*60*1000);
+
+      // Cross-año: deuda de año anterior solo cruza por monto si el egreso
+      // menciona ese año (misma regla anti-robo que frCalcularAbonado)
+      var _aRadFP = parseInt((fechaFR.split('/')[2]||'').substring(0,4)) || 0;
+      var _aEgrFP = parseInt(((gx['Fecha']||'').split('/')[2]||'').substring(0,4)) || 0;
+      if (_aRadFP > 0 && _aEgrFP > 0 && _aRadFP !== _aEgrFP &&
+          gCompFull.indexOf(String(_aRadFP)) < 0) _fechaOkFP = false;
 
       // MODO A2: monto exacto + proveedor coincide + fecha válida
 
@@ -24894,7 +24931,7 @@ function frFuentePago(r) {
       // vienen dd/MM/yyyy). Un débito bancario de junio no puede pagar
       // una cuenta radicada en julio — es el desembolso de otra mensualidad.
       var _tsMv2 = _tsF(_mv2.f);
-      if (tsRad !== null && _tsMv2 !== null && _tsMv2 < tsRad) continue;
+      if (tsRad !== null && _tsMv2 !== null && _tsMv2 < tsRad - 15*24*60*60*1000) continue;
 
       var _desc2 = (_mv2.d||'').toUpperCase();
 
@@ -24980,7 +25017,7 @@ function frFuentePago(r) {
 
     // Fecha del cargo TC: debe ser >= radicación (mismo principio anti-mensualidades)
     var _tsTC = _tsF(tc.f);
-    if (tsRad !== null && _tsTC !== null && _tsTC < tsRad) continue;
+    if (tsRad !== null && _tsTC !== null && _tsTC < tsRad - 15*24*60*60*1000) continue;
 
     var provMatch = false;
 
@@ -29453,7 +29490,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v27jul-1800';
+var ALZAK_BUILD = 'v28jul-0950';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

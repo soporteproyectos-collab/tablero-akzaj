@@ -2563,9 +2563,10 @@ function alzakCambiarOrg(orgKey) {
   // Badge de org activa en el body para CSS theming
   document.body.setAttribute('data-org', orgKey);
 
-  // Limpiar datos anteriores
+  // Limpiar datos anteriores (incluye caché de localStorage para evitar mezcla entre orgs)
 
   FR_DATA = []; GASTOS_DATA = []; FACTURAS = []; FP_DATA = []; GP_DATA = [];
+  try { localStorage.removeItem(_orgKey('alzak_fp_2026')); localStorage.removeItem('alzak_fp2026_' + orgKey); } catch(e) {}
 
   // Recargar
 
@@ -11818,6 +11819,10 @@ function renderResumenTablero() {
           totalProg+=(parseFloat(fp.monto)||0); nProg++;
         });
 
+        // Foundation: si no hay programadas propias, mostrar 0 (no usar caché de GROUP)
+        if (ALZAK_ORG_ACTIVA === 'FOUNDATION' && nProg === 0) {
+          return card('🗓️','Programado 2026', 0,'#553C9A','#F5F3FF','0 facturas programadas','');
+        }
         return card('🗓️','Programado 2026', totalProg,'#553C9A','#F5F3FF', nProg+' facturas programadas','');
 
       })()
@@ -11828,6 +11833,8 @@ function renderResumenTablero() {
 
         // Rendimientos financieros: Fiducuenta + Bold CF + Intereses Bancolombia
 
+        // Foundation no tiene extractos propios aún — mostrar 0
+        if (ALZAK_ORG_ACTIVA === 'FOUNDATION') return '';
         var rendFid = 0, rendBold = 0, rendBcol = 0;
 
         if (typeof P !== 'undefined') {
@@ -29805,7 +29812,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v28jul-2020';
+var ALZAK_BUILD = 'v28jul-2030';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

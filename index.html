@@ -2499,13 +2499,20 @@ var ALZAK_ORGS = {
 
     radicadas:    '11oTHKWQITkfBYaf325BcTGIFZMrX4FP_KqkbI8XX36Y',
 
-    egresos:      '14L9F-vWk5f8JV3ZZ66Nf-zIpw3MxgsvgnZe3-ww5hR4'
+    egresos:      '14L9F-vWk5f8JV3ZZ66Nf-zIpw3MxgsvgnZe3-ww5hR4',
+
+    presupuesto:  '1EtVvN5ALVJepUtkrTZYrkMijX0sk16z1hTkUi7yUzGo'
 
   }
 
 };
 
 var ALZAK_ORG_ACTIVA = 'GROUP'; // Siempre inicia en GROUP
+
+// Garantía anti-caché: forzar campos críticos aunque GitHub sirva versión vieja
+if (!ALZAK_ORGS['FOUNDATION'].presupuesto) ALZAK_ORGS['FOUNDATION'].presupuesto = '1EtVvN5ALVJepUtkrTZYrkMijX0sk16z1hTkUi7yUzGo';
+if (!ALZAK_ORGS['FOUNDATION'].navBg) ALZAK_ORGS['FOUNDATION'].navBg = '#004D2C';
+if (!ALZAK_ORGS['FOUNDATION'].colorLight) ALZAK_ORGS['FOUNDATION'].colorLight = '#E6F7F0';
 
 function _orgKey(base) { return base + '_' + (ALZAK_ORG_ACTIVA||'GROUP'); }
 
@@ -3044,7 +3051,9 @@ function alzakCargarDatosSheets(callback) {
 
     + '&sheetRad=' + encodeURIComponent(org.radicadas)
 
-    + '&sheetEgr=' + encodeURIComponent(org.egresos);
+    + '&sheetEgr=' + encodeURIComponent(org.egresos)
+
+    + (org.presupuesto ? '&sheetPres=' + encodeURIComponent(org.presupuesto) : '');
 
   // Cargar datos principales (rápido)
 
@@ -29796,7 +29805,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v28jul-2000';
+var ALZAK_BUILD = 'v28jul-2010';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

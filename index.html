@@ -24446,6 +24446,9 @@ function frCalcularAbonado(r) {
 
     for (var i = 0; i < GASTOS_DATA.length; i++) {
 
+      // Traslados internos no son pagos — excluirlos del cruce
+      if ((GASTOS_DATA[i]['Tipo_Movimiento']||'').trim() === 'Traslado') continue;
+
       // Un egreso solo puede abonar UNA factura — si otra fila ya lo reservó, saltarlo
       if (window._FR_EGRESO_RESERVADO[i] !== undefined && window._FR_EGRESO_RESERVADO[i] !== _rowKey) {
         if (_tr && Math.abs(parseFloat(GASTOS_DATA[i]['Total ($)']||GASTOS_DATA[i]['Total_COP']||0) - total) <= total*0.5) {
@@ -24459,7 +24462,7 @@ function frCalcularAbonado(r) {
       // Comprobante + Concepto CONCATENADOS: el N° de factura o el nombre del
       // proveedor real suelen venir en el concepto ("Pago factura Mac Center BCA9094",
       // "Pago Homecenter 9 febrero") cuando el pago lo hizo un tercero (NJAZ, Josefina)
-      var gComp2 = _sinTildes((String(gx2['N_Comprobante']||gx2['N Comprobante']||gx2['N_Factura']||'') + ' ' + String(gx2['Concepto']||'')).toLowerCase());
+      var gComp2 = _sinTildes((String(gx2['N_Comprobante']||gx2['N Comprobante']||gx2['N_Factura']||'') + ' ' + String(gx2['Concepto']||'') + ' ' + String(gx2['Observaciones']||'')).toLowerCase());
 
       var gProv2 = _sinTildes((gx2['Beneficiario']||gx2['Proveedor / Beneficiario']||gx2['Proveedor_Beneficiario']||'').toUpperCase());
 
@@ -24907,6 +24910,9 @@ function frFuentePago(r) {
 
     for (var i = 0; i < GASTOS_DATA.length; i++) {
 
+      // Traslados internos no son pagos — excluirlos del cruce
+      if ((GASTOS_DATA[i]['Tipo_Movimiento']||'').trim() === 'Traslado') continue;
+
       // Si este egreso ya fue consumido por otra radicada, saltar
 
       var egresoId = i + '|' + (GASTOS_DATA[i]['N_Comprobante']||GASTOS_DATA[i]['N Comprobante']||i);
@@ -24920,7 +24926,7 @@ function frFuentePago(r) {
 
       var gx   = GASTOS_DATA[i];
 
-      var gComp = String(gx['N_Comprobante'] || gx['N Comprobante'] || gx['N_Factura'] || gx['Concepto'] || '').toLowerCase();
+      var gComp = String(gx['N_Comprobante'] || gx['N Comprobante'] || gx['N_Factura'] || '').toLowerCase();
 
       var gProv = (gx['Beneficiario'] || gx['Proveedor / Beneficiario'] || gx['Proveedor_Beneficiario'] || '').toUpperCase();
 
@@ -29619,7 +29625,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v28jul-1115';
+var ALZAK_BUILD = 'v28jul-1715';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

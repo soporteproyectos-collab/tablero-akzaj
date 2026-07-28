@@ -24413,7 +24413,15 @@ function frCalcularAbonado(r) {
       }
 
       // Modo C: pago parcial — match FUERTE de proveedor + monto menor + fecha válida
-      if (fechaOk && provMatchFuerte && gTot2 > 0 && gTot2 < total) {
+      // + MISMO AÑO: una deuda radicada en 2025 NO absorbe pagos de 2026 como
+      // "abonos" (robaba los pagos de las cuentas nuevas del mismo proveedor).
+      // Las deudas de años anteriores solo se cruzan por comprobante explícito
+      // (Modo A) o pago del monto exacto (Modo B).
+      var _anioRad2 = parseInt(((r['Fecha']||'').split('/')[2]||'').substring(0,4)) || 0;
+      var _anioEgr2 = parseInt(((gx2['Fecha']||'').split('/')[2]||'').substring(0,4)) || 0;
+      var _mismoAnio = (_anioRad2 > 0 && _anioEgr2 > 0 && _anioRad2 === _anioEgr2);
+
+      if (fechaOk && _mismoAnio && provMatchFuerte && gTot2 > 0 && gTot2 < total) {
         abonado += gTot2;
         window._FR_EGRESO_RESERVADO[i] = _rowKey;
         continue;
@@ -29445,7 +29453,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v27jul-1740';
+var ALZAK_BUILD = 'v27jul-1800';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

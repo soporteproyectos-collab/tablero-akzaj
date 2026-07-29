@@ -10434,7 +10434,7 @@ function exportarPDFGastos() {
 
     +'<table><thead><tr>'
 
-    +'<th>Factura</th><th>Fecha</th><th>Mes</th><th>Proveedor</th><th>Concepto</th><th>Categoría</th>'
+    +'<th>N° Comp.</th><th>Fecha</th><th>Mes</th><th>Proveedor</th><th>Concepto</th><th>Categoría</th>'
 
     +'<th style="text-align:right">Subtotal</th><th style="text-align:right">IVA</th>'
 
@@ -14864,9 +14864,11 @@ function exportarPDFEstadoResultados() {
 
   var dataM=meses.map(calcMesData);
 
-  var accIng=FACTURAS.reduce(function(a,f){return a+(f.bruto||0);},0);
+  // accIng = suma de meses reales (facturas no proyectadas)
+  var accIng=dataM.reduce(function(a,d){return a+d.ing;},0);
 
-  var accGas=GASTOS_DATA.filter(esGastoOpPL).reduce(function(a,r){return a+parseFloat(r['Total_COP']||0);},0);
+  // accGas = suma de meses reales en dataM únicamente (no GASTOS_DATA completo que incluye 2025)
+  var accGas=dataM.reduce(function(a,d){return a+d.gas;},0);
 
   // Categorías ordenadas por total desc
 
@@ -15008,7 +15010,8 @@ function exportarPDFEstadoResultados() {
 
     });
 
-    var catAcc=GASTOS_DATA.filter(function(r){return (r['Categoria']||'Otros')===cat;}).reduce(function(a,r){return a+parseFloat(r['Total_COP']||0);},0);
+    // Acumulado = suma de los meses reales en dataM (no GASTOS_DATA completo que incluye 2025)
+    var catAcc=catVals.reduce(function(a,v){return a+v;},0);
 
     catVals.push(catAcc);
 
@@ -15052,7 +15055,8 @@ function exportarPDFEstadoResultados() {
 
       });
 
-      var provAcc=items.reduce(function(a,r){return a+parseFloat(r['Total_COP']||0);},0);
+      // Acumulado proveedor = suma de meses reales únicamente
+      var provAcc=provVals.reduce(function(a,v){return a+v;},0);
 
       provVals.push(provAcc);
 
@@ -15608,7 +15612,7 @@ function renderGastoTabla(datos) {
 
     rows+='<tr style="'+(r._pagada?'background:#f9fffc':'')+'">' +
 
-      '<td style="font-size:11px;font-weight:700;color:#5DC3DA">'+(r['N_Factura']||'—')+'</td>' +
+      '<td style="font-size:11px;font-weight:700;color:#5DC3DA" title="N° Comprobante">'+(r['N_Comprobante']||r['N_Factura']||'—')+'</td>' +
 
       '<td style="font-size:11px">'+(r['Fecha']||'')+'</td><td style="font-size:11px">'+(r['Mes']||'')+'</td>' +
 
@@ -16592,19 +16596,19 @@ function renderGruposGastos(lista, filCat) {
 
       var items=gd.items.slice().sort(function(a,b){return(b['Fecha']||'')>(a['Fecha']||'')?1:-1;});
 
-      html+='<div><div style="display:grid;grid-template-columns:90px 100px 1fr 1fr 110px 80px 36px;gap:6px;padding:7px 14px;background:#f5f4f0;border-top:1px solid #e0ddd8;font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase"><div>Fecha</div><div>N° Fact.</div><div>Proveedor</div><div>Concepto</div><div style="text-align:right">Total</div><div style="text-align:center">Estado</div><div></div></div>';
+      html+='<div><div style="display:grid;grid-template-columns:90px 110px 1fr 1fr 110px 80px 36px;gap:6px;padding:7px 14px;background:#f5f4f0;border-top:1px solid #e0ddd8;font-size:10px;font-weight:700;color:#aaa;text-transform:uppercase"><div>Fecha</div><div>N° Comp.</div><div>Proveedor</div><div>Concepto</div><div style="text-align:right">Total</div><div style="text-align:center">Estado</div><div></div></div>';
 
       for(var ii=0;ii<items.length;ii++){
 
         var r=items[ii],tv=parseFloat(r['Total_COP']||0);
 
-        html+='<div style="display:grid;grid-template-columns:90px 100px 1fr 1fr 110px 80px 36px;gap:6px;padding:9px 14px;border-top:1px solid #f0ede8;align-items:center;background:'+(r._pagada?'#f9fffc':'#fff')+'">';
+        html+='<div style="display:grid;grid-template-columns:90px 110px 1fr 1fr 110px 80px 36px;gap:6px;padding:9px 14px;border-top:1px solid #f0ede8;align-items:center;background:'+(r._pagada?'#f9fffc':'#fff')+'">';
 
         html+='<div style="font-size:11px;color:#666;white-space:nowrap">'+(r['Fecha']||'')+'</div>';
 
         html+='<div style="font-size:11px;font-weight:700;color:#5DC3DA;cursor:pointer;display:flex;align-items:center;gap:4px" onclick="verDocumentoGasto(\''+r._id+'\')" title="'+(GASTOS_PDFS[r._id]?'Ver PDF':'Editar')+'">'+
 
-          (r['N_Factura']||'—')+
+          (r['N_Comprobante']||r['N_Factura']||'—')+
 
           (GASTOS_PDFS[r._id]?'<span style="font-size:9px;background:#E6F1FB;color:#5DC3DA;padding:1px 4px;border-radius:3px;margin-left:3px">PDF</span>':'<span style="font-size:9px;color:#ccc;margin-left:3px">✏️</span>')+
 
@@ -29850,7 +29854,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v28jul-2145';
+var ALZAK_BUILD = 'v29jul-1230';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

@@ -11858,22 +11858,23 @@ function renderResumenTablero() {
               }
             });
 
-            // Bold: intereses desde info cuando no hay movimientos individuales
-            // El panel de conciliación calcula Bold como suma de intereses del mes
-            if (esBold && entry.info) {
-              var boldInt = parseFloat(entry.info.intereses||0);
-              if (boldInt > 0) _rendBoldInfo += boldInt;
-            }
-
-            // Fiducuenta: rendNetos desde info (más preciso que movimientos)
+              // Fiducuenta: rendNetos desde info (más preciso que movimientos)
             if (esFid && entry.info && entry.info.rendNetos) {
               _rendFidInfo += parseFloat(entry.info.rendNetos)||0;
             }
           });
 
-          // Usar info si es mayor (más completo) que movimientos
-          rendBold = Math.max(_rendBoldMovs, _rendBoldInfo);
           rendFid  = _rendFidInfo > 0 ? _rendFidInfo : _rendFidMovs;
+          rendBold = _rendBoldMovs; // se completa con P[] abajo
+        }
+
+        // Bold: complementar con P[] que tiene los intereses de todos los meses
+        if (typeof P !== 'undefined') {
+          var _rendBoldP = 0;
+          P.forEach(function(per){
+            _rendBoldP += (per.bold && per.bold.intereses) ? per.bold.intereses : 0;
+          });
+          if (_rendBoldP > rendBold) rendBold = _rendBoldP;
         }
 
         // Fallback: P[] hardcodeado si DATA no tiene datos
@@ -29879,7 +29880,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v04ago-1100';
+var ALZAK_BUILD = 'v04ago-1110';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

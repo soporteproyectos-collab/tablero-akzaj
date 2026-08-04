@@ -3818,7 +3818,7 @@ function alzakCargarDatosPrincipal(url, callback) {
 
       if (typeof renderEstadoResultados === 'function') setTimeout(renderEstadoResultados, 250);
 
-      if (typeof renderBalance          === 'function') setTimeout(renderBalance, 300);
+      if (typeof renderBalance          === 'function') setTimeout(renderBalance, 600);
 
       if (typeof renderHomeBancosPanel  === 'function') setTimeout(renderHomeBancosPanel, 350);
 
@@ -13362,6 +13362,12 @@ function calcBalMes(mes) {
 
 function renderBalance() {
 
+  // Si FACTURAS no tiene datos aún, reintentar en 500ms
+  if (typeof FACTURAS === 'undefined' || FACTURAS.length === 0) {
+    setTimeout(renderBalance, 500);
+    return;
+  }
+
   var elPills = g('bal-pills');
 
   var elKpis  = g('bal-kpis');
@@ -13553,7 +13559,44 @@ function renderBalance() {
 
     // Cartera 2025 — mostrar facturas individuales pendientes al corte
     if (d.cxcApertura>0) {
-      html += fila('Cartera 2025 pendiente al corte', d.cxcApertura, 'item', 2);
+      // Calcular total pendiente al corte (excluir cobradas)
+      var _cxcPendCalc = 0;
+      var _MESES_CXC = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+      var _mesN = _MESES_CXC.indexOf((mes||'').replace(' 2026','').replace(' 2025','')) + 1;
+      var _anioN = (mes||'').indexOf('2025')>=0 ? 2025 : 2026;
+      var _c25tmp = [];
+      if (typeof FACTURAS !== 'undefined') {
+        FACTURAS.forEach(function(f){
+          var dp = typeof fFechaPartes==='function' ? fFechaPartes(f.fecha_raw||f.fecha||'') : [0,0,0];
+          if (parseInt(dp[0]) === 2025) _c25tmp.push(f);
+        });
+      }
+      if (!_c25tmp.length && BAL_CONFIG.cartera2025) _c25tmp = BAL_CONFIG.cartera2025;
+      _c25tmp.forEach(function(f){
+        var _v = f.vence||f.venceDisplay||'';
+        var _cobr = false;
+        if (_v) {
+          // Normalizar formato: puede ser dd/MM/yyyy o yyyy-MM-dd o "26 Ene 2026"
+          var _va = 0, _vm = 0;
+          var _mMap3 = {Jan:1,Feb:2,Mar:3,Apr:4,May:5,Jun:6,Jul:7,Aug:8,Sep:9,Oct:10,Nov:11,Dec:12,Ene:1,Abr:4,Ago:8,Dic:12};
+          var _mMatch3 = _v.match(/(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})/);
+          if (_mMatch3) { _va=parseInt(_mMatch3[3]); _vm=parseInt(_mMap3[_mMatch3[2]]||0); }
+          else if (_v.indexOf('/')>=0) {
+            var _vp2=_v.split('/');
+            if (_vp2[2] && _vp2[2].length===4) { _va=parseInt(_vp2[2]); _vm=parseInt(_vp2[1]); } // dd/MM/yyyy
+            else { _va=parseInt(_vp2[0]); _vm=parseInt(_vp2[1]); } // yyyy/MM/dd
+          } else if (_v.indexOf('-')>=0) {
+            var _vp3=_v.split('-');
+            if (_vp3[0].length===4) { _va=parseInt(_vp3[0]); _vm=parseInt(_vp3[1]); } // yyyy-MM-dd
+            else { _va=parseInt(_vp3[2]); _vm=parseInt(_vp3[1]); } // dd-MM-yyyy
+          }
+          _cobr = _va>0 && ((_va<_anioN)||(_va===_anioN&&_vm<=_mesN));
+        } else {
+          _cobr = !!f.pagada;
+        }
+        if (!_cobr) _cxcPendCalc += (f.bruto||0);
+      });
+      html += fila('Cartera 2025 pendiente al corte', _cxcPendCalc, 'item', 2);
       // Listar cada factura de 2025 pendiente
       var _cart2025 = [];
       if (typeof FACTURAS !== 'undefined') {
@@ -13569,21 +13612,21 @@ function renderBalance() {
       var _mesCorteN = _MESES_BAL.indexOf(_mesCorte.replace(' 2026','').replace(' 2025','')) + 1;
       var _anioCorte = _mesCorte.indexOf('2025')>=0 ? 2025 : 2026;
 
+      var _totalCart2025Pend = 0;
       _cart2025.forEach(function(f){
         var _bruto = f.bruto||0;
         var _label = (f.num||'—')+' · '+(f.cliente||'');
-        // Calcular si estaba cobrada al corte según vencimiento
         var _vence = f.vence||f.venceDisplay||'';
         var _cobradaAlCorte = false;
         if (_vence) {
           var _vp = _vence.indexOf('/')>=0 ? _vence.split('/') : _vence.split('-');
           var _vAnio = parseInt(_vp.length===3?(_vp[0].length===4?_vp[0]:_vp[2]):0);
           var _vMes  = parseInt(_vp.length===3?_vp[1]:0);
-          // Cobrada al corte si el vencimiento ya pasó al mes de balance
           _cobradaAlCorte = (_vAnio < _anioCorte) || (_vAnio === _anioCorte && _vMes <= _mesCorteN);
         } else {
           _cobradaAlCorte = f.pagada || false;
         }
+        if (!_cobradaAlCorte) _totalCart2025Pend += _bruto;
         var _sub = (_vence ? 'vence '+_vence : '') + (_cobradaAlCorte ? ' ✅ cobrada' : ' ⏳ pendiente');
         html += fila(_label, _bruto, 'item', 3, _sub);
       });
@@ -30356,7 +30399,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v04ago-1545';
+var ALZAK_BUILD = 'v04ago-1630';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

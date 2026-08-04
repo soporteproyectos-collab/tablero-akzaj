@@ -8521,9 +8521,10 @@ function renderFacturas() {
 
   var total    = FACTURAS.reduce(function(a,f){return a+f.total;},0);
 
-  var cobrado  = FACTURAS.filter(function(f){return f.pagada;}).reduce(function(a,f){return a+(f.bruto||f.total||0);},0);
+  var _f26b = FACTURAS.filter(function(f){ return !f.fecha || f.fecha.indexOf('2026') >= 0; });
+  var cobrado  = _f26b.filter(function(f){return f.pagada;}).reduce(function(a,f){return a+(f.bruto||f.total||0);},0);
 
-  var pendiente= FACTURAS.filter(function(f){return !f.pagada;}).reduce(function(a,f){return a+(f.bruto||f.total||0);},0);
+  var pendiente= _f26b.filter(function(f){return !f.pagada;}).reduce(function(a,f){return a+(f.bruto||f.total||0);},0);
 
   var vencidas = FACTURAS.filter(function(f){return !f.pagada && estadoFact(f)==='vencida';});
 
@@ -11597,13 +11598,17 @@ function renderResumenTablero() {
 
   // ── Datos ─────────────────────────────────────────────────
 
-  var totalFact   = FACTURAS.reduce(function(a,f){ return a+(f.bruto||0); }, 0);
+  // Filtrar facturas por año activo (2026 por defecto) — las de 2025 van al Balance General
+  var _anioFact = '2026';
+  var _factAnio = FACTURAS.filter(function(f){ return !f.fecha || f.fecha.indexOf(_anioFact) >= 0; });
 
-  var totalCobrado= FACTURAS.filter(function(f){return f.pagada;}).reduce(function(a,f){return a+(f.total||0);},0);
+  var totalFact   = _factAnio.reduce(function(a,f){ return a+(f.bruto||0); }, 0);
 
-  var totalPendFact = FACTURAS.filter(function(f){return !f.pagada;}).reduce(function(a,f){return a+(f.total||0);},0);
+  var totalCobrado= _factAnio.filter(function(f){return f.pagada;}).reduce(function(a,f){return a+(f.total||0);},0);
 
-  var nFact = FACTURAS.length;
+  var totalPendFact = _factAnio.filter(function(f){return !f.pagada;}).reduce(function(a,f){return a+(f.total||0);},0);
+
+  var nFact = _factAnio.length;
 
   // Excluir obligaciones tributarias del cálculo de gastos operativos (no afectan P&L)
 
@@ -30149,7 +30154,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v04ago-1245';
+var ALZAK_BUILD = 'v04ago-1300';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

@@ -11667,16 +11667,19 @@ function renderResumenTablero() {
 
   }
 
-  // Fuente 2: DATA (movimientos GAS con clase:'gmf') — todos los meses cargados
+  // Fuente 2: DATA (movimientos GAS) — todos los meses cargados
   if (typeof DATA !== 'undefined') {
+    var _GMF_KEYS = ['4x1000','impto gobierno','gmf','gravamen'];
     Object.keys(DATA).forEach(function(key) {
       var entry = DATA[key];
       (entry.movs||[]).forEach(function(mv){
         var clase = (mv.clase||mv.t||'').toLowerCase();
         var desc  = (mv.desc||mv.d||'').toLowerCase();
-        var val   = mv.v !== undefined ? mv.v : -(mv.deb||0);
-        if ((clase === 'gmf' || desc.indexOf('4x1000') >= 0 || desc.indexOf('impto gobierno') >= 0) && val < 0) {
-          gmf4x1000_conc += Math.abs(val);
+        // Valor negativo: puede ser mv.v<0, mv.car>0 (Bold), o mv.deb>0
+        var valNeg = mv.v !== undefined ? mv.v : -(mv.car||mv.deb||0);
+        var esGMF  = clase === 'gmf' || _GMF_KEYS.some(function(k){ return desc.indexOf(k) >= 0; });
+        if (esGMF && valNeg < 0) {
+          gmf4x1000_conc += Math.abs(valNeg);
         }
       });
     });
@@ -11829,23 +11832,29 @@ function renderResumenTablero() {
         if (ALZAK_ORG_ACTIVA === 'FOUNDATION') return '';
         var rendFid = 0, rendBold = 0, rendBcol = 0;
 
-        // Leer desde DATA (movimientos GAS con clase:'interes'/'rendimiento') — todos los meses
+        // Leer desde DATA (movimientos de todos los bancos)
         if (typeof DATA !== 'undefined') {
+          var _REND_KEYS = ['abono de intereses','intereses ahorros','rendimiento','abono intereses'];
           Object.keys(DATA).forEach(function(key) {
             var entry = DATA[key];
             var banco = (entry.info && entry.info.banco ? entry.info.banco : key).toLowerCase();
             (entry.movs||[]).forEach(function(mv){
               var clase = (mv.clase||mv.t||'').toLowerCase();
-              var val   = mv.v !== undefined ? mv.v : (mv.ab||0);
-              if ((clase === 'interes' || clase === 'rendimiento') && val > 0) {
+              var desc  = (mv.desc||mv.d||'').toLowerCase();
+              // Valor: puede ser mv.v, mv.ab (Bold), o mv.ab-mv.car
+              var val = mv.v !== undefined ? mv.v : (mv.ab||0);
+              // Detectar interés por clase o por descripción
+              var esInteres = clase === 'interes' || clase === 'rendimiento' ||
+                _REND_KEYS.some(function(k){ return desc.indexOf(k) >= 0; });
+              if (esInteres && val > 0) {
                 if (banco.indexOf('fiducuenta') >= 0 || banco.indexOf('fiducia') >= 0) rendFid += val;
                 else if (banco.indexOf('bold') >= 0) rendBold += val;
                 else rendBcol += val;
               }
             });
-            // Rendimientos Fiducuenta desde el resumen (rendNetos)
+            // Rendimientos Fiducuenta desde el resumen (rendNetos) — evitar doble conteo
             if ((banco.indexOf('fiducuenta') >= 0 || banco.indexOf('fiducia') >= 0) && entry.info && entry.info.rendNetos) {
-              rendFid += parseFloat(entry.info.rendNetos)||0;
+              if (rendFid === 0) rendFid += parseFloat(entry.info.rendNetos)||0;
             }
           });
         }
@@ -29838,7 +29847,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v04ago-1025';
+var ALZAK_BUILD = 'v04ago-1050';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

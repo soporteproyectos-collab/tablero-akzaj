@@ -12757,19 +12757,41 @@ function calcBalMes(mes) {
           if (perAnio > corteAnio_cxc) continue;
           if (perAnio === corteAnio_cxc && perMesN > corteMes_cxc) continue;
           (per.movs || []).forEach(function(mv) {
-            if (mv.v <= 0) return; // solo ingresos
-            if (mv.clase !== 'ingreso_externo' && mv.clase !== 'ingreso') return;
-            var desc = (mv.d || mv.desc || '').toUpperCase();
-            var cliU = fac.cliente.toUpperCase();
-            // Coincide si la descripción del movimiento contiene el nombre del cliente
-            // y el monto está dentro del rango del total con IVA (±5%)
-            var montoOk = Math.abs(mv.v - fac.total) / fac.total < 0.05 ||
-                          Math.abs(mv.v - fac.bruto) / fac.bruto < 0.05;
-            var clienteOk = desc.indexOf(cliU) >= 0 ||
-                            desc.indexOf(cliU.split(' ')[0]) >= 0;
-            if (montoOk && clienteOk) cobrado2025 += fac.bruto;
+            var val = mv.v !== undefined ? mv.v : (mv.ab||0);
+            if (val <= 0) return; // solo ingresos
+            // No filtrar por clase — en Bancolombia puede ser undefined
+            var clase = (mv.clase||mv.t||'').toLowerCase();
+            if (clase === 'gmf' || clase === 'impto' || clase === 'retencion' ||
+                clase === 'traslado_interno' || clase === 'fondo') return;
+            // Cruzar solo por monto (±2%) — más confiable que por nombre de cliente
+            var montoOk = fac.total > 0 && Math.abs(val - fac.total) / fac.total < 0.02;
+            var montoOkBase = fac.bruto > 0 && Math.abs(val - fac.bruto) / fac.bruto < 0.02;
+            if (montoOk || montoOkBase) cobrado2025 += fac.bruto;
           });
         }
+      });
+    }
+
+    // Cruzar también contra DATA (GAS) — meses más recientes
+    if (typeof DATA !== 'undefined' && cartera2025.length) {
+      cartera2025.forEach(function(fac) {
+        if (cobrado2025 >= fac.bruto) return;
+        Object.keys(DATA).forEach(function(k) {
+          var entry = DATA[k];
+          var kMes = 0;
+          var MESES_N2 = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+          MESES_N2.forEach(function(mn3,i){ if(k.indexOf(mn3)>=0) kMes=i+1; });
+          if (kMes > corteMes_cxc) return;
+          (entry.movs||[]).forEach(function(mv){
+            var val2 = mv.v !== undefined ? mv.v : (mv.ab||0);
+            if (val2 <= 0) return;
+            var clase2 = (mv.clase||mv.t||'').toLowerCase();
+            if (clase2==='gmf'||clase2==='impto'||clase2==='traslado_interno'||clase2==='fondo') return;
+            var ok = (fac.total>0 && Math.abs(val2-fac.total)/fac.total<0.02) ||
+                     (fac.bruto>0 && Math.abs(val2-fac.bruto)/fac.bruto<0.02);
+            if (ok) cobrado2025 += fac.bruto;
+          });
+        });
       });
     }
 
@@ -13347,6 +13369,10 @@ function renderBalance() {
   function fFechaPartes(f) {
     var s = String(f||'').trim();
     if (!s) return [];
+    // Formato "21 Ene 2026"
+    var _mMap2 = {Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',Jul:'07',Aug:'08',Sep:'09',Oct:'10',Nov:'11',Dec:'12',Ene:'01',Abr:'04',Ago:'08',Dic:'12'};
+    var _mM = s.match(/(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})/);
+    if (_mM) return [_mM[3], _mMap2[_mM[2]]||'01', ('0'+_mM[1]).slice(-2)];
     if (s.indexOf('/') >= 0) { var p = s.split('/'); if (p.length < 3) return []; return [p[2].substring(0,4), p[1], p[0]]; }
     if (s.indexOf('-') >= 0) { var q = s.substring(0,10).split('-'); if (q.length < 3) return []; return [q[0], q[1], q[2]]; }
     return [];
@@ -13354,13 +13380,30 @@ function renderBalance() {
 
   var disp = {};
 
-  for (var i=0;i<FACTURAS.length;i++) { var dp=fFechaPartes(FACTURAS[i].fecha_raw || FACTURAS[i].fecha); if(dp.length===3) disp[MN[parseInt(dp[1])-1]+' '+dp[0]]=1; }
+  // Solo incluir meses de 2026 en los tabs del balance
+  for (var i=0;i<FACTURAS.length;i++) {
+    var dp=fFechaPartes(FACTURAS[i].fecha_raw || FACTURAS[i].fecha);
+    if(dp.length===3 && dp[0]==='2026') disp[MN[parseInt(dp[1])-1]+' '+dp[0]]=1;
+  }
 
-  for (var i=0;i<GASTOS_DATA.length;i++) { if(GASTOS_DATA[i]['Mes']) disp[GASTOS_DATA[i]['Mes']]=1; }
+  for (var i=0;i<GASTOS_DATA.length;i++) {
+    var _gm = GASTOS_DATA[i]['Mes']||'';
+    if(_gm && _gm.indexOf('2026')>=0) disp[_gm]=1;
+  }
 
-  if (typeof P !== 'undefined') { for (var i=0;i<P.length;i++) { if(P[i].label) disp[P[i].label]=1; } }
+  if (typeof FR_DATA !== 'undefined') {
+    for (var i=0;i<FR_DATA.length;i++) {
+      var _fp = (FR_DATA[i]['Fecha']||'').split('/');
+      if(_fp.length>=3 && _fp[2]==='2026') disp[MN[parseInt(_fp[1])-1]+' 2026']=1;
+    }
+  }
 
-  var meses = MESES_ORD.filter(function(m){return disp[m];});
+  if (typeof P !== 'undefined') { for (var i=0;i<P.length;i++) { if(P[i].label && P[i].label.indexOf('2026')>=0) disp[P[i].label]=1; } }
+
+  // Siempre incluir los 12 meses de 2026
+  MN.forEach(function(m){ disp[m+' 2026']=1; });
+
+  var meses = MESES_ORD.filter(function(m){ return disp[m] && m.indexOf('2026')>=0; });
 
   if (elPills) {
 
@@ -30259,7 +30302,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v04ago-1430';
+var ALZAK_BUILD = 'v04ago-1515';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

@@ -12375,7 +12375,7 @@ function renderAlertasCobros() {
 
 // ============================================================
 
-var BAL_MES_SEL = '';
+var BAL_MES_SEL = 'Enero 2026'; // Arranca en enero 2026 por defecto
 
 var BAL_CONFIG = {
 
@@ -12407,7 +12407,8 @@ var BAL_CONFIG = {
 
   apertura2025: {
 
-    cxc:         308967384,  // CxC cartera activa cierre 2025 — facturas FEE2273 a FEE2284 pendientes de cobro (base gravable sin IVA)
+    cxc:         0,  // Se calcula dinámicamente desde FACTURAS (Sheet) — ver calcBalMes()
+    // Valor hardcodeado de respaldo: 308967384
 
     cxpProv:     155301000,  // Cuentas por pagar proveedores nacionales
 
@@ -12639,6 +12640,16 @@ function calcBalMes(mes) {
 
   var afNeto2025 = (BAL_CONFIG.apertura2025&&BAL_CONFIG.apertura2025.equiposNeto)||0;
 
+  // Recalcular cxcApertura desde FACTURAS 2025 (Sheet) si están disponibles
+  if (typeof FACTURAS !== 'undefined' && FACTURAS.length) {
+    var _cxc2025 = 0;
+    FACTURAS.forEach(function(f){
+      var dp = typeof fFechaPartes==='function' ? fFechaPartes(f.fecha_raw||f.fecha||'') : [0,0,0];
+      if (parseInt(dp[0]) === 2025) _cxc2025 += (f.bruto||0);
+    });
+    if (_cxc2025 > 0) BAL_CONFIG.apertura2025.cxc = _cxc2025;
+  }
+
   // 1b. CxC — facturas emitidas pendientes de cobro al corte
   // Incluye: facturas reales no pagadas + facturas proyectadas (ya causadas, aún por cobrar)
   // Lógica 45-60-90 días: si no hay pago confirmado al corte = sigue en CxC
@@ -12705,7 +12716,17 @@ function calcBalMes(mes) {
     // Fuente primaria: FACTURAS array (facturas 2025 marcadas pagadas con fecha de cobro)
     // Fuente secundaria: extractos bancarios P[] — si entró un pago de cliente de 2025
     var cobrado2025 = 0;
-    var cartera2025 = (BAL_CONFIG.cartera2025 || []);
+    // Cartera 2025 desde FACTURAS (Sheet) — dinámico, no hardcodeado
+    var cartera2025 = [];
+    if (typeof FACTURAS !== 'undefined' && FACTURAS.length) {
+      FACTURAS.forEach(function(f){
+        var dp = typeof fFechaPartes==='function' ? fFechaPartes(f.fecha_raw||f.fecha||'') : [0,0,0];
+        if (parseInt(dp[0]) === 2025) {
+          cartera2025.push({ num: f.num, cliente: f.cliente, bruto: f.bruto||0, total: f.total||0 });
+        }
+      });
+    }
+    if (!cartera2025.length) cartera2025 = (BAL_CONFIG.cartera2025 || []); // fallback hardcodeado
 
     // Método 1: cruzar contra FACTURAS con fecha de cobro confirmada
     FACTURAS.forEach(function(f) {
@@ -22246,11 +22267,44 @@ function fcRender() {
 
   var MNC  = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
-  // Ingresos reales de FACTURAS
-
+  // Ingresos reales de FACTURAS (radicadas por mes = causación)
   var ingReal = new Array(12).fill(0);
 
+  // ingCob = ingresos que REALMENTE entraron al banco por mes (de P[] conciliación)
+  // Esto es lo que importa para el flujo de caja — no la fecha de la factura
   var ingCob  = new Array(12).fill(0);
+
+  // Fuente 1: P[] conciliación bancaria — ingresos externos reales por mes
+  if (typeof P !== 'undefined' && P.length) {
+    P.forEach(function(per) {
+      var mesNum = per.mes || 0; // 1-based
+      if (mesNum < 1 || mesNum > 12) return;
+      var m = mesNum - 1;
+      // Ingresos externos de Bancolombia + Caja Social
+      var ingBcol = 0;
+      (per.movs||[]).forEach(function(mv){
+        if ((mv.t==='ingreso') && mv.v > 0) ingBcol += mv.v;
+      });
+      var ingCaja = 0;
+      if (per.caja && per.caja.movs) {
+        per.caja.movs.forEach(function(mv){
+          if ((mv.t==='ingreso') && mv.v > 0) ingCaja += mv.v;
+        });
+      }
+      ingCob[m] += ingBcol + ingCaja;
+    });
+  }
+
+  // Si P[] no tiene datos, fallback a FACTURAS pagadas por mes
+  var _ingCobTotal = ingCob.reduce(function(a,v){return a+v;},0);
+  if (_ingCobTotal === 0 && typeof FACTURAS !== 'undefined') {
+    FACTURAS.forEach(function(f) {
+      var dp = typeof fFechaPartes==='function' ? fFechaPartes(f.fecha_raw || f.fecha || '') : (f.fecha||'').split('/');
+      if (!dp[0] || parseInt(dp[0]) !== anio) return;
+      var m = parseInt(dp[1]) - 1;
+      if (m >= 0 && m < 12 && f.pagada) ingCob[m] += (f.total||0);
+    });
+  }
 
   if (typeof FACTURAS !== 'undefined') {
 
@@ -22258,15 +22312,13 @@ function fcRender() {
 
       var dp = typeof fFechaPartes==='function' ? fFechaPartes(f.fecha_raw || f.fecha || '') : (f.fecha||'').split('/');
 
-      if (dp.length < 3 || parseInt(dp[2]) !== anio) return;
+      if (!dp[0] || parseInt(dp[0]) !== anio) return;
 
       var m = parseInt(dp[1]) - 1;
 
       if (m >= 0 && m < 12) {
 
         ingReal[m] += (f.total||0);
-
-        if (f.pagada) ingCob[m] += (f.total||0);
 
       }
 
@@ -22488,6 +22540,36 @@ function fcActualizar() {
 
   var mesPagado    = new Array(12).fill(0); // lo que efectivamente entró
 
+  // ingPag real desde P[] conciliación bancaria (cuándo entró el dinero al banco)
+  if (typeof P !== 'undefined' && P.length) {
+    P.forEach(function(per) {
+      var mn = (per.mes||0) - 1;
+      if (mn < 0 || mn > 11) return;
+      var ingBcol = 0;
+      (per.movs||[]).forEach(function(mv){ if (mv.t==='ingreso' && mv.v>0) ingBcol += mv.v; });
+      var ingCaja2 = 0;
+      if (per.caja && per.caja.movs) {
+        per.caja.movs.forEach(function(mv){ if (mv.t==='ingreso' && mv.v>0) ingCaja2 += mv.v; });
+      }
+      // También desde DATA (GAS) para meses más recientes
+      if (typeof DATA !== 'undefined') {
+        Object.keys(DATA).forEach(function(k){
+          var kL = k.toLowerCase();
+          var MESES_N = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+          var mesIdx = -1;
+          MESES_N.forEach(function(mn2,i){ if(kL.indexOf(mn2)>=0) mesIdx=i; });
+          if (mesIdx !== mn) return;
+          (DATA[k].movs||[]).forEach(function(mv){
+            var t = (mv.clase||mv.t||'').toLowerCase();
+            var val = mv.v !== undefined ? mv.v : (mv.ab||0);
+            if ((t==='ingreso_externo'||t==='ingreso') && val>0) ingBcol += val;
+          });
+        });
+      }
+      ingPag[mn] = ingBcol + ingCaja2;
+    });
+  }
+
   var detMes       = []; for (var i=0; i<12; i++) detMes.push([]);
 
   // Detalle contextual por FILA y MES: qué facturas componen cada celda
@@ -22502,11 +22584,11 @@ function fcActualizar() {
 
       var rawFecha = f.fecha_raw || f.fecha || '';
 
-      var dp = rawFecha.indexOf('/') >= 0 ? rawFecha.split('/') : null;
+      var dp = typeof fFechaPartes==='function' ? fFechaPartes(rawFecha) : rawFecha.split('/');
 
-      if (!dp || dp.length < 3) return;
+      if (!dp || !dp[0]) return;
 
-      var fAnio = parseInt(dp[2]);
+      var fAnio = parseInt(dp[0]);
 
       if (fAnio !== anio) return;
 
@@ -30177,7 +30259,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v04ago-1330';
+var ALZAK_BUILD = 'v04ago-1430';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

@@ -13541,7 +13541,25 @@ function renderBalance() {
 
     html += '<div id="'+_cxcUID+'" style="display:none">';
 
-    if (d.cxcApertura>0) html += fila('Cartera 2025 pendiente al corte', d.cxcApertura, 'item', 2);
+    // Cartera 2025 — mostrar facturas individuales pendientes al corte
+    if (d.cxcApertura>0) {
+      html += fila('Cartera 2025 pendiente al corte', d.cxcApertura, 'item', 2);
+      // Listar cada factura de 2025 pendiente
+      var _cart2025 = [];
+      if (typeof FACTURAS !== 'undefined') {
+        FACTURAS.forEach(function(f){
+          var dp = typeof fFechaPartes==='function' ? fFechaPartes(f.fecha_raw||f.fecha||'') : [0,0,0];
+          if (parseInt(dp[0]) === 2025) _cart2025.push(f);
+        });
+      }
+      if (!_cart2025.length && BAL_CONFIG.cartera2025) _cart2025 = BAL_CONFIG.cartera2025;
+      _cart2025.forEach(function(f){
+        var _bruto = f.bruto||0;
+        var _label = (f.num||'—')+' · '+(f.cliente||'');
+        var _sub = (f.vence ? 'vence '+f.vence : '') + (f.pagada ? ' ✅ cobrada' : '');
+        html += fila(_label, _bruto, 'item', 3, _sub);
+      });
+    }
 
     if (d.cxcArr&&d.cxcArr.length) {
 
@@ -13559,7 +13577,15 @@ function renderBalance() {
 
   }
 
-  html += fila('Anticipo Rte.Fte. (11% s/honorarios)', d.rete, 'item', 1, 'activo fiscal');
+  // Retefuente separada: 2025 acumulada + 2026 mes a mes
+  var _rete2025 = BAL_CONFIG.apertura2025 ? (BAL_CONFIG.apertura2025.rete || 178329000) : 178329000;
+  var _rete2026 = Math.max(0, d.rete - _rete2025);
+  if (_rete2026 > 0) {
+    html += fila('Anticipo Rte.Fte. acumulada 2025', _rete2025, 'item', 1, 'Saldo a favor DIAN arrastrado de 2025');
+    html += fila('Anticipo Rte.Fte. acumulada 2026', _rete2026, 'item', 1, 'Retefuente generada '+(mes||'acumulado').replace(' 2026',''));
+  } else {
+    html += fila('Anticipo Rte.Fte. (11% s/honorarios)', d.rete, 'item', 1, 'activo fiscal — incluye saldo 2025 $'+Math.round(_rete2025/1000000)+'M');
+  }
 
   html += fila('Total Activos Corrientes', d.totalActCorr, 'st');
 
@@ -30302,7 +30328,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v04ago-1515';
+var ALZAK_BUILD = 'v04ago-1530';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

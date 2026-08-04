@@ -8141,6 +8141,14 @@ function fFechaPartes(fecha) {
 
   if (!s) return [0,0,0];
 
+  // Formato "21 Ene 2026" o "21 Nov 2025"
+  var _mMap = {Jan:1,Feb:2,Mar:3,Apr:4,May:5,Jun:6,Jul:7,Aug:8,Sep:9,Oct:10,Nov:11,Dec:12,
+               Ene:1,Abr:4,Ago:8,Dic:12};
+  var _mMatch = s.match(/(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})/);
+  if (_mMatch) {
+    return [parseInt(_mMatch[3]), _mMap[_mMatch[2]]||0, parseInt(_mMatch[1])];
+  }
+
   if (s.indexOf('/') >= 0) {
 
     var p = s.split('/');
@@ -11190,6 +11198,7 @@ function renderCarteraHome() {
 
     var mm={};
 
+    var _anioGraf = 2026; // siempre mostrar año en curso en el gráfico
     for(var i=0;i<FACTURAS.length;i++){var f=FACTURAS[i];
 
       var _fd=f.fecha_raw||f.fecha||'',_dp,_mes,_anio;
@@ -11199,6 +11208,8 @@ function renderCarteraHome() {
       else{_dp=_fd.split('-');_mes=parseInt(_dp[1]);_anio=parseInt(_dp[0]);}
 
       if(!_mes||!_anio)continue;
+
+      if(_anio !== _anioGraf) continue; // solo año en curso
 
       var mk=MN[_mes-1]+' '+_anio;
 
@@ -16850,19 +16861,31 @@ function renderFacturasAjustables() {
 
   var barEl = g('dash-fa-barras');
   if (barEl && Object.keys(porMes).length) {
-    var maxVal = Math.max.apply(null, Object.values(porMes).map(function(v){ return v.sub+v.iva; }));
-    var bhtml = '<div style="display:flex;gap:4px;align-items:flex-end;height:80px;margin-top:8px">';
+    var BAR_H = 100; // px altura total del gráfico
+    var vals = [];
+    for (var mi=1; mi<=12; mi++) { vals.push((porMes[mi]||{sub:0,iva:0}).sub + ((porMes[mi]||{sub:0,iva:0}).iva)); }
+    var maxVal = Math.max.apply(null, vals) || 1;
+    var bhtml = '<div style="display:flex;gap:3px;align-items:flex-end;height:'+BAR_H+'px;margin-top:8px;padding-top:18px;position:relative">';
     for (var mi=1; mi<=12; mi++) {
       var d = porMes[mi] || {sub:0,iva:0};
-      var tot = d.sub + d.iva;
-      var pct = maxVal > 0 ? Math.max(4, Math.round(tot/maxVal*100)) : 0;
+      var sub = d.sub, iva = d.iva, tot = sub + iva;
+      var pxSub = maxVal > 0 ? Math.round(sub/maxVal*(BAR_H-20)) : 0;
+      var pxIva = maxVal > 0 ? Math.round(iva/maxVal*(BAR_H-20)) : 0;
       var mesAbr = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][mi-1];
-      bhtml += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">'+
-        (tot>0?'<div style="font-size:8px;color:#7C3AED;font-weight:700">'+Math.round(tot/1000)+'k</div>':'<div style="font-size:8px;color:transparent">0</div>')+
-        '<div style="width:100%;background:'+(tot>0?'#7C3AED':'#f0ede8')+';border-radius:3px 3px 0 0;height:'+pct+'%;min-height:3px" title="'+mesAbr+': '+F(tot)+'"></div>'+
-        '<div style="font-size:8px;color:#aaa">'+mesAbr+'</div>'+
+      bhtml += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0" title="'+mesAbr+': '+F(tot)+'">' +
+        (tot>0?'<div style="font-size:8px;color:#7C3AED;font-weight:700;white-space:nowrap">'+Math.round(tot/1000)+'k</div>':'<div style="font-size:8px;color:transparent">0</div>') +
+        '<div style="width:100%;display:flex;flex-direction:column;justify-content:flex-end">' +
+          (pxIva>0?'<div style="width:100%;height:'+pxIva+'px;background:#C4B5FD;border-radius:2px 2px 0 0"></div>':'') +
+          (pxSub>0?'<div style="width:100%;height:'+pxSub+'px;background:#7C3AED;border-radius:'+(pxIva>0?'0':'2px 2px')+' 0 0"></div>':'') +
+          (tot===0?'<div style="width:100%;height:3px;background:#f0ede8;border-radius:2px"></div>':'') +
+        '</div>' +
+        '<div style="font-size:8px;color:#aaa;margin-top:2px">'+mesAbr+'</div>'+
       '</div>';
     }
+    bhtml += '</div>';
+    bhtml += '<div style="display:flex;gap:12px;margin-top:4px;font-size:10px;color:#888">';
+    bhtml += '<span><span style="display:inline-block;width:10px;height:10px;background:#7C3AED;border-radius:2px;margin-right:3px"></span>Base</span>';
+    bhtml += '<span><span style="display:inline-block;width:10px;height:10px;background:#C4B5FD;border-radius:2px;margin-right:3px"></span>IVA</span>';
     bhtml += '</div>';
     barEl.innerHTML = bhtml;
   }
@@ -30154,7 +30177,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v04ago-1300';
+var ALZAK_BUILD = 'v04ago-1330';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

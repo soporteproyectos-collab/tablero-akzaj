@@ -1102,27 +1102,32 @@ body[data-org="FOUNDATION"] .alzak-toast {
 <!-- ═══ FACTURAS AJUSTABLES ═══ -->
 <div id="dash-fa-bloque" style="margin-bottom:12px">
 <div class="card" style="border:1.5px solid #7C3AED;margin-bottom:12px;">
-<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;cursor:pointer" onclick="toggleFADetalle()">
   <div>
     <div style="font-size:15px;font-weight:700;color:#7C3AED">🧾 Facturas Ajustables</div>
     <div style="font-size:11px;color:#888;margin-top:2px">Registro tributario · No computa en Estado de Resultados</div>
   </div>
-  <div style="display:flex;gap:8px">
-    <button onclick="alzakExportFAExcel()" style="background:#1D6F42;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">📊 Excel</button>
+  <div style="display:flex;gap:8px;align-items:center">
+    <span id="fa-resumen-top" style="font-size:12px;color:#7C3AED;font-weight:700"></span>
+    <span id="ico-fa" style="font-size:14px;transition:transform .2s">▼</span>
   </div>
 </div>
-<div id="dash-fa-kpis" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px"></div>
-<div id="dash-fa-filtros" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
-  <select id="fa-fil-mes" onchange="renderFacturasAjustables()" style="font-size:12px;padding:7px 10px;border:1px solid #d0cec8;border-radius:8px;font-family:'Montserrat',Helvetica,Arial,sans-serif">
-    <option value="">Todos los meses</option>
-  </select>
-  <select id="fa-fil-cat" onchange="renderFacturasAjustables()" style="font-size:12px;padding:7px 10px;border:1px solid #d0cec8;border-radius:8px;font-family:'Montserrat',Helvetica,Arial,sans-serif">
-    <option value="">Todas las categorías</option>
-  </select>
-  <input id="fa-fil-txt" oninput="renderFacturasAjustables()" placeholder="Buscar proveedor o concepto..." style="flex:1;min-width:200px;font-size:12px;padding:7px 12px;border:1px solid #d0cec8;border-radius:8px;font-family:'Montserrat',Helvetica,Arial,sans-serif">
-  <span id="fa-conteo" style="font-size:11px;color:#888;white-space:nowrap"></span>
+<div id="fa-detalle" style="display:none;margin-top:14px">
+  <div id="dash-fa-kpis" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px"></div>
+  <div id="dash-fa-cuatri" style="margin-bottom:14px"></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
+    <select id="fa-fil-mes" onchange="renderFacturasAjustables()" style="font-size:12px;padding:7px 10px;border:1px solid #d0cec8;border-radius:8px;font-family:'Montserrat',Helvetica,Arial,sans-serif">
+      <option value="">Todos los meses</option>
+    </select>
+    <select id="fa-fil-cat" onchange="renderFacturasAjustables()" style="font-size:12px;padding:7px 10px;border:1px solid #d0cec8;border-radius:8px;font-family:'Montserrat',Helvetica,Arial,sans-serif">
+      <option value="">Todas las categorías</option>
+    </select>
+    <input id="fa-fil-txt" oninput="renderFacturasAjustables()" placeholder="Buscar proveedor o concepto..." style="flex:1;min-width:200px;font-size:12px;padding:7px 12px;border:1px solid #d0cec8;border-radius:8px;font-family:'Montserrat',Helvetica,Arial,sans-serif">
+    <button onclick="alzakExportFAExcel()" style="background:#1D6F42;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">📊 Excel</button>
+    <span id="fa-conteo" style="font-size:11px;color:#888;white-space:nowrap"></span>
+  </div>
+  <div id="dash-fa-tabla" style="overflow-x:auto"></div>
 </div>
-<div id="dash-fa-tabla" style="overflow-x:auto"></div>
 </div>
 </div>
 
@@ -16738,6 +16743,16 @@ function renderGruposGastos(lista, filCat) {
 // MÓDULO FACTURAS AJUSTABLES
 // ══════════════════════════════════════════════════════════════════════════════
 
+function toggleFADetalle() {
+  var det = document.getElementById('fa-detalle');
+  var ico = document.getElementById('ico-fa');
+  if (!det) return;
+  var open = det.style.display !== 'none';
+  det.style.display = open ? 'none' : 'block';
+  if (ico) ico.style.transform = open ? 'rotate(0deg)' : 'rotate(180deg)';
+  if (!open) renderFacturasAjustables();
+}
+
 function renderFacturasAjustables() {
   if (!FA_DATA || !FA_DATA.length) return;
 
@@ -16808,6 +16823,50 @@ function renderFacturasAjustables() {
 
   var conteo = g('fa-conteo');
   if (conteo) conteo.textContent = datos.length + ' registros';
+
+  // Resumen top (visible cuando está colapsado)
+  var resTop = g('fa-resumen-top');
+  var totalSubAll = FA_DATA.reduce(function(a,r){ return a+parseFloat(r['Subtotal (COP)']||0); }, 0);
+  var totalIVAAll = FA_DATA.reduce(function(a,r){ return a+parseFloat(r['IVA (COP)']||0); }, 0);
+  if (resTop) resTop.textContent = FA_DATA.length + ' registros · ' + F(totalSubAll) + ' base · IVA ' + F(totalIVAAll);
+
+  // IVA por cuatrimestre
+  var cuatris = {
+    'Q1 Ene–Abr': { meses: ['Enero','Febrero','Marzo','Abril'], sub: 0, iva: 0, tot: 0 },
+    'Q2 May–Ago': { meses: ['Mayo','Junio','Julio','Agosto'],   sub: 0, iva: 0, tot: 0 },
+    'Q3 Sep–Dic': { meses: ['Septiembre','Octubre','Noviembre','Diciembre'], sub: 0, iva: 0, tot: 0 }
+  };
+  FA_DATA.forEach(function(r){
+    var fecha = String(r['Fecha']||'');
+    var partes = fecha.split('/');
+    var mesNum = parseInt(partes[1]||partes[0]||0);
+    var MESES = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    var mesNom = MESES[mesNum] || '';
+    Object.keys(cuatris).forEach(function(q){
+      if (cuatris[q].meses.indexOf(mesNom) >= 0) {
+        cuatris[q].sub += parseFloat(r['Subtotal (COP)']||0);
+        cuatris[q].iva += parseFloat(r['IVA (COP)']||0);
+        cuatris[q].tot += parseFloat(r['Total (COP)']||0) || (parseFloat(r['Subtotal (COP)']||0) + parseFloat(r['IVA (COP)']||0));
+      }
+    });
+  });
+
+  var cuatriEl = g('dash-fa-cuatri');
+  if (cuatriEl) {
+    var chtml = '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:4px">';
+    Object.keys(cuatris).forEach(function(q){
+      var c = cuatris[q];
+      var hasData = c.sub > 0;
+      chtml += '<div style="flex:1;min-width:160px;background:'+(hasData?'#F5F3FF':'#fafaf8')+';border:1px solid '+(hasData?'#DDD6FE':'#e8e5e0')+';border-radius:10px;padding:10px 14px">' +
+        '<div style="font-size:10px;font-weight:700;color:#7C3AED;text-transform:uppercase;margin-bottom:4px">'+q+'</div>' +
+        '<div style="font-size:11px;color:#666">Base: <b>'+F(c.sub)+'</b></div>' +
+        '<div style="font-size:13px;font-weight:800;color:'+(c.iva>0?'#7C3AED':'#aaa')+'">IVA: '+F(c.iva)+'</div>' +
+        '<div style="font-size:10px;color:#888">Total: '+F(c.tot)+'</div>' +
+      '</div>';
+    });
+    chtml += '</div>';
+    cuatriEl.innerHTML = chtml;
+  }
 
   // Tabla
   var tabEl = g('dash-fa-tabla');
@@ -30073,7 +30132,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v04ago-1200';
+var ALZAK_BUILD = 'v04ago-1215';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

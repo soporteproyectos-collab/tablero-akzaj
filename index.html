@@ -1102,32 +1102,49 @@ body[data-org="FOUNDATION"] .alzak-toast {
 <!-- ═══ FACTURAS AJUSTABLES ═══ -->
 <div id="dash-fa-bloque" style="margin-bottom:12px">
 <div class="card" style="border:1.5px solid #7C3AED;margin-bottom:12px;">
-<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;cursor:pointer" onclick="toggleFADetalle()">
-  <div>
-    <div style="font-size:15px;font-weight:700;color:#7C3AED">🧾 Facturas Ajustables</div>
-    <div style="font-size:11px;color:#888;margin-top:2px">Registro tributario · No computa en Estado de Resultados</div>
+
+  <!-- Header siempre visible -->
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+    <div>
+      <div style="font-size:10px;font-weight:700;color:#7C3AED;letter-spacing:.06em;margin-bottom:2px">🧾 Facturas Ajustables</div>
+      <div style="font-size:11px;color:#888">Registro tributario · No computa en Estado de Resultados</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="alzakExportFAExcel()" style="background:#1D6F42;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">📊 Excel</button>
+    </div>
   </div>
-  <div style="display:flex;gap:8px;align-items:center">
-    <span id="fa-resumen-top" style="font-size:12px;color:#7C3AED;font-weight:700"></span>
-    <span id="ico-fa" style="font-size:14px;transition:transform .2s">▼</span>
-  </div>
-</div>
-<div id="fa-detalle" style="display:none;margin-top:14px">
-  <div id="dash-fa-kpis" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px"></div>
+
+  <!-- KPIs -->
+  <div id="dash-fa-kpis" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px"></div>
+
+  <!-- IVA Cuatrimestral -->
   <div id="dash-fa-cuatri" style="margin-bottom:14px"></div>
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
-    <select id="fa-fil-mes" onchange="renderFacturasAjustables()" style="font-size:12px;padding:7px 10px;border:1px solid #d0cec8;border-radius:8px;font-family:'Montserrat',Helvetica,Arial,sans-serif">
-      <option value="">Todos los meses</option>
-    </select>
-    <select id="fa-fil-cat" onchange="renderFacturasAjustables()" style="font-size:12px;padding:7px 10px;border:1px solid #d0cec8;border-radius:8px;font-family:'Montserrat',Helvetica,Arial,sans-serif">
-      <option value="">Todas las categorías</option>
-    </select>
-    <input id="fa-fil-txt" oninput="renderFacturasAjustables()" placeholder="Buscar proveedor o concepto..." style="flex:1;min-width:200px;font-size:12px;padding:7px 12px;border:1px solid #d0cec8;border-radius:8px;font-family:'Montserrat',Helvetica,Arial,sans-serif">
-    <button onclick="alzakExportFAExcel()" style="background:#1D6F42;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">📊 Excel</button>
-    <span id="fa-conteo" style="font-size:11px;color:#888;white-space:nowrap"></span>
+
+  <!-- Gráfico de barras por mes -->
+  <div id="dash-fa-barras" style="margin-bottom:12px"></div>
+
+  <!-- Ver detalle colapsable -->
+  <div style="border-top:1px solid #f0ede8;padding-top:10px;margin-top:4px">
+    <button onclick="toggleFADetalle()" id="btn-fa-detalle"
+      style="width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;cursor:pointer;font-family:'Montserrat',Helvetica,Arial,sans-serif;font-size:13px;font-weight:700;color:#7C3AED;padding:0">
+      <span>📋 Ver detalle de facturas ajustables</span>
+      <span id="ico-fa" style="font-size:14px;transition:transform .2s">▼</span>
+    </button>
+    <div id="fa-detalle" style="display:none;margin-top:12px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
+        <select id="fa-fil-mes" onchange="renderFATabla()" style="font-size:12px;padding:7px 10px;border:1px solid #d0cec8;border-radius:8px;font-family:'Montserrat',Helvetica,Arial,sans-serif">
+          <option value="">Todos los meses</option>
+        </select>
+        <select id="fa-fil-cat" onchange="renderFATabla()" style="font-size:12px;padding:7px 10px;border:1px solid #d0cec8;border-radius:8px;font-family:'Montserrat',Helvetica,Arial,sans-serif">
+          <option value="">Todas las categorías</option>
+        </select>
+        <input id="fa-fil-txt" oninput="renderFATabla()" placeholder="Buscar proveedor o concepto..." style="flex:1;min-width:200px;font-size:12px;padding:7px 12px;border:1px solid #d0cec8;border-radius:8px;font-family:'Montserrat',Helvetica,Arial,sans-serif">
+        <span id="fa-conteo" style="font-size:11px;color:#888;white-space:nowrap"></span>
+      </div>
+      <div id="dash-fa-tabla" style="overflow-x:auto"></div>
+    </div>
   </div>
-  <div id="dash-fa-tabla" style="overflow-x:auto"></div>
-</div>
+
 </div>
 </div>
 
@@ -16750,178 +16767,174 @@ function toggleFADetalle() {
   var open = det.style.display !== 'none';
   det.style.display = open ? 'none' : 'block';
   if (ico) ico.style.transform = open ? 'rotate(0deg)' : 'rotate(180deg)';
-  if (!open) renderFacturasAjustables();
+  if (!open) renderFATabla();
 }
 
 function renderFacturasAjustables() {
   if (!FA_DATA || !FA_DATA.length) return;
-
   var F = function(n){ return '$'+(Math.round(n)||0).toLocaleString('es-CO'); };
   var g = function(id){ return document.getElementById(id); };
+  var MESES_ORD = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
-  // Poblar filtros
-  var meses = {}, cats = {};
-  FA_DATA.forEach(function(r){
-    var m = r['Mes'] || (r['Fecha']||'').split('/').slice(1).join('/');
-    if (m) meses[m] = 1;
-    var c = r['Categoria'] || r['Categoría'] || '';
-    if (c) cats[c] = 1;
-  });
-
-  var selMes = g('fa-fil-mes');
-  var selCat = g('fa-fil-cat');
-  if (selMes && Object.keys(meses).length > 1) {
-    var curMes = selMes.value;
-    selMes.innerHTML = '<option value="">Todos los meses</option>' +
-      Object.keys(meses).sort().map(function(m){ return '<option value="'+m+'"'+(m===curMes?' selected':'')+'>'+m+'</option>'; }).join('');
-  }
-  if (selCat && Object.keys(cats).length > 1) {
-    var curCat = selCat.value;
-    selCat.innerHTML = '<option value="">Todas las categorías</option>' +
-      Object.keys(cats).sort().map(function(c){ return '<option value="'+c+'"'+(c===curCat?' selected':'')+'>'+c+'</option>'; }).join('');
-  }
-
-  // Filtrar
-  var filMes = selMes ? selMes.value : '';
-  var filCat = selCat ? selCat.value : '';
-  var filTxt = (g('fa-fil-txt') ? g('fa-fil-txt').value : '').toLowerCase();
-
-  var datos = FA_DATA.filter(function(r){
-    if (filMes && (r['Mes']||'') !== filMes) return false;
-    if (filCat && (r['Categoria']||r['Categoría']||'') !== filCat) return false;
-    if (filTxt) {
-      var hay = ((r['Proveedor / Beneficiario']||'')+(r['Concepto']||'')).toLowerCase();
-      if (hay.indexOf(filTxt) < 0) return false;
-    }
-    return true;
-  });
+  var totalSub = FA_DATA.reduce(function(a,r){ return a+parseFloat(r['Subtotal (COP)']||0); }, 0);
+  var totalIVA = FA_DATA.reduce(function(a,r){ return a+parseFloat(r['IVA (COP)']||0); }, 0);
+  var totalTot = FA_DATA.reduce(function(a,r){ var t=parseFloat(r['Total (COP)']||0); return a+(t||parseFloat(r['Subtotal (COP)']||0)+parseFloat(r['IVA (COP)']||0)); }, 0);
 
   // KPIs
-  var totalSub = datos.reduce(function(a,r){ return a+parseFloat(r['Subtotal (COP)']||0); }, 0);
-  var totalIVA = datos.reduce(function(a,r){ return a+parseFloat(r['IVA (COP)']||0); }, 0);
-  var totalTot = datos.reduce(function(a,r){ return a+parseFloat(r['Total (COP)']||0); }, 0);
-  if (totalTot === 0) totalTot = totalSub + totalIVA;
-
   var kpiEl = g('dash-fa-kpis');
   if (kpiEl) kpiEl.innerHTML =
-    '<div style="background:#F5F3FF;border:1px solid #DDD6FE;border-radius:10px;padding:12px 18px;min-width:160px">' +
-      '<div style="font-size:10px;color:#7C3AED;font-weight:700;text-transform:uppercase">TOTAL REGISTROS</div>' +
-      '<div style="font-size:20px;font-weight:800;color:#54504F">'+datos.length+'</div>' +
-    '</div>' +
-    '<div style="background:#F5F3FF;border:1px solid #DDD6FE;border-radius:10px;padding:12px 18px;min-width:160px">' +
-      '<div style="font-size:10px;color:#7C3AED;font-weight:700;text-transform:uppercase">BASE GRAVABLE</div>' +
-      '<div style="font-size:20px;font-weight:800;color:#54504F">'+F(totalSub)+'</div>' +
-    '</div>' +
-    '<div style="background:#F5F3FF;border:1px solid #DDD6FE;border-radius:10px;padding:12px 18px;min-width:160px">' +
-      '<div style="font-size:10px;color:#7C3AED;font-weight:700;text-transform:uppercase">IVA</div>' +
-      '<div style="font-size:20px;font-weight:800;color:#7C3AED">'+F(totalIVA)+'</div>' +
-    '</div>' +
-    '<div style="background:#F5F3FF;border:1px solid #DDD6FE;border-radius:10px;padding:12px 18px;min-width:160px">' +
-      '<div style="font-size:10px;color:#7C3AED;font-weight:700;text-transform:uppercase">TOTAL</div>' +
-      '<div style="font-size:20px;font-weight:800;color:#7C3AED">'+F(totalTot)+'</div>' +
-    '</div>';
-
-  var conteo = g('fa-conteo');
-  if (conteo) conteo.textContent = datos.length + ' registros';
-
-  // Resumen top (visible cuando está colapsado)
-  var resTop = g('fa-resumen-top');
-  var totalSubAll = FA_DATA.reduce(function(a,r){ return a+parseFloat(r['Subtotal (COP)']||0); }, 0);
-  var totalIVAAll = FA_DATA.reduce(function(a,r){ return a+parseFloat(r['IVA (COP)']||0); }, 0);
-  if (resTop) resTop.textContent = FA_DATA.length + ' registros · ' + F(totalSubAll) + ' base · IVA ' + F(totalIVAAll);
+    '<div class="ind"><div class="ind-l">Total registros</div><div class="ind-v tb">'+FA_DATA.length+'</div><div class="ind-s">Facturas ajustables 2026</div></div>'+
+    '<div class="ind"><div class="ind-l">Base gravable</div><div class="ind-v tb">'+F(totalSub)+'</div><div class="ind-s">Sin IVA</div></div>'+
+    '<div class="ind"><div class="ind-l" style="color:#7C3AED">IVA total</div><div class="ind-v" style="color:#7C3AED;font-weight:700">'+F(totalIVA)+'</div><div class="ind-s">IVA acreditable</div></div>'+
+    '<div class="ind"><div class="ind-l">Total con IVA</div><div class="ind-v tb">'+F(totalTot)+'</div><div class="ind-s">Valor total período</div></div>';
 
   // IVA por cuatrimestre
-  var cuatris = {
-    'Q1 Ene–Abr': { meses: ['Enero','Febrero','Marzo','Abril'], sub: 0, iva: 0, tot: 0 },
-    'Q2 May–Ago': { meses: ['Mayo','Junio','Julio','Agosto'],   sub: 0, iva: 0, tot: 0 },
-    'Q3 Sep–Dic': { meses: ['Septiembre','Octubre','Noviembre','Diciembre'], sub: 0, iva: 0, tot: 0 }
-  };
+  var cuatris = [
+    { label: 'Q1 Ene–Abr', meses: [1,2,3,4], sub:0, iva:0, tot:0 },
+    { label: 'Q2 May–Ago', meses: [5,6,7,8], sub:0, iva:0, tot:0 },
+    { label: 'Q3 Sep–Dic', meses: [9,10,11,12], sub:0, iva:0, tot:0 }
+  ];
   FA_DATA.forEach(function(r){
-    var fecha = String(r['Fecha']||'');
-    var partes = fecha.split('/');
-    var mesNum = parseInt(partes[1]||partes[0]||0);
-    var MESES = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-    var mesNom = MESES[mesNum] || '';
-    Object.keys(cuatris).forEach(function(q){
-      if (cuatris[q].meses.indexOf(mesNom) >= 0) {
-        cuatris[q].sub += parseFloat(r['Subtotal (COP)']||0);
-        cuatris[q].iva += parseFloat(r['IVA (COP)']||0);
-        cuatris[q].tot += parseFloat(r['Total (COP)']||0) || (parseFloat(r['Subtotal (COP)']||0) + parseFloat(r['IVA (COP)']||0));
-      }
+    var f = String(r['Fecha']||'').split('/');
+    var mes = parseInt(f[1]||f[0]||0);
+    if (!mes) {
+      // Intentar por campo Mes
+      var mNom = String(r['Mes']||'');
+      mes = MESES_ORD.indexOf(mNom.split(' ')[0]) + 1;
+    }
+    var sub = parseFloat(r['Subtotal (COP)']||0);
+    var iva = parseFloat(r['IVA (COP)']||0);
+    var tot = parseFloat(r['Total (COP)']||0) || sub+iva;
+    cuatris.forEach(function(q){
+      if (q.meses.indexOf(mes) >= 0) { q.sub+=sub; q.iva+=iva; q.tot+=tot; }
     });
   });
 
   var cuatriEl = g('dash-fa-cuatri');
   if (cuatriEl) {
-    var chtml = '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:4px">';
-    Object.keys(cuatris).forEach(function(q){
-      var c = cuatris[q];
-      var hasData = c.sub > 0;
-      chtml += '<div style="flex:1;min-width:160px;background:'+(hasData?'#F5F3FF':'#fafaf8')+';border:1px solid '+(hasData?'#DDD6FE':'#e8e5e0')+';border-radius:10px;padding:10px 14px">' +
-        '<div style="font-size:10px;font-weight:700;color:#7C3AED;text-transform:uppercase;margin-bottom:4px">'+q+'</div>' +
-        '<div style="font-size:11px;color:#666">Base: <b>'+F(c.sub)+'</b></div>' +
-        '<div style="font-size:13px;font-weight:800;color:'+(c.iva>0?'#7C3AED':'#aaa')+'">IVA: '+F(c.iva)+'</div>' +
-        '<div style="font-size:10px;color:#888">Total: '+F(c.tot)+'</div>' +
+    var ch = '<div style="display:flex;gap:10px;flex-wrap:wrap">';
+    cuatris.forEach(function(q){
+      var hasData = q.sub > 0;
+      ch += '<div style="flex:1;min-width:180px;background:'+(hasData?'#F5F3FF':'#fafaf8')+';border:1px solid '+(hasData?'#DDD6FE':'#e8e5e0')+';border-radius:10px;padding:12px 16px">'+
+        '<div style="font-size:10px;font-weight:700;color:#7C3AED;text-transform:uppercase;margin-bottom:6px">'+q.label+'</div>'+
+        '<div style="font-size:11px;color:#666;margin-bottom:2px">Base: <b>'+F(q.sub)+'</b></div>'+
+        '<div style="font-size:16px;font-weight:800;color:'+(q.iva>0?'#7C3AED':'#bbb')+'">IVA: '+F(q.iva)+'</div>'+
+        '<div style="font-size:10px;color:#888;margin-top:2px">Total: '+F(q.tot)+'</div>'+
       '</div>';
     });
-    chtml += '</div>';
-    cuatriEl.innerHTML = chtml;
+    ch += '</div>';
+    cuatriEl.innerHTML = ch;
   }
 
-  // Tabla
-  var tabEl = g('dash-fa-tabla');
-  if (!tabEl) return;
-
-  var th = function(t,align){ return '<th style="padding:8px 10px;font-size:10px;text-transform:uppercase;color:#aaa;font-weight:700;white-space:nowrap;text-align:'+(align||'left')+'">'+t+'</th>'; };
-
-  var html = '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
-    '<thead><tr style="border-bottom:2px solid #e8e5e0">' +
-    th('Fecha') + th('Categoría') + th('Proveedor / Beneficiario') + th('Concepto') +
-    th('N° Comp.') + th('Subtotal','right') + th('IVA','right') + th('Total','right') +
-    '</tr></thead><tbody>';
-
-  datos.forEach(function(r, i){
-    var bg = i%2===0 ? '#fff' : '#fafaf8';
-    var sub = parseFloat(r['Subtotal (COP)']||0);
-    var iva = parseFloat(r['IVA (COP)']||0);
-    var tot = parseFloat(r['Total (COP)']||0) || (sub+iva);
-    html += '<tr style="background:'+bg+';border-bottom:1px solid #f0ede8">' +
-      '<td style="padding:8px 10px;color:#888;white-space:nowrap">'+(r['Fecha']||'')+'</td>' +
-      '<td style="padding:8px 10px;color:#666">'+(r['Categoria']||r['Categoría']||'')+'</td>' +
-      '<td style="padding:8px 10px;font-weight:600;color:#54504F">'+(r['Proveedor / Beneficiario']||'')+'</td>' +
-      '<td style="padding:8px 10px;color:#666;max-width:320px">'+(r['Concepto']||'').substring(0,80)+(((r['Concepto']||'').length>80)?'…':'')+'</td>' +
-      '<td style="padding:8px 10px;color:#7C3AED;font-weight:600">'+(r['N Comprobante']||r['N_Comprobante']||'—')+'</td>' +
-      '<td style="padding:8px 10px;text-align:right">'+F(sub)+'</td>' +
-      '<td style="padding:8px 10px;text-align:right;color:#7C3AED">'+(iva>0?F(iva):'—')+'</td>' +
-      '<td style="padding:8px 10px;text-align:right;font-weight:700">'+F(tot)+'</td>' +
-    '</tr>';
+  // Gráfico de barras por mes
+  var porMes = {};
+  FA_DATA.forEach(function(r){
+    var f = String(r['Fecha']||'').split('/');
+    var mesNum = parseInt(f[1]||0);
+    if (!mesNum) { var mn=String(r['Mes']||''); mesNum=MESES_ORD.indexOf(mn.split(' ')[0])+1; }
+    if (mesNum < 1 || mesNum > 12) return;
+    var key = mesNum;
+    if (!porMes[key]) porMes[key] = {sub:0, iva:0};
+    porMes[key].sub += parseFloat(r['Subtotal (COP)']||0);
+    porMes[key].iva += parseFloat(r['IVA (COP)']||0);
   });
 
-  // Totales
-  html += '<tr style="background:#F5F3FF;border-top:2px solid #7C3AED;font-weight:700">' +
-    '<td colspan="5" style="padding:10px">TOTAL</td>' +
-    '<td style="padding:10px;text-align:right">'+F(totalSub)+'</td>' +
-    '<td style="padding:10px;text-align:right;color:#7C3AED">'+F(totalIVA)+'</td>' +
-    '<td style="padding:10px;text-align:right;color:#7C3AED">'+F(totalTot)+'</td>' +
-  '</tr>';
+  var barEl = g('dash-fa-barras');
+  if (barEl && Object.keys(porMes).length) {
+    var maxVal = Math.max.apply(null, Object.values(porMes).map(function(v){ return v.sub+v.iva; }));
+    var bhtml = '<div style="display:flex;gap:4px;align-items:flex-end;height:80px;margin-top:8px">';
+    for (var mi=1; mi<=12; mi++) {
+      var d = porMes[mi] || {sub:0,iva:0};
+      var tot = d.sub + d.iva;
+      var pct = maxVal > 0 ? Math.max(4, Math.round(tot/maxVal*100)) : 0;
+      var mesAbr = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][mi-1];
+      bhtml += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">'+
+        (tot>0?'<div style="font-size:8px;color:#7C3AED;font-weight:700">'+Math.round(tot/1000)+'k</div>':'<div style="font-size:8px;color:transparent">0</div>')+
+        '<div style="width:100%;background:'+(tot>0?'#7C3AED':'#f0ede8')+';border-radius:3px 3px 0 0;height:'+pct+'%;min-height:3px" title="'+mesAbr+': '+F(tot)+'"></div>'+
+        '<div style="font-size:8px;color:#aaa">'+mesAbr+'</div>'+
+      '</div>';
+    }
+    bhtml += '</div>';
+    barEl.innerHTML = bhtml;
+  }
 
-  html += '</tbody></table>';
+  // Poblar selects para el detalle
+  var meses = {}, cats = {};
+  FA_DATA.forEach(function(r){
+    var f=String(r['Fecha']||'').split('/');
+    var mn=parseInt(f[1]||0);
+    if(mn>=1&&mn<=12){var mk=MESES_ORD[mn-1]+' '+((f[2]||'').substring(0,4)||'2026');meses[mk]=1;}
+    var c=r['Categoria']||r['Categoría']||''; if(c) cats[c]=1;
+  });
+  var selMes=g('fa-fil-mes'), selCat=g('fa-fil-cat');
+  if(selMes){ var cv=selMes.value; selMes.innerHTML='<option value="">Todos los meses</option>'+Object.keys(meses).sort().map(function(m){return '<option value="'+m+'"'+(m===cv?' selected':'')+'>'+m+'</option>';}).join(''); }
+  if(selCat){ var cc=selCat.value; selCat.innerHTML='<option value="">Todas las categorías</option>'+Object.keys(cats).sort().map(function(c){return '<option value="'+c+'"'+(c===cc?' selected':'')+'>'+c+'</option>';}).join(''); }
+}
+
+function renderFATabla() {
+  var F = function(n){ return '$'+(Math.round(n)||0).toLocaleString('es-CO'); };
+  var g = function(id){ return document.getElementById(id); };
+  var MESES_ORD = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  if (!FA_DATA || !FA_DATA.length) return;
+
+  var filMes = g('fa-fil-mes') ? g('fa-fil-mes').value : '';
+  var filCat = g('fa-fil-cat') ? g('fa-fil-cat').value : '';
+  var filTxt = (g('fa-fil-txt') ? g('fa-fil-txt').value : '').toLowerCase();
+
+  var datos = FA_DATA.filter(function(r){
+    if (filCat && (r['Categoria']||r['Categoría']||'') !== filCat) return false;
+    if (filTxt) { var hay=((r['Proveedor / Beneficiario']||'')+(r['Concepto']||'')).toLowerCase(); if(hay.indexOf(filTxt)<0) return false; }
+    if (filMes) {
+      var f=String(r['Fecha']||'').split('/');
+      var mn=parseInt(f[1]||0);
+      var mk=mn>=1&&mn<=12?MESES_ORD[mn-1]+' '+((f[2]||'').substring(0,4)||'2026'):'';
+      if(mk!==filMes) return false;
+    }
+    return true;
+  });
+
+  var conteo=g('fa-conteo'); if(conteo) conteo.textContent=datos.length+' registros';
+  var tabEl=g('dash-fa-tabla'); if(!tabEl) return;
+
+  var th=function(t,a){ return '<th style="padding:8px 10px;font-size:10px;text-transform:uppercase;color:#aaa;font-weight:700;white-space:nowrap;text-align:'+(a||'left')+'">'+t+'</th>'; };
+  var html='<table style="width:100%;border-collapse:collapse;font-size:12px">'+
+    '<thead><tr style="border-bottom:2px solid #e8e5e0">'+th('Fecha')+th('Categoría')+th('Proveedor')+th('Concepto')+th('N° Comp.')+th('Subtotal','right')+th('IVA','right')+th('Total','right')+'</tr></thead><tbody>';
+
+  var tSub=0,tIVA=0,tTot=0;
+  datos.forEach(function(r,i){
+    var sub=parseFloat(r['Subtotal (COP)']||0),iva=parseFloat(r['IVA (COP)']||0),tot=parseFloat(r['Total (COP)']||0)||(sub+iva);
+    tSub+=sub; tIVA+=iva; tTot+=tot;
+    html+='<tr style="background:'+(i%2===0?'#fff':'#fafaf8')+';border-bottom:1px solid #f0ede8">'+
+      '<td style="padding:8px 10px;color:#888;white-space:nowrap">'+(r['Fecha']||'')+'</td>'+
+      '<td style="padding:8px 10px;color:#666">'+(r['Categoria']||r['Categoría']||'')+'</td>'+
+      '<td style="padding:8px 10px;font-weight:600;color:#54504F">'+(r['Proveedor / Beneficiario']||'')+'</td>'+
+      '<td style="padding:8px 10px;color:#666;max-width:300px">'+(r['Concepto']||'').substring(0,70)+(((r['Concepto']||'').length>70)?'…':'')+'</td>'+
+      '<td style="padding:8px 10px;color:#7C3AED;font-weight:600">'+(r['N Comprobante']||r['N_Comprobante']||'—')+'</td>'+
+      '<td style="padding:8px 10px;text-align:right">'+F(sub)+'</td>'+
+      '<td style="padding:8px 10px;text-align:right;color:#7C3AED">'+(iva>0?F(iva):'—')+'</td>'+
+      '<td style="padding:8px 10px;text-align:right;font-weight:700">'+F(tot)+'</td>'+
+    '</tr>';
+  });
+  html+='<tr style="background:#F5F3FF;border-top:2px solid #7C3AED;font-weight:700">'+
+    '<td colspan="5" style="padding:10px">TOTAL ('+datos.length+' registros)</td>'+
+    '<td style="padding:10px;text-align:right">'+F(tSub)+'</td>'+
+    '<td style="padding:10px;text-align:right;color:#7C3AED">'+F(tIVA)+'</td>'+
+    '<td style="padding:10px;text-align:right;color:#7C3AED">'+F(tTot)+'</td>'+
+  '</tr></tbody></table>';
   tabEl.innerHTML = html;
 }
 
 function alzakExportFAExcel() {
   if (!FA_DATA || !FA_DATA.length) { alert('Sin datos de Facturas Ajustables'); return; }
   var cols = ['Fecha','Categoria','Proveedor / Beneficiario','Concepto','N Comprobante','Subtotal (COP)','IVA (COP)','Total (COP)'];
-  var csv = cols.join('\t') + '\n';
-  FA_DATA.forEach(function(r){
-    csv += cols.map(function(c){ return String(r[c]||'').replace(/\t/g,' '); }).join('\t') + '\n';
-  });
-  var blob = new Blob([csv], {type:'text/tab-separated-values'});
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'Facturas_Ajustables_ALZAK_'+new Date().toISOString().slice(0,10)+'.xls';
-  a.click();
+  var csv = cols.join('\t')+'\n';
+  FA_DATA.forEach(function(r){ csv+=cols.map(function(c){ return String(r[c]||'').replace(/\t/g,' '); }).join('\t')+'\n'; });
+  var blob=new Blob([csv],{type:'text/tab-separated-values'});
+  var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='Facturas_Ajustables_ALZAK_'+new Date().toISOString().slice(0,10)+'.xls'; a.click();
 }
+
+
 
 function renderGastosDashboard() {
 
@@ -30132,7 +30145,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v04ago-1215';
+var ALZAK_BUILD = 'v04ago-1230';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

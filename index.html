@@ -12758,15 +12758,25 @@ function calcBalMes(mes) {
           if (perAnio === corteAnio_cxc && perMesN > corteMes_cxc) continue;
           (per.movs || []).forEach(function(mv) {
             var val = mv.v !== undefined ? mv.v : (mv.ab||0);
-            if (val <= 0) return; // solo ingresos
-            // No filtrar por clase — en Bancolombia puede ser undefined
+            if (val <= 0) return;
             var clase = (mv.clase||mv.t||'').toLowerCase();
-            if (clase === 'gmf' || clase === 'impto' || clase === 'retencion' ||
-                clase === 'traslado_interno' || clase === 'fondo') return;
-            // Cruzar solo por monto (±2%) — más confiable que por nombre de cliente
-            var montoOk = fac.total > 0 && Math.abs(val - fac.total) / fac.total < 0.02;
-            var montoOkBase = fac.bruto > 0 && Math.abs(val - fac.bruto) / fac.bruto < 0.02;
-            if (montoOk || montoOkBase) cobrado2025 += fac.bruto;
+            if (clase==='gmf'||clase==='impto'||clase==='retencion'||
+                clase==='traslado_interno'||clase==='fondo') return;
+            // Cruzar por monto (±2%) Y verificar que el período sea >= vencimiento de la factura
+            var montoOk = (fac.total>0 && Math.abs(val-fac.total)/fac.total<0.02) ||
+                          (fac.bruto>0 && Math.abs(val-fac.bruto)/fac.bruto<0.02);
+            if (!montoOk) return;
+            // Verificar que el vencimiento de la factura es <= al período del extracto
+            var venceStr = fac.vence || '';
+            if (venceStr) {
+              var vParts = venceStr.split('/');
+              if (vParts.length < 3) { vParts = venceStr.split('-'); }
+              var vAnio = parseInt(vParts.length===3 ? (vParts[0].length===4?vParts[0]:vParts[2]) : 0);
+              var vMes  = parseInt(vParts.length===3 ? (vParts[0].length===4?vParts[1]:vParts[1]) : 0);
+              // Solo marcar cobrada si el vencimiento es <= el mes del extracto
+              if (vAnio > perAnio || (vAnio === perAnio && vMes > perMesN)) return;
+            }
+            cobrado2025 += fac.bruto;
           });
         }
       });
@@ -13553,10 +13563,28 @@ function renderBalance() {
         });
       }
       if (!_cart2025.length && BAL_CONFIG.cartera2025) _cart2025 = BAL_CONFIG.cartera2025;
+      // Determinar mes de corte del balance
+      var _mesCorte = mes || '';
+      var _MESES_BAL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+      var _mesCorteN = _MESES_BAL.indexOf(_mesCorte.replace(' 2026','').replace(' 2025','')) + 1;
+      var _anioCorte = _mesCorte.indexOf('2025')>=0 ? 2025 : 2026;
+
       _cart2025.forEach(function(f){
         var _bruto = f.bruto||0;
         var _label = (f.num||'—')+' · '+(f.cliente||'');
-        var _sub = (f.vence ? 'vence '+f.vence : '') + (f.pagada ? ' ✅ cobrada' : '');
+        // Calcular si estaba cobrada al corte según vencimiento
+        var _vence = f.vence||f.venceDisplay||'';
+        var _cobradaAlCorte = false;
+        if (_vence) {
+          var _vp = _vence.indexOf('/')>=0 ? _vence.split('/') : _vence.split('-');
+          var _vAnio = parseInt(_vp.length===3?(_vp[0].length===4?_vp[0]:_vp[2]):0);
+          var _vMes  = parseInt(_vp.length===3?_vp[1]:0);
+          // Cobrada al corte si el vencimiento ya pasó al mes de balance
+          _cobradaAlCorte = (_vAnio < _anioCorte) || (_vAnio === _anioCorte && _vMes <= _mesCorteN);
+        } else {
+          _cobradaAlCorte = f.pagada || false;
+        }
+        var _sub = (_vence ? 'vence '+_vence : '') + (_cobradaAlCorte ? ' ✅ cobrada' : ' ⏳ pendiente');
         html += fila(_label, _bruto, 'item', 3, _sub);
       });
     }
@@ -30328,7 +30356,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v04ago-1530';
+var ALZAK_BUILD = 'v04ago-1545';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

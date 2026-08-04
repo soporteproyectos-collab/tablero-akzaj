@@ -13626,9 +13626,11 @@ function renderBalance() {
         } else {
           _cobradaAlCorte = f.pagada || false;
         }
-        if (!_cobradaAlCorte) _totalCart2025Pend += _bruto;
-        var _sub = (_vence ? 'vence '+_vence : '') + (_cobradaAlCorte ? ' ✅ cobrada' : ' ⏳ pendiente');
-        html += fila(_label, _bruto, 'item', 3, _sub);
+        if (!_cobradaAlCorte) {
+          _totalCart2025Pend += _bruto;
+          var _sub = _vence ? 'vence '+_vence : '';
+          html += fila(_label, _bruto, 'item', 3, _sub);
+        }
       });
     }
 
@@ -30399,7 +30401,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v04ago-1630';
+var ALZAK_BUILD = 'v04ago-1645';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

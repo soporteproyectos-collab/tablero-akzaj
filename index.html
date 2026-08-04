@@ -11832,31 +11832,48 @@ function renderResumenTablero() {
         if (ALZAK_ORG_ACTIVA === 'FOUNDATION') return '';
         var rendFid = 0, rendBold = 0, rendBcol = 0;
 
-        // Leer desde DATA (movimientos de todos los bancos)
+        // Leer desde DATA — rendimientos por banco
         if (typeof DATA !== 'undefined') {
           var _REND_KEYS = ['abono de intereses','intereses ahorros','rendimiento','abono intereses'];
+          var _rendBoldMovs = 0, _rendBoldInfo = 0;
+          var _rendFidMovs  = 0, _rendFidInfo  = 0;
           Object.keys(DATA).forEach(function(key) {
             var entry = DATA[key];
             var banco = (entry.info && entry.info.banco ? entry.info.banco : key).toLowerCase();
+            var esBold = banco.indexOf('bold') >= 0;
+            var esFid  = banco.indexOf('fiducuenta') >= 0 || banco.indexOf('fiducia') >= 0;
+            var esBcol = !esBold && !esFid;
+
+            // Movimientos individuales
             (entry.movs||[]).forEach(function(mv){
               var clase = (mv.clase||mv.t||'').toLowerCase();
               var desc  = (mv.desc||mv.d||'').toLowerCase();
-              // Valor: puede ser mv.v, mv.ab (Bold), o mv.ab-mv.car
-              var val = mv.v !== undefined ? mv.v : (mv.ab||0);
-              // Detectar interés por clase o por descripción
-              var esInteres = clase === 'interes' || clase === 'rendimiento' ||
+              var val   = mv.v !== undefined ? mv.v : (mv.ab||0);
+              var esInt = clase === 'interes' || clase === 'rendimiento' ||
                 _REND_KEYS.some(function(k){ return desc.indexOf(k) >= 0; });
-              if (esInteres && val > 0) {
-                if (banco.indexOf('fiducuenta') >= 0 || banco.indexOf('fiducia') >= 0) rendFid += val;
-                else if (banco.indexOf('bold') >= 0) rendBold += val;
-                else rendBcol += val;
+              if (esInt && val > 0) {
+                if (esFid)       _rendFidMovs  += val;
+                else if (esBold) _rendBoldMovs += val;
+                else             rendBcol      += val;
               }
             });
-            // Rendimientos Fiducuenta desde el resumen (rendNetos) — evitar doble conteo
-            if ((banco.indexOf('fiducuenta') >= 0 || banco.indexOf('fiducia') >= 0) && entry.info && entry.info.rendNetos) {
-              if (rendFid === 0) rendFid += parseFloat(entry.info.rendNetos)||0;
+
+            // Bold: intereses desde info cuando no hay movimientos individuales
+            // El panel de conciliación calcula Bold como suma de intereses del mes
+            if (esBold && entry.info) {
+              var boldInt = parseFloat(entry.info.intereses||0);
+              if (boldInt > 0) _rendBoldInfo += boldInt;
+            }
+
+            // Fiducuenta: rendNetos desde info (más preciso que movimientos)
+            if (esFid && entry.info && entry.info.rendNetos) {
+              _rendFidInfo += parseFloat(entry.info.rendNetos)||0;
             }
           });
+
+          // Usar info si es mayor (más completo) que movimientos
+          rendBold = Math.max(_rendBoldMovs, _rendBoldInfo);
+          rendFid  = _rendFidInfo > 0 ? _rendFidInfo : _rendFidMovs;
         }
 
         // Fallback: P[] hardcodeado si DATA no tiene datos
@@ -20064,11 +20081,26 @@ var CLASE_A_TIPO = {
 
 function convMovGAS(mv, banco) {
 
-  var t = CLASE_A_TIPO[mv.clase] || 'egreso';
+  // Valor: puede ser mv.v (Bancolombia/BCS/Fiducuenta) o mv.ab/mv.car (Bold)
+  var val = mv.v !== undefined ? mv.v : (mv.ab > 0 ? mv.ab : -(mv.car||0));
+
+  // Tipo: desde clase del GAS, o detectar por descripción si clase es undefined
+  var clase = (mv.clase||'').toLowerCase();
+  var desc  = (mv.desc||mv.d||'').toLowerCase();
+  var t = CLASE_A_TIPO[clase] || 'egreso';
+
+  // Bold: detectar por descripción cuando clase es undefined
+  if (!mv.clase || t === 'egreso') {
+    if (desc.indexOf('interes') >= 0 || desc.indexOf('abono de interes') >= 0) t = 'interes';
+    else if (desc.indexOf('gmf') >= 0 || desc.indexOf('4x1000') >= 0) t = 'impto';
+    else if (desc.indexOf('retefuente') >= 0 || desc.indexOf('retencion') >= 0) t = 'impto';
+    else if (val > 0) t = 'ingreso';
+    else t = 'egreso';
+  }
 
   if ((banco === 'BCS' || banco === 'Bold') && t === 'interno') t = 'traslado';
 
-  return { f: mv.f || '', d: mv.desc || '', t: t, v: mv.v || 0, doc: '' };
+  return { f: mv.f || '', d: mv.desc || '', t: t, v: val, doc: mv.doc||'' };
 
 }
 
@@ -29847,7 +29879,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v04ago-1050';
+var ALZAK_BUILD = 'v04ago-1100';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

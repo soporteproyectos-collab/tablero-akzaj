@@ -12375,7 +12375,17 @@ function renderAlertasCobros() {
 
 // ============================================================
 
-var BAL_MES_SEL = 'Enero 2026'; // Arranca en enero 2026 por defecto
+var BAL_MES_SEL = 'Enero 2026'; // Se sobreescribe al cargar datos
+
+// Al cargar, setear default a enero 2026 (primer mes del ejercicio)
+// El "Acumulado" siempre calcula hasta el mes anterior al actual
+function _balSetDefaultMes() {
+  var _hoy2 = new Date();
+  var _mesAnt = _hoy2.getMonth(); // mes anterior (0-based)
+  var MN2 = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  if (_mesAnt >= 1) BAL_MES_SEL = MN2[_mesAnt-1] + ' 2026';
+  else BAL_MES_SEL = '';
+}
 
 var BAL_CONFIG = {
 
@@ -13416,8 +13426,14 @@ function renderBalance() {
 
   if (typeof P !== 'undefined') { for (var i=0;i<P.length;i++) { if(P[i].label && P[i].label.indexOf('2026')>=0) disp[P[i].label]=1; } }
 
-  // Siempre incluir los 12 meses de 2026
-  MN.forEach(function(m){ disp[m+' 2026']=1; });
+  // Solo mostrar meses hasta el actual (inclusive)
+  var _hoy = new Date();
+  var _mesActualN = _hoy.getMonth() + 1; // 1-based
+  var _anioActual = _hoy.getFullYear();
+  MN.forEach(function(m, i){
+    var mesN = i + 1;
+    if (_anioActual === 2026 && mesN <= _mesActualN) disp[m+' 2026']=1;
+  });
 
   var meses = MESES_ORD.filter(function(m){ return disp[m] && m.indexOf('2026')>=0; });
 
@@ -13429,7 +13445,12 @@ function renderBalance() {
 
       ph += '<button class="pill'+(BAL_MES_SEL===meses[i]?' on':'')+'" onclick="BAL_MES_SEL=\''+meses[i]+'\';renderBalance()" style="font-size:11px">'+meses[i].replace(' 2026','').replace(' 2025','')+'</button>';
 
-    ph += '<button class="pill'+(BAL_MES_SEL===''?' on':'')+'" onclick="BAL_MES_SEL=\'\';renderBalance()" style="font-size:11px">Acumulado</button>';
+    var _mesAntLabel = (function(){
+      var _h=new Date(); var _m=_h.getMonth();
+      var _MN2=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+      return _m>=1?'Acum. Ene–'+_MN2[_m-1]:'Acumulado';
+    })();
+    ph += '<button class="pill'+(BAL_MES_SEL===''?' on':'')+'" onclick="BAL_MES_SEL=\'\';renderBalance()" style="font-size:11px">'+_mesAntLabel+'</button>';
 
     elPills.innerHTML = ph;
 
@@ -20157,6 +20178,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Aplicar tema de org al iniciar
   document.body.setAttribute('data-org', ALZAK_ORG_ACTIVA || 'GROUP');
+  if (typeof _balSetDefaultMes === 'function') _balSetDefaultMes();
 
   var nav = document.getElementById('tab-nav');
 
@@ -30402,7 +30424,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v05ago-0910';
+var ALZAK_BUILD = 'v05ago-0920';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

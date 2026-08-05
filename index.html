@@ -12926,7 +12926,7 @@ function calcBalMes(mes) {
 
   var EXCLUIR_ACTIVOS = ['ST-130','F591344584'];
 
-  var activosPorCat={}, totalActivosGastos2026=0;
+  var activosPorCat={}, totalActivosGastos2026=0, activosItems={};
 
   if (typeof FR_DATA!=='undefined' && FR_DATA.length) {
 
@@ -12965,6 +12965,16 @@ function calcBalMes(mes) {
       activosPorCat[cat]=(activosPorCat[cat]||0)+v;
 
       totalActivosGastos2026+=v;
+
+      // Guardar detalle del item comprado
+      if (!activosItems[cat]) activosItems[cat]=[];
+      activosItems[cat].push({
+        concepto: r['Concepto']||'',
+        proveedor: r['Proveedor / Beneficiario']||'',
+        comp: r['N Comprobante']||r['N_Comprobante']||'',
+        fecha: r['Fecha']||'',
+        valor: v
+      });
 
     });
 
@@ -13360,7 +13370,7 @@ function calcBalMes(mes) {
 
     af:BAL_CONFIG.activosFijos, totalActivosGastos:totalActivosGastos2026, totalAF:totalAF,
 
-    activosPorCat:activosPorCat, afDesglose:afDesglose,
+    activosPorCat:activosPorCat, afDesglose:afDesglose, activosItems:activosItems,
 
     totalAct:totalAct,
 
@@ -13570,13 +13580,25 @@ function renderBalComparativo() {
     if (d && d.activosPorCat) Object.keys(d.activosPorCat).forEach(function(c){ _catsPPE[c]=1; });
   });
   Object.keys(_catsPPE).forEach(function(cat){
-    html += '<tr><td style="padding:5px 14px 5px 30px;color:#666">(+) '+cat+' 2026</td>';
+    var _catUID = 'ppe-items-'+cat.replace(/[^a-zA-Z0-9]/g,'');
+    html += '<tr><td style="padding:5px 14px 5px 30px;color:#666">';
+    html += '<span onclick="var e=document.getElementById(&quot;'+_catUID+'&quot;);if(e)e.style.display=e.style.display===&quot;none&quot;?&quot;table-row&quot;:&quot;none&quot;" style="cursor:pointer;color:#7C3AED;font-size:9px;margin-right:3px">▶</span>';
+    html += '(+) '+cat+' 2026</td>';
     datos.forEach(function(d){
       var v = (d && d.activosPorCat && d.activosPorCat[cat]) ? d.activosPorCat[cat] : 0;
       html += '<td style="padding:5px 10px;text-align:right;color:#1D6F42">'+(v>0?'+'+F(v):'—')+'</td>';
     });
     var acumV = (acum.activosPorCat && acum.activosPorCat[cat]) ? acum.activosPorCat[cat] : 0;
     html += '<td style="padding:5px 10px;text-align:right;color:#1D6F42;background:#F0FDF4">'+(acumV>0?'+'+F(acumV):'—')+'</td></tr>';
+
+    // Sub-detalle: items comprados (del acumulado)
+    var _items = (acum.activosItems && acum.activosItems[cat]) ? acum.activosItems[cat] : [];
+    _items.forEach(function(it){
+      html += '<tr id="'+_catUID+'" style="display:none;background:#faf9ff">';
+      html += '<td colspan="'+(NC+2)+'" style="padding:4px 14px 4px 48px;font-size:9px;color:#888">';
+      html += '<div style="display:flex;justify-content:space-between"><span>📦 '+(it.fecha||'')+' · '+(it.proveedor||'').substring(0,30)+' — '+(it.concepto||'').substring(0,50)+' ['+(it.comp||'')+']</span><span style="font-weight:700;color:#1D6F42">$'+Math.round(it.valor).toLocaleString('es-CO')+'</span></div>';
+      html += '</td></tr>';
+    });
   });
 
   // Fila: (−) Depreciación 2026 acumulada
@@ -30729,7 +30751,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v05ago-1400';
+var ALZAK_BUILD = 'v05ago-1500';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

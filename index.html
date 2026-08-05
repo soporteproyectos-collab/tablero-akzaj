@@ -1893,17 +1893,14 @@ body[data-org="FOUNDATION"] .alzak-toast {
 
   <!-- Pills de mes -->
 
-  <div id="bal-pills" style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:14px"></div>
+  <!-- Pills y KPIs ocultos — solo tabla comparativa activa -->
+  <div id="bal-pills" style="display:none"></div>
+  <div id="bal-kpis" style="display:none"></div>
 
-  <!-- KPIs resumen -->
-
-  <div id="bal-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:16px"></div>
-
-  <!-- Tabla comparativa mes a mes -->
+  <!-- Tabla comparativa mes a mes — vista principal -->
   <div id="bal-tabla-comparativa" style="margin-bottom:16px;overflow-x:auto"></div>
 
-  <!-- Tabla detalle mes seleccionado -->
-
+  <!-- Tabla detalle (se mantiene temporalmente) -->
   <div id="bal-tabla"></div>
 
 </div>
@@ -13384,62 +13381,177 @@ function renderBalComparativo() {
   var MN_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   var MN_ABR  = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
-  // Calcular datos para cada mes hasta el actual
   var colMeses = [];
   for (var mi = 1; mi <= mesActN; mi++) colMeses.push(MN_FULL[mi-1]+' 2026');
-
   var datos = colMeses.map(function(m){ try { return calcBalMes(m); } catch(e){ return null; } });
 
-  // Filas de la tabla
-  var filas = [
-    { label: 'ACTIVOS',               key: null,            tipo: 'h' },
-    { label: 'Caja y Bancos',         key: 'bancos',        tipo: 'r' },
-    { label: 'Cuentas por Cobrar',    key: 'cxc',           tipo: 'r' },
-    { label: 'Anticipo Rte.Fte.',     key: 'rete',          tipo: 'r' },
-    { label: 'Total Activos Corr.',   key: 'totalActCorr',  tipo: 'st' },
-    { label: 'PP&E neto',             key: 'totalAF',       tipo: 'r' },
-    { label: 'TOTAL ACTIVOS',         key: 'totalAct',      tipo: 'total' },
-    { label: 'PASIVOS',               key: null,            tipo: 'h' },
-    { label: 'CxP Corrientes',        key: 'totalPasCorrFR',tipo: 'r', neg: true },
-    { label: 'Préstamos',             key: 'prestamosTotal',tipo: 'r', neg: true },
-    { label: 'TOTAL PASIVOS',         key: 'totalPas',      tipo: 'total', neg: true },
-    { label: 'PATRIMONIO',            key: null,            tipo: 'h' },
-    { label: 'Utilidad del ejercicio',key: 'utilEj',        tipo: 'r' },
-    { label: 'TOTAL PATRIMONIO',      key: 'totalPat',      tipo: 'total' },
-  ];
-
-  var th = function(t, w, align){
-    return '<th style="padding:8px '+(w||10)+'px;font-size:10px;font-weight:700;color:#fff;background:#2C2C2C;white-space:nowrap;text-align:'+(align||'right')+'">'+t+'</th>';
+  var NC = colMeses.length;
+  var th = function(t, align, extra){
+    var style = 'padding:8px 10px;font-size:10px;font-weight:700;color:#fff;background:#2C2C2C;white-space:nowrap;text-align:'+(align||'right')+';'+(extra||'');
+    return '<th style="'+style+'">'+t+'</th>';
   };
+
+  // Calcular acumulado (último mes disponible = acumulado real)
+  var acum = datos[NC-1] || {};
+
+  var tdVal = function(val, fw, color, extraStyle){
+    return '<td style="padding:7px 10px;text-align:right;font-weight:'+(fw||'400')+';color:'+(color||'#54504F')+';'+(extraStyle||'')+'">'+F(val)+'</td>';
+  };
+  var tdDash = function(){ return '<td style="padding:7px 10px;text-align:right;color:#ccc">—</td>'; };
 
   var html = '<div style="font-size:13px;font-weight:700;color:#54504F;margin-bottom:8px">📊 Balance Comparativo Ene–'+MN_ABR[mesActN-1]+' 2026</div>';
   html += '<table style="width:100%;border-collapse:collapse;font-size:11px">';
-  html += '<thead><tr>'+th('CONCEPTO', 14, 'left');
-  colMeses.forEach(function(m, i){ html += th(MN_ABR[i]); });
+  html += '<thead><tr>'+th('CONCEPTO',20,'left');
+  colMeses.forEach(function(m,i){ html += th(MN_ABR[i]); });
+  html += th('ACUM.','right','background:#1A3A5C;');
   html += '</tr></thead><tbody>';
 
-  filas.forEach(function(f){
-    if (f.tipo === 'h') {
-      html += '<tr><td colspan="'+(colMeses.length+1)+'" style="padding:10px 14px 4px;font-size:10px;font-weight:800;color:#5DC3DA;letter-spacing:.08em;background:#f8f7f5;border-top:2px solid #e8e5e0">'+f.label+'</td></tr>';
-      return;
-    }
-    var bgColor = f.tipo==='total' ? '#f0ede8' : f.tipo==='st' ? '#f5f4f2' : '#fff';
-    var fw = f.tipo==='total' ? '700' : '400';
-    html += '<tr style="border-bottom:1px solid #f5f4f2;background:'+bgColor+'">';
-    html += '<td style="padding:7px 14px;font-size:11px;font-weight:'+fw+';color:#54504F;white-space:nowrap">'+f.label+'</td>';
+  // ── ACTIVOS ──
+  html += '<tr><td colspan="'+(NC+2)+'" style="padding:8px 14px 3px;font-size:10px;font-weight:800;color:#5DC3DA;letter-spacing:.08em;background:#f8f7f5;border-top:2px solid #e8e5e0">ACTIVOS</td></tr>';
+
+  // Caja y Bancos con desplegable
+  html += '<tr id="bal-row-bancos" style="background:#fff;border-bottom:1px solid #f5f4f2">';
+  html += '<td style="padding:7px 14px;font-size:11px;color:#54504F">';
+  html += '<span onclick="balToggleDetBancos()" style="cursor:pointer;color:#5DC3DA;font-size:10px;margin-right:4px" id="bal-ico-bancos">▶</span>';
+  html += 'Caja y Bancos</td>';
+  datos.forEach(function(d){ html += d ? tdVal(d.bancos) : tdDash(); });
+  html += tdVal(acum.bancos,'700','#54504F','background:#EBF6FA;');
+  html += '</tr>';
+
+  // Sub-filas cuentas (ocultas por defecto)
+  html += '<tr id="bal-det-bancos" style="display:none;background:#f8fcff">';
+  html += '<td colspan="'+(NC+2)+'" style="padding:0"><table style="width:100%;border-collapse:collapse;font-size:10px">';
+  var _cuentas = ['Bancolombia Ahorros','Fiducuenta','Caja Social','Bold CF'];
+  _cuentas.forEach(function(cta){
+    html += '<tr><td style="padding:5px 14px 5px 30px;color:#666">'+cta+'</td>';
     datos.forEach(function(d){
-      if (!d || !f.key) { html += '<td style="padding:7px 10px;text-align:right;color:#aaa">—</td>'; return; }
-      var val = d[f.key] || 0;
-      var color = f.tipo==='total' ? '#54504F' : (val < 0 ? '#DC2626' : '#54504F');
-      if (f.key === 'utilEj') color = val >= 0 ? '#1D6F42' : '#DC2626';
-      html += '<td style="padding:7px 10px;text-align:right;font-weight:'+fw+';color:'+color+'">'+F(val)+'</td>';
+      var val = 0;
+      if (d && d.bancosDetalle) {
+        d.bancosDetalle.forEach(function(b){ if((b.nombre||'').indexOf(cta.split(' ')[0])>=0) val+=b.saldo; });
+      }
+      html += '<td style="padding:5px 10px;text-align:right;color:#888">'+(val>0?F(val):'—')+'</td>';
     });
+    var acumVal = 0;
+    if (acum.bancosDetalle) acum.bancosDetalle.forEach(function(b){ if((b.nombre||'').indexOf(cta.split(' ')[0])>=0) acumVal+=b.saldo; });
+    html += '<td style="padding:5px 10px;text-align:right;color:#5DC3DA;background:#EBF6FA">'+(acumVal>0?F(acumVal):'—')+'</td>';
     html += '</tr>';
   });
+  html += '</table></td></tr>';
+
+  // Cuentas por Cobrar con desplegable
+  html += '<tr id="bal-row-cxc" style="background:#fff;border-bottom:1px solid #f5f4f2">';
+  html += '<td style="padding:7px 14px;font-size:11px;color:#54504F">';
+  html += '<span onclick="balToggleDetCxc()" style="cursor:pointer;color:#5DC3DA;font-size:10px;margin-right:4px" id="bal-ico-cxc">▶</span>';
+  html += 'Cuentas por Cobrar</td>';
+  datos.forEach(function(d){ html += d ? tdVal(d.cxc) : tdDash(); });
+  html += tdVal(acum.cxc,'700','#54504F','background:#EBF6FA;');
+  html += '</tr>';
+
+  // Sub-filas CxC (ocultas)
+  html += '<tr id="bal-det-cxc" style="display:none;background:#f8fcff">';
+  html += '<td colspan="'+(NC+2)+'" style="padding:4px 14px 4px 30px;font-size:10px;color:#888">Ver detalle completo en la vista mensual abajo ▼</td>';
+  html += '</tr>';
+
+  // Anticipo Rte.Fte. — una sola línea con total
+  html += '<tr style="background:#fff;border-bottom:1px solid #f5f4f2">';
+  html += '<td style="padding:7px 14px;font-size:11px;color:#54504F">Anticipo Rte.Fte. (total)</td>';
+  datos.forEach(function(d){ html += d ? tdVal(d.rete) : tdDash(); });
+  html += tdVal(acum.rete,'700','#54504F','background:#EBF6FA;');
+  html += '</tr>';
+
+  // Total Activos Corrientes
+  html += '<tr style="background:#f5f4f2;border-bottom:1px solid #e8e5e0">';
+  html += '<td style="padding:7px 14px;font-size:11px;font-weight:700;color:#54504F">Total Activos Corr.</td>';
+  datos.forEach(function(d){ html += d ? tdVal(d.totalActCorr,'700') : tdDash(); });
+  html += tdVal(acum.totalActCorr,'700','#54504F','background:#EBF6FA;');
+  html += '</tr>';
+
+  // PP&E
+  html += '<tr style="background:#fff;border-bottom:1px solid #f5f4f2">';
+  html += '<td style="padding:7px 14px;font-size:11px;color:#54504F">PP&E neto</td>';
+  datos.forEach(function(d){ html += d ? tdVal(d.totalAF) : tdDash(); });
+  html += tdVal(acum.totalAF,'700','#54504F','background:#EBF6FA;');
+  html += '</tr>';
+
+  // TOTAL ACTIVOS
+  html += '<tr style="background:#E8F4FD;border-top:2px solid #5DC3DA">';
+  html += '<td style="padding:9px 14px;font-size:12px;font-weight:800;color:#0C447C">TOTAL ACTIVOS</td>';
+  datos.forEach(function(d){ html += d ? '<td style="padding:9px 10px;text-align:right;font-weight:800;color:#0C447C">'+F(d.totalAct)+'</td>' : tdDash(); });
+  html += '<td style="padding:9px 10px;text-align:right;font-weight:800;color:#0C447C;background:#D4EBF8">'+F(acum.totalAct)+'</td>';
+  html += '</tr>';
+
+  // ── PASIVOS ──
+  html += '<tr><td colspan="'+(NC+2)+'" style="padding:8px 14px 3px;font-size:10px;font-weight:800;color:#DC2626;letter-spacing:.08em;background:#f8f7f5;border-top:2px solid #e8e5e0">PASIVOS</td></tr>';
+
+  html += '<tr style="background:#fff;border-bottom:1px solid #f5f4f2">';
+  html += '<td style="padding:7px 14px;font-size:11px;color:#54504F">CxP Corrientes</td>';
+  datos.forEach(function(d){ html += d ? tdVal(d.totalPasCorrFR,'400','#DC2626') : tdDash(); });
+  html += tdVal(acum.totalPasCorrFR,'700','#DC2626','background:#FEF2F2;');
+  html += '</tr>';
+
+  html += '<tr style="background:#fff;border-bottom:1px solid #f5f4f2">';
+  html += '<td style="padding:7px 14px;font-size:11px;color:#54504F">Préstamos L/P</td>';
+  datos.forEach(function(d){ html += d ? tdVal(d.prestamosTotal,'400','#DC2626') : tdDash(); });
+  html += tdVal(acum.prestamosTotal,'700','#DC2626','background:#FEF2F2;');
+  html += '</tr>';
+
+  html += '<tr style="background:#FEE2E2;border-top:2px solid #DC2626">';
+  html += '<td style="padding:9px 14px;font-size:12px;font-weight:800;color:#991B1B">TOTAL PASIVOS</td>';
+  datos.forEach(function(d){ html += d ? '<td style="padding:9px 10px;text-align:right;font-weight:800;color:#991B1B">'+F(d.totalPas)+'</td>' : tdDash(); });
+  html += '<td style="padding:9px 10px;text-align:right;font-weight:800;color:#991B1B;background:#FCA5A5">'+F(acum.totalPas)+'</td>';
+  html += '</tr>';
+
+  // ── PATRIMONIO ──
+  html += '<tr><td colspan="'+(NC+2)+'" style="padding:8px 14px 3px;font-size:10px;font-weight:800;color:#7C3AED;letter-spacing:.08em;background:#f8f7f5;border-top:2px solid #e8e5e0">PATRIMONIO</td></tr>';
+
+  html += '<tr style="background:#fff;border-bottom:1px solid #f5f4f2">';
+  html += '<td style="padding:7px 14px;font-size:11px;color:#54504F">Utilidad del ejercicio</td>';
+  datos.forEach(function(d){
+    if (!d) { html += tdDash(); return; }
+    var c = d.utilEj>=0?'#1D6F42':'#DC2626';
+    html += '<td style="padding:7px 10px;text-align:right;color:'+c+'">'+F(d.utilEj)+'</td>';
+  });
+  var ac = acum.utilEj>=0?'#1D6F42':'#DC2626';
+  html += '<td style="padding:7px 10px;text-align:right;font-weight:700;color:'+ac+';background:#F5F3FF">'+F(acum.utilEj)+'</td>';
+  html += '</tr>';
+
+  html += '<tr style="background:#F5F3FF;border-top:2px solid #7C3AED">';
+  html += '<td style="padding:9px 14px;font-size:12px;font-weight:800;color:#5B21B6">TOTAL PATRIMONIO</td>';
+  datos.forEach(function(d){
+    if (!d) { html += tdDash(); return; }
+    var c = d.totalPat>=0?'#5B21B6':'#DC2626';
+    html += '<td style="padding:9px 10px;text-align:right;font-weight:800;color:'+c+'">'+F(d.totalPat)+'</td>';
+  });
+  var acp = acum.totalPat>=0?'#5B21B6':'#DC2626';
+  html += '<td style="padding:9px 10px;text-align:right;font-weight:800;color:'+acp+';background:#EDE9FE">'+F(acum.totalPat)+'</td>';
+  html += '</tr>';
 
   html += '</tbody></table>';
+
+  // Botón para ir al detalle del mes
+  html += '<div style="margin-top:10px;font-size:11px;color:#888">Haz clic en cualquier mes de los tabs para ver el detalle completo ▼</div>';
+
   el.innerHTML = html;
 }
+
+function balToggleDetBancos() {
+  var det = document.getElementById('bal-det-bancos');
+  var ico = document.getElementById('bal-ico-bancos');
+  if (!det) return;
+  var open = det.style.display !== 'none';
+  det.style.display = open ? 'none' : 'table-row';
+  if (ico) ico.textContent = open ? '▶' : '▼';
+}
+
+function balToggleDetCxc() {
+  var det = document.getElementById('bal-det-cxc');
+  var ico = document.getElementById('bal-ico-cxc');
+  if (!det) return;
+  var open = det.style.display !== 'none';
+  det.style.display = open ? 'none' : 'table-row';
+  if (ico) ico.textContent = open ? '▶' : '▼';
+}
+
 
 function renderBalance() {
 
@@ -30496,7 +30608,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v05ago-0935';
+var ALZAK_BUILD = 'v05ago-1025';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

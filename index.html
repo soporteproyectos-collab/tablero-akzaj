@@ -13421,18 +13421,19 @@ function renderBalComparativo() {
   // Sub-filas cuentas (ocultas por defecto)
   html += '<tr id="bal-det-bancos" style="display:none;background:#f8fcff">';
   html += '<td colspan="'+(NC+2)+'" style="padding:0"><table style="width:100%;border-collapse:collapse;font-size:10px">';
-  var _cuentas = ['Bancolombia Ahorros','Fiducuenta','Caja Social','Bold CF'];
+  var _cuentas = [
+    {lbl:'Bancolombia Ahorros', key:'bcol'},
+    {lbl:'Fiducuenta', key:'fid'},
+    {lbl:'Caja Social', key:'caja'},
+    {lbl:'Bold CF', key:'bold'}
+  ];
   _cuentas.forEach(function(cta){
-    html += '<tr><td style="padding:5px 14px 5px 30px;color:#666">'+cta+'</td>';
+    html += '<tr><td style="padding:5px 14px 5px 30px;color:#666">'+cta.lbl+'</td>';
     datos.forEach(function(d){
-      var val = 0;
-      if (d && d.bancosDetalle) {
-        d.bancosDetalle.forEach(function(b){ if((b.nombre||'').indexOf(cta.split(' ')[0])>=0) val+=b.saldo; });
-      }
+      var val = (d && d.bancosDetalle) ? (d.bancosDetalle[cta.key]||0) : 0;
       html += '<td style="padding:5px 10px;text-align:right;color:#888">'+(val>0?F(val):'—')+'</td>';
     });
-    var acumVal = 0;
-    if (acum.bancosDetalle) acum.bancosDetalle.forEach(function(b){ if((b.nombre||'').indexOf(cta.split(' ')[0])>=0) acumVal+=b.saldo; });
+    var acumVal = (acum.bancosDetalle) ? (acum.bancosDetalle[cta.key]||0) : 0;
     html += '<td style="padding:5px 10px;text-align:right;color:#5DC3DA;background:#EBF6FA">'+(acumVal>0?F(acumVal):'—')+'</td>';
     html += '</tr>';
   });
@@ -30594,7 +30595,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v05ago-1050';
+var ALZAK_BUILD = 'v05ago-1100';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

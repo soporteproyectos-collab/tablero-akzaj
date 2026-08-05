@@ -13539,12 +13539,56 @@ function renderBalComparativo() {
   html += tdVal(acum.totalActCorr,'700','#54504F','background:#EBF6FA;');
   html += '</tr>';
 
-  // PP&E
-  html += '<tr style="background:#fff;border-bottom:1px solid #f5f4f2">';
-  html += '<td style="padding:7px 14px;font-size:11px;color:#54504F">PP&E neto (ver detalle ↓)</td>';
+  // Activos No Corrientes — PP&E con desplegable
+  html += '<tr><td colspan="'+(NC+2)+'" style="padding:8px 14px 3px;font-size:10px;font-weight:800;color:#5DC3DA;letter-spacing:.08em;background:#f8f7f5;border-top:1px solid #e8e5e0">ACTIVOS NO CORRIENTES</td></tr>';
+
+  html += '<tr id="bal-row-ppe" style="background:#fff;border-bottom:1px solid #f5f4f2">';
+  html += '<td style="padding:7px 14px;font-size:11px;color:#54504F">';
+  html += '<span onclick="balToggleDetPPE()" style="cursor:pointer;color:#5DC3DA;font-size:10px;margin-right:4px" id="bal-ico-ppe">▶</span>';
+  html += 'PP&E neto</td>';
   datos.forEach(function(d){ html += d ? tdVal(d.totalAF) : tdDash(); });
   html += tdVal(acum.totalAF,'700','#54504F','background:#EBF6FA;');
   html += '</tr>';
+
+  // Sub-filas PP&E (ocultas)
+  html += '<tr id="bal-det-ppe" style="display:none;background:#f8fcff">';
+  html += '<td colspan="'+(NC+2)+'" style="padding:0"><table style="width:100%;border-collapse:collapse;font-size:10px">';
+
+  // Fila: PP&E bruto apertura 2025
+  html += '<tr><td style="padding:5px 14px 5px 30px;color:#666">PP&E bruto apertura 2025</td>';
+  datos.forEach(function(d){ var v = d ? (d.bruto2025||60000000) : 0; html += '<td style="padding:5px 10px;text-align:right;color:#888">'+F(v)+'</td>'; });
+  html += '<td style="padding:5px 10px;text-align:right;color:#5DC3DA;background:#EBF6FA">'+F(acum.bruto2025||60000000)+'</td></tr>';
+
+  // Fila: (−) Depreciación acum. 2025
+  html += '<tr><td style="padding:5px 14px 5px 30px;color:#666">(−) Depreciación acum. 2025</td>';
+  datos.forEach(function(d){ var v = d ? (d.deprec2025||0) : 0; html += '<td style="padding:5px 10px;text-align:right;color:#DC2626">'+(v>0?'-'+F(v):'—')+'</td>'; });
+  html += '<td style="padding:5px 10px;text-align:right;color:#DC2626;background:#FEF2F2">'+((acum.deprec2025||0)>0?'-'+F(acum.deprec2025):'—')+'</td></tr>';
+
+  // Filas: adquisiciones 2026 por categoría (dinámico)
+  var _catsPPE = {};
+  datos.forEach(function(d){
+    if (d && d.activosPorCat) Object.keys(d.activosPorCat).forEach(function(c){ _catsPPE[c]=1; });
+  });
+  Object.keys(_catsPPE).forEach(function(cat){
+    html += '<tr><td style="padding:5px 14px 5px 30px;color:#666">(+) '+cat+' 2026</td>';
+    datos.forEach(function(d){
+      var v = (d && d.activosPorCat && d.activosPorCat[cat]) ? d.activosPorCat[cat] : 0;
+      html += '<td style="padding:5px 10px;text-align:right;color:#1D6F42">'+(v>0?'+'+F(v):'—')+'</td>';
+    });
+    var acumV = (acum.activosPorCat && acum.activosPorCat[cat]) ? acum.activosPorCat[cat] : 0;
+    html += '<td style="padding:5px 10px;text-align:right;color:#1D6F42;background:#F0FDF4">'+(acumV>0?'+'+F(acumV):'—')+'</td></tr>';
+  });
+
+  // Fila: (−) Depreciación 2026 acumulada
+  html += '<tr><td style="padding:5px 14px 5px 30px;color:#666">(−) Depreciación 2026 acum.</td>';
+  datos.forEach(function(d){
+    var deprec2026 = d ? ((d.deprecAcumTotal||0) - (d.deprec2025||0)) : 0;
+    html += '<td style="padding:5px 10px;text-align:right;color:#DC2626">'+(deprec2026>0?'-'+F(deprec2026):'—')+'</td>';
+  });
+  var _dep26acum = (acum.deprecAcumTotal||0) - (acum.deprec2025||0);
+  html += '<td style="padding:5px 10px;text-align:right;color:#DC2626;background:#FEF2F2">'+(_dep26acum>0?'-'+F(_dep26acum):'—')+'</td></tr>';
+
+  html += '</table></td></tr>';
 
   // TOTAL ACTIVOS
   html += '<tr style="background:#E8F4FD;border-top:2px solid #5DC3DA">';
@@ -13628,6 +13672,15 @@ function balToggleDetCxc() {
 function balToggleDetRete() {
   var det = document.getElementById('bal-det-rete');
   var ico = document.getElementById('bal-ico-rete');
+  if (!det) return;
+  var open = det.style.display !== 'none';
+  det.style.display = open ? 'none' : 'table-row';
+  if (ico) ico.textContent = open ? '▶' : '▼';
+}
+
+function balToggleDetPPE() {
+  var det = document.getElementById('bal-det-ppe');
+  var ico = document.getElementById('bal-ico-ppe');
   if (!det) return;
   var open = det.style.display !== 'none';
   det.style.display = open ? 'none' : 'table-row';
@@ -30676,7 +30729,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v05ago-1300';
+var ALZAK_BUILD = 'v05ago-1400';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

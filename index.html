@@ -12612,30 +12612,40 @@ function calcBalMes(mes) {
 
   var totalBancos=0, bancosDetalle={bcol:0,fid:0,caja:0,bold:0};
 
-  if (typeof P!=='undefined' && P.length) {
-
-    var pIdx=-1;
-
-    if (mes) {
-
-      for (var pi=0;pi<P.length;pi++) if (P[pi].label===mes) { pIdx=pi; break; }
-
-    }
-
-    if (pIdx<0) pIdx=P.length-1;
-
-    var pp=P[pIdx];
-
-    bancosDetalle.bcol = pp.sF||0;
-
-    bancosDetalle.fid  = (pp.fid&&pp.fid.sF)||0;
-
-    bancosDetalle.caja = (pp.caja&&pp.caja.sF)||0;
-
-    bancosDetalle.bold = (pp.bold&&pp.bold.sF)||0;
-
+  // FUENTE ÚNICA: DATA (extractos reales del GAS). Buscar el mes específico.
+  // Enero usa clave sin sufijo ("Bancolombia"), otros meses con sufijo ("Bancolombia Julio 2026")
+  var _foundData = false;
+  if (mes && typeof DATA !== 'undefined') {
+    var _mesNom = mes.split(' ')[0];
+    var _mesNomL = _mesNom.toLowerCase();
+    var _esEnero = _mesNomL === 'enero';
+    Object.keys(DATA).forEach(function(k){
+      var kL = k.toLowerCase();
+      // Matchear el mes: enero es clave sin sufijo o "enero"
+      var matchMes = _esEnero ? (kL.indexOf(' '+_mesNomL)<0 && kL.indexOf(_mesNomL)<0 && (kL==='bancolombia'||kL==='fiducia'||kL==='bold'||kL.indexOf('bcs enero')>=0||kL==='bcs')) || kL.indexOf('enero')>=0
+                              : kL.indexOf(_mesNomL) >= 0;
+      if (!matchMes) return;
+      var info = DATA[k].info || {};
+      var sf = info.sfin || info.sF || 0;
+      if (kL.indexOf('bcs') >= 0 || kL.indexOf('caja social') >= 0) { bancosDetalle.caja = sf; _foundData=true; }
+      else if (kL.indexOf('bold') >= 0) { bancosDetalle.bold = sf; _foundData=true; }
+      else if (kL.indexOf('fiduc') >= 0 || kL.indexOf('fondo invers') >= 0) { bancosDetalle.fid = sf; _foundData=true; }
+      else if (kL.indexOf('bancolombia') >= 0) { bancosDetalle.bcol = sf; _foundData=true; }
+    });
     totalBancos = bancosDetalle.bcol + bancosDetalle.fid + bancosDetalle.caja + bancosDetalle.bold;
+  }
 
+  // Fallback: P[] solo si DATA no tiene el mes
+  if (!_foundData && typeof P!=='undefined' && P.length) {
+    var pIdx=-1;
+    if (mes) for (var pi=0;pi<P.length;pi++) if (P[pi].label===mes) { pIdx=pi; break; }
+    if (pIdx<0) pIdx=P.length-1;
+    var pp=P[pIdx];
+    bancosDetalle.bcol = pp.sF||0;
+    bancosDetalle.fid  = (pp.fid&&pp.fid.sF)||0;
+    bancosDetalle.caja = (pp.caja&&pp.caja.sF)||0;
+    bancosDetalle.bold = (pp.bold&&pp.bold.sF)||0;
+    totalBancos = bancosDetalle.bcol + bancosDetalle.fid + bancosDetalle.caja + bancosDetalle.bold;
   }
 
   // Apertura 2025
@@ -30666,7 +30676,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v05ago-1115';
+var ALZAK_BUILD = 'v05ago-1300';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

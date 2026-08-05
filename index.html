@@ -17024,31 +17024,32 @@ function renderFacturasAjustables() {
 
   var barEl = g('dash-fa-barras');
   if (barEl && Object.keys(porMes).length) {
-    var BAR_H = 100; // px altura total del gráfico
-    var vals = [];
-    for (var mi=1; mi<=12; mi++) { vals.push((porMes[mi]||{sub:0,iva:0}).sub + ((porMes[mi]||{sub:0,iva:0}).iva)); }
-    var maxVal = Math.max.apply(null, vals) || 1;
-    var bhtml = '<div style="display:flex;gap:3px;align-items:flex-end;height:'+BAR_H+'px;margin-top:8px;padding-top:18px;position:relative">';
+    var CH = 120;
+    var vals2 = [];
+    for (var mi=1; mi<=12; mi++) vals2.push((porMes[mi]||{sub:0,iva:0}).sub + ((porMes[mi]||{sub:0,iva:0}).iva));
+    var maxVal2 = Math.max.apply(null, vals2) || 1;
+    var ABREV = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    var bhtml = '<div style="display:flex;gap:6px;align-items:flex-end;border-bottom:2px solid #e8e5e0;padding-bottom:0;margin-bottom:6px">';
     for (var mi=1; mi<=12; mi++) {
-      var d = porMes[mi] || {sub:0,iva:0};
-      var sub = d.sub, iva = d.iva, tot = sub + iva;
-      var pxSub = maxVal > 0 ? Math.round(sub/maxVal*(BAR_H-20)) : 0;
-      var pxIva = maxVal > 0 ? Math.round(iva/maxVal*(BAR_H-20)) : 0;
-      var mesAbr = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][mi-1];
-      bhtml += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0" title="'+mesAbr+': '+F(tot)+'">' +
-        (tot>0?'<div style="font-size:8px;color:#7C3AED;font-weight:700;white-space:nowrap">'+Math.round(tot/1000)+'k</div>':'<div style="font-size:8px;color:transparent">0</div>') +
-        '<div style="width:100%;display:flex;flex-direction:column;justify-content:flex-end">' +
-          (pxIva>0?'<div style="width:100%;height:'+pxIva+'px;background:#C4B5FD;border-radius:2px 2px 0 0"></div>':'') +
-          (pxSub>0?'<div style="width:100%;height:'+pxSub+'px;background:#7C3AED;border-radius:'+(pxIva>0?'0':'2px 2px')+' 0 0"></div>':'') +
-          (tot===0?'<div style="width:100%;height:3px;background:#f0ede8;border-radius:2px"></div>':'') +
-        '</div>' +
-        '<div style="font-size:8px;color:#aaa;margin-top:2px">'+mesAbr+'</div>'+
-      '</div>';
+      var dm = porMes[mi] || {sub:0, iva:0};
+      var sub2 = dm.sub, iva2 = dm.iva, tot2 = sub2 + iva2;
+      var hSub = tot2>0 ? Math.max(4, Math.round(sub2/maxVal2*CH)) : 0;
+      var hIva = tot2>0 ? Math.max(0, Math.round(iva2/maxVal2*CH)) : 0;
+      var label2 = tot2>0 ? (tot2>=1000000 ? (tot2/1000000).toFixed(1)+'M' : Math.round(tot2/1000)+'k') : '';
+      bhtml += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0;min-width:0">';
+      bhtml += '<div style="font-size:9px;color:#7C3AED;font-weight:700;height:14px;display:flex;align-items:flex-end;margin-bottom:2px">'+(label2||'')+'</div>';
+      bhtml += '<div style="width:100%;display:flex;flex-direction:column;justify-content:flex-end;gap:0">';
+      if (hIva>0) bhtml += '<div style="width:100%;height:'+hIva+'px;background:#C4B5FD;border-radius:3px 3px 0 0"></div>';
+      if (hSub>0) bhtml += '<div style="width:100%;height:'+hSub+'px;background:#7C3AED;border-radius:'+(hIva>0?'0':'3px 3px')+' 0 0"></div>';
+      if (tot2===0) bhtml += '<div style="width:100%;height:4px;background:#f0ede8;border-radius:2px"></div>';
+      bhtml += '</div>';
+      bhtml += '<div style="font-size:10px;color:#888;margin-top:4px;text-align:center">'+ABREV[mi-1]+'</div>';
+      bhtml += '</div>';
     }
     bhtml += '</div>';
-    bhtml += '<div style="display:flex;gap:12px;margin-top:4px;font-size:10px;color:#888">';
-    bhtml += '<span><span style="display:inline-block;width:10px;height:10px;background:#7C3AED;border-radius:2px;margin-right:3px"></span>Base</span>';
-    bhtml += '<span><span style="display:inline-block;width:10px;height:10px;background:#C4B5FD;border-radius:2px;margin-right:3px"></span>IVA</span>';
+    bhtml += '<div style="display:flex;gap:14px;font-size:10px;color:#888;margin-top:2px">';
+    bhtml += '<span><span style="display:inline-block;width:10px;height:10px;background:#7C3AED;border-radius:2px;vertical-align:middle;margin-right:3px"></span>Base gravable</span>';
+    bhtml += '<span><span style="display:inline-block;width:10px;height:10px;background:#C4B5FD;border-radius:2px;vertical-align:middle;margin-right:3px"></span>IVA</span>';
     bhtml += '</div>';
     barEl.innerHTML = bhtml;
   }
@@ -30401,7 +30402,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v04ago-1645';
+var ALZAK_BUILD = 'v05ago-0910';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

@@ -1899,7 +1899,10 @@ body[data-org="FOUNDATION"] .alzak-toast {
 
   <div id="bal-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:16px"></div>
 
-  <!-- Tabla comparativa -->
+  <!-- Tabla comparativa mes a mes -->
+  <div id="bal-tabla-comparativa" style="margin-bottom:16px;overflow-x:auto"></div>
+
+  <!-- Tabla detalle mes seleccionado -->
 
   <div id="bal-tabla"></div>
 
@@ -13370,6 +13373,74 @@ function calcBalMes(mes) {
 
 }
 
+function renderBalComparativo() {
+  var el = document.getElementById('bal-tabla-comparativa');
+  if (!el) return;
+  if (typeof FACTURAS === 'undefined' || FACTURAS.length === 0) { el.innerHTML = ''; return; }
+
+  var F = function(n){ return n ? '$'+(Math.round(Math.abs(n))||0).toLocaleString('es-CO') : '—'; };
+  var hoy = new Date();
+  var mesActN = hoy.getFullYear() === 2026 ? hoy.getMonth() + 1 : 8;
+  var MN_FULL = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  var MN_ABR  = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+  // Calcular datos para cada mes hasta el actual
+  var colMeses = [];
+  for (var mi = 1; mi <= mesActN; mi++) colMeses.push(MN_FULL[mi-1]+' 2026');
+
+  var datos = colMeses.map(function(m){ try { return calcBalMes(m); } catch(e){ return null; } });
+
+  // Filas de la tabla
+  var filas = [
+    { label: 'ACTIVOS',               key: null,            tipo: 'h' },
+    { label: 'Caja y Bancos',         key: 'bancos',        tipo: 'r' },
+    { label: 'Cuentas por Cobrar',    key: 'cxc',           tipo: 'r' },
+    { label: 'Anticipo Rte.Fte.',     key: 'rete',          tipo: 'r' },
+    { label: 'Total Activos Corr.',   key: 'totalActCorr',  tipo: 'st' },
+    { label: 'PP&E neto',             key: 'totalAF',       tipo: 'r' },
+    { label: 'TOTAL ACTIVOS',         key: 'totalAct',      tipo: 'total' },
+    { label: 'PASIVOS',               key: null,            tipo: 'h' },
+    { label: 'CxP Corrientes',        key: 'totalPasCorrFR',tipo: 'r', neg: true },
+    { label: 'Préstamos',             key: 'prestamosTotal',tipo: 'r', neg: true },
+    { label: 'TOTAL PASIVOS',         key: 'totalPas',      tipo: 'total', neg: true },
+    { label: 'PATRIMONIO',            key: null,            tipo: 'h' },
+    { label: 'Utilidad del ejercicio',key: 'utilEj',        tipo: 'r' },
+    { label: 'TOTAL PATRIMONIO',      key: 'totalPat',      tipo: 'total' },
+  ];
+
+  var th = function(t, w, align){
+    return '<th style="padding:8px '+(w||10)+'px;font-size:10px;font-weight:700;color:#fff;background:#2C2C2C;white-space:nowrap;text-align:'+(align||'right')+'">'+t+'</th>';
+  };
+
+  var html = '<div style="font-size:13px;font-weight:700;color:#54504F;margin-bottom:8px">📊 Balance Comparativo Ene–'+MN_ABR[mesActN-1]+' 2026</div>';
+  html += '<table style="width:100%;border-collapse:collapse;font-size:11px">';
+  html += '<thead><tr>'+th('CONCEPTO', 14, 'left');
+  colMeses.forEach(function(m, i){ html += th(MN_ABR[i]); });
+  html += '</tr></thead><tbody>';
+
+  filas.forEach(function(f){
+    if (f.tipo === 'h') {
+      html += '<tr><td colspan="'+(colMeses.length+1)+'" style="padding:10px 14px 4px;font-size:10px;font-weight:800;color:#5DC3DA;letter-spacing:.08em;background:#f8f7f5;border-top:2px solid #e8e5e0">'+f.label+'</td></tr>';
+      return;
+    }
+    var bgColor = f.tipo==='total' ? '#f0ede8' : f.tipo==='st' ? '#f5f4f2' : '#fff';
+    var fw = f.tipo==='total' ? '700' : '400';
+    html += '<tr style="border-bottom:1px solid #f5f4f2;background:'+bgColor+'">';
+    html += '<td style="padding:7px 14px;font-size:11px;font-weight:'+fw+';color:#54504F;white-space:nowrap">'+f.label+'</td>';
+    datos.forEach(function(d){
+      if (!d || !f.key) { html += '<td style="padding:7px 10px;text-align:right;color:#aaa">—</td>'; return; }
+      var val = d[f.key] || 0;
+      var color = f.tipo==='total' ? '#54504F' : (val < 0 ? '#DC2626' : '#54504F');
+      if (f.key === 'utilEj') color = val >= 0 ? '#1D6F42' : '#DC2626';
+      html += '<td style="padding:7px 10px;text-align:right;font-weight:'+fw+';color:'+color+'">'+F(val)+'</td>';
+    });
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
 function renderBalance() {
 
   // Si FACTURAS no tiene datos aún, reintentar en 500ms
@@ -13377,6 +13448,9 @@ function renderBalance() {
     setTimeout(renderBalance, 500);
     return;
   }
+
+  // Tabla comparativa mes a mes
+  renderBalComparativo();
 
   var elPills = g('bal-pills');
 
@@ -13426,13 +13500,11 @@ function renderBalance() {
 
   if (typeof P !== 'undefined') { for (var i=0;i<P.length;i++) { if(P[i].label && P[i].label.indexOf('2026')>=0) disp[P[i].label]=1; } }
 
-  // Solo mostrar meses hasta el actual (inclusive)
+  // Solo mostrar meses hasta el actual (inclusive) — dinámico
   var _hoy = new Date();
-  var _mesActualN = _hoy.getMonth() + 1; // 1-based
-  var _anioActual = _hoy.getFullYear();
+  var _mesActualN = _hoy.getFullYear() === 2026 ? _hoy.getMonth() + 1 : 12;
   MN.forEach(function(m, i){
-    var mesN = i + 1;
-    if (_anioActual === 2026 && mesN <= _mesActualN) disp[m+' 2026']=1;
+    if (i + 1 <= _mesActualN) disp[m+' 2026']=1;
   });
 
   var meses = MESES_ORD.filter(function(m){ return disp[m] && m.indexOf('2026')>=0; });
@@ -30424,7 +30496,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v05ago-0920';
+var ALZAK_BUILD = 'v05ago-0935';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

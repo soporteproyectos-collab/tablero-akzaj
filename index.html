@@ -13468,7 +13468,7 @@ function renderBalComparativo() {
 
   // PP&E
   html += '<tr style="background:#fff;border-bottom:1px solid #f5f4f2">';
-  html += '<td style="padding:7px 14px;font-size:11px;color:#54504F">PP&E neto</td>';
+  html += '<td style="padding:7px 14px;font-size:11px;color:#54504F">PP&E neto (ver detalle ↓)</td>';
   datos.forEach(function(d){ html += d ? tdVal(d.totalAF) : tdDash(); });
   html += tdVal(acum.totalAF,'700','#54504F','background:#EBF6FA;');
   html += '</tr>';
@@ -13881,43 +13881,29 @@ function renderBalance() {
 
   }
 
-  // Adquisiciones 2026
-
-  var CATS_DISPLAY = {
-
-    'Equipos de Oficina':'Equipos oficina 2026','Equipos y Tecnología':'Equipos oficina 2026',
-
-    'Mobiliario y Enseres':'Mobiliario y enseres 2026','Mobiliario y enseres':'Mobiliario y enseres 2026'
-
-  };
-
-  var dispActivos={};
-
+  // Adquisiciones 2026 — unificadas en Propiedad, Planta y Equipo
+  var _ppeAcum2026 = 0;
+  var _ppeItems = [];
   if (d.activosPorCat) {
-
     Object.keys(d.activosPorCat).forEach(function(cat){
-
-      var lbl=CATS_DISPLAY[cat]||(cat+' 2026');
-
-      dispActivos[lbl]=(dispActivos[lbl]||0)+d.activosPorCat[cat];
-
+      var v = d.activosPorCat[cat]||0;
+      if (v > 0) { _ppeAcum2026 += v; _ppeItems.push({cat:cat, val:v}); }
     });
-
   }
-
-  Object.keys(dispActivos).forEach(function(lbl){
-
-    if (dispActivos[lbl]>0) html += fila('(+) '+lbl, dispActivos[lbl], 'item', 1);
-
+  // Manuales del configurador
+  ['equiposComputo','vehiculos','muebles','otrosActivos'].forEach(function(k){
+    if (d.af[k]) { _ppeAcum2026 += d.af[k]; _ppeItems.push({cat:k, val:d.af[k]}); }
   });
 
-  if (d.af.equiposComputo) html += fila('Equipos adicionales (manual)', d.af.equiposComputo, 'item', 1);
-
-  if (d.af.vehiculos) html += fila('Vehículos', d.af.vehiculos, 'item', 1);
-
-  if (d.af.muebles) html += fila('Muebles y enseres (manual)', d.af.muebles, 'item', 1);
-
-  if (d.af.otrosActivos) html += fila('Otros activos fijos', d.af.otrosActivos, 'item', 1);
+  if (_ppeAcum2026 > 0) {
+    var _ppeUID = 'ppe-det-'+(mes||'acum').replace(/ /g,'-');
+    html += fila('(+) PP&E adquirido 2026', _ppeAcum2026, 'item', 1, 'ver detalle abajo');
+    html += '<div id="'+_ppeUID+'" style="display:none;padding:4px 0 4px 40px;background:#f8fcff">';
+    _ppeItems.forEach(function(it){
+      html += '<div style="display:flex;justify-content:space-between;font-size:10px;color:#666;padding:3px 14px 3px 0"><span>'+it.cat+'</span><span>$'+Math.round(it.val).toLocaleString('es-CO')+'</span></div>';
+    });
+    html += '</div>';
+  }
 
   // Depreciación 2026
 
@@ -30608,7 +30594,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v05ago-1025';
+var ALZAK_BUILD = 'v05ago-1050';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

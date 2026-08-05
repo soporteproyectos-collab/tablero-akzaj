@@ -13448,17 +13448,79 @@ function renderBalComparativo() {
   html += tdVal(acum.cxc,'700','#54504F','background:#EBF6FA;');
   html += '</tr>';
 
-  // Sub-filas CxC (ocultas)
+  // Sub-filas CxC — facturas pendientes por mes (igual que bancos)
   html += '<tr id="bal-det-cxc" style="display:none;background:#f8fcff">';
-  html += '<td colspan="'+(NC+2)+'" style="padding:4px 14px 4px 30px;font-size:10px;color:#888">Ver detalle completo en la vista mensual abajo ▼</td>';
-  html += '</tr>';
+  html += '<td colspan="'+(NC+2)+'" style="padding:0"><table style="width:100%;border-collapse:collapse;font-size:10px">';
+  // Reunir todas las facturas 2025 + 2026 pendientes que aparecen en algún mes
+  var _todasFactCxc = {};
+  datos.forEach(function(d, di){
+    if (!d) return;
+    // Cartera 2025 pendiente + facturas 2026 pendientes
+    var _lista = [];
+    if (d.cxcArr) d.cxcArr.forEach(function(f){ _lista.push({num:f.num, cliente:f.cliente, val:f.total||f.bruto||0, mesIdx:di}); });
+    // Cartera 2025 (reconstruir desde FACTURAS)
+    if (typeof FACTURAS !== 'undefined') {
+      FACTURAS.forEach(function(f){
+        var dp = typeof fFechaPartes==='function' ? fFechaPartes(f.fecha_raw||f.fecha||'') : [0,0,0];
+        if (parseInt(dp[0]) === 2025) {
+          // ¿pendiente en este mes?
+          var _v = f.vence||f.venceDisplay||'';
+          var _cobr = false;
+          if (_v) {
+            var _mMapC={Jan:1,Feb:2,Mar:3,Apr:4,May:5,Jun:6,Jul:7,Aug:8,Sep:9,Oct:10,Nov:11,Dec:12,Ene:1,Abr:4,Ago:8,Dic:12};
+            var _mm=_v.match(/(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})/);
+            var _va=0,_vm=0;
+            if(_mm){_va=parseInt(_mm[3]);_vm=_mMapC[_mm[2]]||0;}
+            else if(_v.indexOf('/')>=0){var _p=_v.split('/');if(_p[2]&&_p[2].length===4){_va=parseInt(_p[2]);_vm=parseInt(_p[1]);}else{_va=parseInt(_p[0]);_vm=parseInt(_p[1]);}}
+            else if(_v.indexOf('-')>=0){var _q=_v.split('-');if(_q[0].length===4){_va=parseInt(_q[0]);_vm=parseInt(_q[1]);}else{_va=parseInt(_q[2]);_vm=parseInt(_q[1]);}}
+            _cobr = _va>0 && ((_va<2026)||(_va===2026&&_vm<=(di+1)));
+          }
+          if (!_cobr) _lista.push({num:f.num, cliente:f.cliente, val:f.bruto||0, es2025:true});
+        }
+      });
+    }
+    _lista.forEach(function(it){
+      var k = it.num+'|'+it.cliente;
+      if (!_todasFactCxc[k]) _todasFactCxc[k] = {num:it.num, cliente:it.cliente, porMes:new Array(NC).fill(0)};
+      _todasFactCxc[k].porMes[di] = it.val;
+    });
+  });
+  Object.keys(_todasFactCxc).forEach(function(k){
+    var fc = _todasFactCxc[k];
+    html += '<tr><td style="padding:5px 14px 5px 30px;color:#666;white-space:nowrap">'+fc.num+' · '+(fc.cliente||'').substring(0,20)+'</td>';
+    fc.porMes.forEach(function(v){ html += '<td style="padding:5px 10px;text-align:right;color:#888">'+(v>0?F(v):'—')+'</td>'; });
+    var _ultVal = fc.porMes[NC-1]||0;
+    html += '<td style="padding:5px 10px;text-align:right;color:#5DC3DA;background:#EBF6FA">'+(_ultVal>0?F(_ultVal):'—')+'</td>';
+    html += '</tr>';
+  });
+  html += '</table></td></tr>';
 
-  // Anticipo Rte.Fte. — una sola línea con total
-  html += '<tr style="background:#fff;border-bottom:1px solid #f5f4f2">';
-  html += '<td style="padding:7px 14px;font-size:11px;color:#54504F">Anticipo Rte.Fte. (total)</td>';
+  // Anticipo Rte.Fte. con desplegable (2025 acum + 2026 mes a mes)
+  html += '<tr id="bal-row-rete" style="background:#fff;border-bottom:1px solid #f5f4f2">';
+  html += '<td style="padding:7px 14px;font-size:11px;color:#54504F">';
+  html += '<span onclick="balToggleDetRete()" style="cursor:pointer;color:#5DC3DA;font-size:10px;margin-right:4px" id="bal-ico-rete">▶</span>';
+  html += 'Anticipo Rte.Fte. (total)</td>';
   datos.forEach(function(d){ html += d ? tdVal(d.rete) : tdDash(); });
   html += tdVal(acum.rete,'700','#54504F','background:#EBF6FA;');
   html += '</tr>';
+
+  // Sub-filas Retefuente
+  html += '<tr id="bal-det-rete" style="display:none;background:#f8fcff">';
+  html += '<td colspan="'+(NC+2)+'" style="padding:0"><table style="width:100%;border-collapse:collapse;font-size:10px">';
+  var _rete2025Val = (typeof BAL_CONFIG!=='undefined' && BAL_CONFIG.apertura2025) ? (BAL_CONFIG.apertura2025.rete||178329000) : 178329000;
+  // Línea 2025 acumulada (constante en todos los meses)
+  html += '<tr><td style="padding:5px 14px 5px 30px;color:#666">Acumulada 2025 (saldo DIAN)</td>';
+  datos.forEach(function(){ html += '<td style="padding:5px 10px;text-align:right;color:#888">'+F(_rete2025Val)+'</td>'; });
+  html += '<td style="padding:5px 10px;text-align:right;color:#5DC3DA;background:#EBF6FA">'+F(_rete2025Val)+'</td></tr>';
+  // Línea 2026 acumulada mes a mes
+  html += '<tr><td style="padding:5px 14px 5px 30px;color:#666">Acumulada 2026 (11% facturación)</td>';
+  datos.forEach(function(d){
+    var _r26 = d ? Math.max(0, (d.rete||0) - _rete2025Val) : 0;
+    html += '<td style="padding:5px 10px;text-align:right;color:#888">'+(_r26>0?F(_r26):'—')+'</td>';
+  });
+  var _r26acum = Math.max(0, (acum.rete||0) - _rete2025Val);
+  html += '<td style="padding:5px 10px;text-align:right;color:#5DC3DA;background:#EBF6FA">'+(_r26acum>0?F(_r26acum):'—')+'</td></tr>';
+  html += '</table></td></tr>';
 
   // Total Activos Corrientes
   html += '<tr style="background:#f5f4f2;border-bottom:1px solid #e8e5e0">';
@@ -13547,6 +13609,15 @@ function balToggleDetBancos() {
 function balToggleDetCxc() {
   var det = document.getElementById('bal-det-cxc');
   var ico = document.getElementById('bal-ico-cxc');
+  if (!det) return;
+  var open = det.style.display !== 'none';
+  det.style.display = open ? 'none' : 'table-row';
+  if (ico) ico.textContent = open ? '▶' : '▼';
+}
+
+function balToggleDetRete() {
+  var det = document.getElementById('bal-det-rete');
+  var ico = document.getElementById('bal-ico-rete');
   if (!det) return;
   var open = det.style.display !== 'none';
   det.style.display = open ? 'none' : 'table-row';
@@ -30595,7 +30666,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v05ago-1100';
+var ALZAK_BUILD = 'v05ago-1115';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

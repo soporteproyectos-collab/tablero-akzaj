@@ -17610,7 +17610,7 @@ function renderGastosDashboard() {
 
     var maxV=0;for(var i=0;i<meses.length;i++)if(mesGr[meses[i]]>maxV)maxV=mesGr[meses[i]];maxV=maxV*1.15||1;
 
-    var W=500,H=130,PL=46,PR=10,PT=14,PB=26,CW=W-PL-PR,CH=H-PT-PB,bw=Math.max(40,Math.min(80,CW/meses.length*0.5));
+    var W=500,H=130,PL=46,PR=10,PT=14,PB=26,CW=W-PL-PR,CH=H-PT-PB,bw=Math.max(14,Math.min(44,CW/meses.length*0.55));
 
     var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px">';
 
@@ -23448,27 +23448,48 @@ function fcActualizar() {
 
   html += '</tr>';
 
-  // ── Liquidez acumulada mes a mes + proyección hasta diciembre ──
+  // Saldo de CIERRE de bancos por mes (sfin) — dato conciliado, infalible
+  var saldoCierreBancos = new Array(12).fill(0);
+  if (typeof DATA !== 'undefined') {
+    var MESES_N_CL = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    for (var mIdx2 = 0; mIdx2 < 12; mIdx2++) {
+      var mesNomCL = MESES_N_CL[mIdx2];
+      var esEneroCL = mIdx2 === 0;
+      Object.keys(DATA).forEach(function(k){
+        var kL = k.toLowerCase();
+        var matchMes = esEneroCL
+          ? (kL==='bancolombia'||kL==='fiducia'||kL==='bold'||kL==='bcs'||kL.indexOf('bcs enero')>=0||(kL.indexOf('enero')>=0))
+          : (kL.indexOf(mesNomCL) >= 0);
+        if (!matchMes) return;
+        var info = DATA[k].info || {};
+        saldoCierreBancos[mIdx2] += parseFloat(info.sfin || 0);
+      });
+    }
+  }
+
+  // ── Liquidez: saldo real de bancos (meses reales) + proyección (meses futuros) ──
   html += '<tr style="background:#2C2C2C;color:#fff;font-weight:700;border-top:2px solid #FFD700">';
-  html += '<td style="padding:9px 12px">💧 Liquidez acumulada <span style="font-weight:400;font-size:9px;color:#aaa">(real hasta ' + ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][_mesActualFC] + ' · proyectada después)</span></td>';
+  html += '<td style="padding:9px 12px">💧 Liquidez acumulada <span style="font-weight:400;font-size:9px;color:#aaa">(saldo real bancos · proyectada después de ' + ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][_mesActualFC] + ')</span></td>';
 
-  // Apertura del año = apertura del primer mes con datos
-  var _aperturaAnual = saldoApertura[0] || 0;
-  var _liqAcum = _aperturaAnual;
-
+  var _liqAcum = 0;
+  var _ultLiqReal = 0;
   for (var m3=0; m3<12; m3++) {
     var esProyeccion = m3 > _mesActualFC;
 
     if (!esProyeccion) {
-      // Mes real: usar cobro real (ingPag) y egresos ejecutados (egr)
-      var ingreso3 = ingPag[m3] || 0;
-      var salida3 = egr[m3] || 0;
-      _liqAcum += ingreso3 - salida3;
+      // Mes real: liquidez = saldo de cierre real de bancos (conciliado)
+      _liqAcum = saldoCierreBancos[m3] || 0;
+      if (_liqAcum > 0) _ultLiqReal = _liqAcum;
     } else {
-      // Mes proyectado: usar cobro estimado programado + proyección cobro, menos egresos programados
+      // Mes proyectado: partir del último saldo real y sumar/restar flujo proyectado
       var ingProy3 = (ingCobro[m3]||0) + (ingProgCobro[m3]||0);
       var salidaProy3 = (egrProgramado[m3]||0) + (egr[m3]||0);
-      _liqAcum += ingProy3 - salidaProy3;
+      _liqAcum = _liqAcum + ingProy3 - salidaProy3;
+    }
+
+    if (!esProyeccion && (saldoCierreBancos[m3]||0) === 0) {
+      html += '<td style="padding:9px 6px;text-align:right;color:#666;'+(m3===hoy?'background:#1a1a1a':'')+'">—</td>';
+      continue;
     }
 
     var colLiq = _liqAcum >= 0 ? '#68D391' : '#FC8181';
@@ -23477,7 +23498,6 @@ function fcActualizar() {
     html += '<td style="padding:9px 6px;text-align:right;color:'+colLiq+';'+estiloProy+';'+bgCol+'">'+(_liqAcum<0?'-':'')+'$'+Math.round(Math.abs(_liqAcum)).toLocaleString('es-CO')+'</td>';
   }
 
-  // Total = liquidez proyectada a fin de año (diciembre)
   var colTotLiq = _liqAcum >= 0 ? '#68D391' : '#FC8181';
   html += '<td style="padding:9px 8px;text-align:right;color:'+colTotLiq+'" title="Liquidez proyectada a diciembre">'+(_liqAcum<0?'-':'')+'$'+Math.round(Math.abs(_liqAcum)).toLocaleString('es-CO')+'</td>';
   html += '</tr>';
@@ -30855,7 +30875,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v11ago-1800';
+var ALZAK_BUILD = 'v11ago-1815';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

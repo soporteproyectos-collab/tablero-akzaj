@@ -23448,28 +23448,38 @@ function fcActualizar() {
 
   html += '</tr>';
 
-  // ── Liquidez real = saldo apertura + lo que ingresó − egresos operativos ──
+  // ── Liquidez acumulada mes a mes + proyección hasta diciembre ──
   html += '<tr style="background:#2C2C2C;color:#fff;font-weight:700;border-top:2px solid #FFD700">';
-  html += '<td style="padding:9px 12px">💧 Liquidez disponible <span style="font-weight:400;font-size:9px;color:#aaa">(apertura + ingresó − egresos)</span></td>';
-  var totLiq = 0, _mesesLiq = 0;
+  html += '<td style="padding:9px 12px">💧 Liquidez acumulada <span style="font-weight:400;font-size:9px;color:#aaa">(real hasta ' + ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][_mesActualFC] + ' · proyectada después)</span></td>';
+
+  // Apertura del año = apertura del primer mes con datos
+  var _aperturaAnual = saldoApertura[0] || 0;
+  var _liqAcum = _aperturaAnual;
+
   for (var m3=0; m3<12; m3++) {
-    var apertura3 = saldoApertura[m3] || 0;
-    var ingreso3 = ingPag[m3] || 0;      // lo que realmente entró
-    var salida3 = egr[m3] || 0;          // egresos operativos ejecutados
-    // Solo meses con movimiento
-    if (apertura3 === 0 && ingreso3 === 0 && salida3 === 0) {
-      html += '<td style="padding:9px 6px;text-align:right;color:#666;'+(m3===hoy?'background:#1a1a1a':'')+'">—</td>';
-      continue;
+    var esProyeccion = m3 > _mesActualFC;
+
+    if (!esProyeccion) {
+      // Mes real: usar cobro real (ingPag) y egresos ejecutados (egr)
+      var ingreso3 = ingPag[m3] || 0;
+      var salida3 = egr[m3] || 0;
+      _liqAcum += ingreso3 - salida3;
+    } else {
+      // Mes proyectado: usar cobro estimado programado + proyección cobro, menos egresos programados
+      var ingProy3 = (ingCobro[m3]||0) + (ingProgCobro[m3]||0);
+      var salidaProy3 = (egrProgramado[m3]||0) + (egr[m3]||0);
+      _liqAcum += ingProy3 - salidaProy3;
     }
-    var liq = apertura3 + ingreso3 - salida3;
-    totLiq += liq; _mesesLiq++;
-    var colLiq = liq >= 0 ? '#68D391' : '#FC8181';
-    html += '<td style="padding:9px 6px;text-align:right;color:'+colLiq+';'+(m3===hoy?'background:#1a1a1a':'')+'">'+(liq<0?'-':'')+'$'+Math.round(Math.abs(liq)).toLocaleString('es-CO')+'</td>';
+
+    var colLiq = _liqAcum >= 0 ? '#68D391' : '#FC8181';
+    var estiloProy = esProyeccion ? 'opacity:.75;font-style:italic' : '';
+    var bgCol = m3===hoy ? 'background:#1a1a1a' : (esProyeccion ? 'background:#232323' : '');
+    html += '<td style="padding:9px 6px;text-align:right;color:'+colLiq+';'+estiloProy+';'+bgCol+'">'+(_liqAcum<0?'-':'')+'$'+Math.round(Math.abs(_liqAcum)).toLocaleString('es-CO')+'</td>';
   }
-  // El total de liquidez es el del último mes (no la suma, porque la apertura se arrastra)
-  var _liqActual = (saldoApertura[_mesActualFC]||0) + (ingPag[_mesActualFC]||0) - (egr[_mesActualFC]||0);
-  var colTotLiq = _liqActual >= 0 ? '#68D391' : '#FC8181';
-  html += '<td style="padding:9px 8px;text-align:right;color:'+colTotLiq+'" title="Liquidez del mes actual">'+(_liqActual<0?'-':'')+'$'+Math.round(Math.abs(_liqActual)).toLocaleString('es-CO')+'</td>';
+
+  // Total = liquidez proyectada a fin de año (diciembre)
+  var colTotLiq = _liqAcum >= 0 ? '#68D391' : '#FC8181';
+  html += '<td style="padding:9px 8px;text-align:right;color:'+colTotLiq+'" title="Liquidez proyectada a diciembre">'+(_liqAcum<0?'-':'')+'$'+Math.round(Math.abs(_liqAcum)).toLocaleString('es-CO')+'</td>';
   html += '</tr>';
 
   // Panel ÚNICO de detalle contextual — se llena según (fila, mes) clickeados
@@ -30845,7 +30855,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v11ago-1745';
+var ALZAK_BUILD = 'v11ago-1800';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

@@ -23323,16 +23323,36 @@ function fcActualizar() {
   // hoy = mes actual (0-based)
   var _mesActualFC = (new Date().getFullYear() === anio) ? new Date().getMonth() : 11;
 
+  // Saldo de apertura de bancos por mes (sant de cada banco desde DATA)
+  var saldoApertura = new Array(12).fill(0);
+  if (typeof DATA !== 'undefined') {
+    var MESES_N_FC = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    for (var mIdx = 0; mIdx < 12; mIdx++) {
+      var mesNomFC = MESES_N_FC[mIdx];
+      var esEneroFC = mIdx === 0;
+      Object.keys(DATA).forEach(function(k){
+        var kL = k.toLowerCase();
+        var matchMes = esEneroFC
+          ? (kL==='bancolombia'||kL==='fiducia'||kL==='bold'||kL==='bcs'||kL.indexOf('bcs enero')>=0||kL.indexOf('enero')>=0)
+          : (kL.indexOf(mesNomFC) >= 0);
+        if (!matchMes) return;
+        var info = DATA[k].info || {};
+        saldoApertura[mIdx] += parseFloat(info.sant || 0);
+      });
+    }
+  }
+
   var filas = [
+
+    { lbl:'🏦 Saldo en bancos (apertura mes) <span style="font-weight:400;font-size:9px;color:#999">(conciliación bancaria)</span>', vals:saldoApertura, bg:'#F0F9FF', col:'#0369A1', key:'apertura' },
+
+    { sep:true },
 
     { lbl:'🟢 Facturado',           vals:ingReal,     bg:'#F0FFF4', col:'#0C6E3D', key:'fact' },
 
-    { lbl:'✅ Cobro real (entró al banco)', vals:ingPag, bg:'#EBF8FF', col:'#0C447C', key:'pag',
-      nota:'Coincide con conciliación bancaria' },
-
     { lbl:'🔴 Vencido sin cobrar',  vals:ingVenc,     bg:'#FFF5F5', col:'#C53030', key:'venc' },
 
-    { lbl:'⏱ Proyección cobro (por entrar)', vals:ingCobro, bg:'#FFFBEB', col:'#B7791F', italic:true, key:'cobro' },
+    { lbl:'⏱ Proyección cobro <span style="font-weight:400;font-size:9px;color:#0C447C">(por entrar / ya ingresó)</span>', vals:ingCobro, bg:'#FFFBEB', col:'#B7791F', italic:true, key:'cobro', dual:ingPag },
 
     { sep:true },
 
@@ -23366,11 +23386,29 @@ function fcActualizar() {
 
     f.vals.forEach(function(v,mi) {
 
-      html += '<td style="padding:8px 6px;text-align:right;cursor:pointer;'+(mi===hoy?'background:#e8f0fe':'')+'" onclick="fcVerDetalle(\''+(f.key||'fact')+'\','+mi+')" title="Ver detalle">'+fmS(v, f.col)+'</td>';
+      if (f.dual) {
+        // Modo dual: "por entrar / ya ingresó"
+        var yaIngreso = f.dual[mi] || 0;
+        var celda = '';
+        if (v > 0 || yaIngreso > 0) {
+          celda = '<div style="font-size:10px;color:#B7791F">'+(v>0?'$'+Math.round(v).toLocaleString('es-CO'):'—')+'</div>';
+          if (yaIngreso > 0) celda += '<div style="font-size:9px;color:#0C6E3D;font-weight:700;border-top:1px solid #e0d5b0;margin-top:1px;padding-top:1px">✓$'+Math.round(yaIngreso).toLocaleString('es-CO')+'</div>';
+        } else {
+          celda = '<span style="color:#ddd">—</span>';
+        }
+        html += '<td style="padding:6px;text-align:right;cursor:pointer;'+(mi===hoy?'background:#e8f0fe':'')+'" onclick="fcVerDetalle(\'pag\','+mi+')" title="Ver facturas ingresadas">'+celda+'</td>';
+      } else {
+        html += '<td style="padding:8px 6px;text-align:right;cursor:pointer;'+(mi===hoy?'background:#e8f0fe':'')+'" onclick="fcVerDetalle(\''+(f.key||'fact')+'\','+mi+')" title="Ver detalle">'+fmS(v, f.col)+'</td>';
+      }
 
     });
 
-    html += '<td style="padding:8px;text-align:right;font-weight:700">'+fmS(tot, f.col)+'</td></tr>';
+    if (f.dual) {
+      var totDual = f.dual.reduce(function(a,b){return a+b;},0);
+      html += '<td style="padding:6px;text-align:right;font-weight:700"><div style="font-size:10px;color:#B7791F">$'+Math.round(tot).toLocaleString('es-CO')+'</div><div style="font-size:9px;color:#0C6E3D">✓$'+Math.round(totDual).toLocaleString('es-CO')+'</div></td></tr>';
+    } else {
+      html += '<td style="padding:8px;text-align:right;font-weight:700">'+fmS(tot, f.col)+'</td></tr>';
+    }
 
   });
 
@@ -23410,32 +23448,28 @@ function fcActualizar() {
 
   html += '</tr>';
 
-  // ── Caja ingresada — liquidez que YA entró (cobro real) ──
-  html += '<tr style="background:#0C6E3D;color:#fff;font-weight:700">';
-  html += '<td style="padding:9px 12px">💰 Caja ingresada (ya entró)</td>';
-  var totIngresada = 0;
-  for (var m2=0; m2<12; m2++) {
-    var ing2 = ingPag[m2] || 0;
-    totIngresada += ing2;
-    html += '<td style="padding:9px 6px;text-align:right;'+(m2===hoy?'background:#0a5730':'')+'">'+(ing2?'$'+Math.round(ing2).toLocaleString('es-CO'):'—')+'</td>';
-  }
-  html += '<td style="padding:9px 8px;text-align:right">$'+Math.round(totIngresada).toLocaleString('es-CO')+'</td>';
-  html += '</tr>';
-
-  // ── Resultado neto mensual — (cobro real + por entrar) − (egresos ejecutados + proyectados) ──
+  // ── Liquidez real = saldo apertura + lo que ingresó − egresos operativos ──
   html += '<tr style="background:#2C2C2C;color:#fff;font-weight:700;border-top:2px solid #FFD700">';
-  html += '<td style="padding:9px 12px">📊 Resultado neto (liquidez)</td>';
-  var totNeto = 0;
+  html += '<td style="padding:9px 12px">💧 Liquidez disponible <span style="font-weight:400;font-size:9px;color:#aaa">(apertura + ingresó − egresos)</span></td>';
+  var totLiq = 0, _mesesLiq = 0;
   for (var m3=0; m3<12; m3++) {
-    var entradas = (ingPag[m3]||0) + (ingCobro[m3]||0) + (ingProgCobro[m3]||0);
-    var salidas = (egr[m3]||0) + (egrProgramado[m3]||0);
-    var neto = entradas - salidas;
-    totNeto += neto;
-    var colNeto = neto >= 0 ? '#68D391' : '#FC8181';
-    html += '<td style="padding:9px 6px;text-align:right;color:'+colNeto+';'+(m3===hoy?'background:#1a1a1a':'')+'">'+(neto!==0?(neto<0?'-':'')+'$'+Math.round(Math.abs(neto)).toLocaleString('es-CO'):'—')+'</td>';
+    var apertura3 = saldoApertura[m3] || 0;
+    var ingreso3 = ingPag[m3] || 0;      // lo que realmente entró
+    var salida3 = egr[m3] || 0;          // egresos operativos ejecutados
+    // Solo meses con movimiento
+    if (apertura3 === 0 && ingreso3 === 0 && salida3 === 0) {
+      html += '<td style="padding:9px 6px;text-align:right;color:#666;'+(m3===hoy?'background:#1a1a1a':'')+'">—</td>';
+      continue;
+    }
+    var liq = apertura3 + ingreso3 - salida3;
+    totLiq += liq; _mesesLiq++;
+    var colLiq = liq >= 0 ? '#68D391' : '#FC8181';
+    html += '<td style="padding:9px 6px;text-align:right;color:'+colLiq+';'+(m3===hoy?'background:#1a1a1a':'')+'">'+(liq<0?'-':'')+'$'+Math.round(Math.abs(liq)).toLocaleString('es-CO')+'</td>';
   }
-  var colTotNeto = totNeto >= 0 ? '#68D391' : '#FC8181';
-  html += '<td style="padding:9px 8px;text-align:right;color:'+colTotNeto+'">'+(totNeto<0?'-':'')+'$'+Math.round(Math.abs(totNeto)).toLocaleString('es-CO')+'</td>';
+  // El total de liquidez es el del último mes (no la suma, porque la apertura se arrastra)
+  var _liqActual = (saldoApertura[_mesActualFC]||0) + (ingPag[_mesActualFC]||0) - (egr[_mesActualFC]||0);
+  var colTotLiq = _liqActual >= 0 ? '#68D391' : '#FC8181';
+  html += '<td style="padding:9px 8px;text-align:right;color:'+colTotLiq+'" title="Liquidez del mes actual">'+(_liqActual<0?'-':'')+'$'+Math.round(Math.abs(_liqActual)).toLocaleString('es-CO')+'</td>';
   html += '</tr>';
 
   // Panel ÚNICO de detalle contextual — se llena según (fila, mes) clickeados
@@ -30811,7 +30845,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v05ago-1620';
+var ALZAK_BUILD = 'v11ago-1745';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

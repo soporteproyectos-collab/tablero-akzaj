@@ -12944,11 +12944,14 @@ function calcBalMes(mes) {
 
       var fp=(r['Fecha']||'').split('/');
 
-      if (fp.length<3) return true;
-
-      if (!mes) return true;
+      if (fp.length<3) return false;
 
       var fAnio=parseInt(fp[2]),fMes=parseInt(fp[1]);
+
+      // Solo activos comprados en 2026 — excluir facturas 2025
+      if (fAnio !== 2026) return false;
+
+      if (!mes) return true;
 
       if (fAnio>corteAnio_cxc) return false;
 
@@ -13591,13 +13594,25 @@ function renderBalComparativo() {
     var acumV = (acum.activosPorCat && acum.activosPorCat[cat]) ? acum.activosPorCat[cat] : 0;
     html += '<td style="padding:5px 10px;text-align:right;color:#1D6F42;background:#F0FDF4">'+(acumV>0?'+'+F(acumV):'—')+'</td></tr>';
 
-    // Sub-detalle: items comprados (del acumulado)
+    // Sub-detalle: items comprados, mostrados en el mes que se compraron
     var _items = (acum.activosItems && acum.activosItems[cat]) ? acum.activosItems[cat] : [];
-    _items.forEach(function(it){
+    _items.forEach(function(it, itIdx){
+      // Determinar el mes de compra del item
+      var _itFp = (it.fecha||'').split('/');
+      var _itMes = _itFp.length>=3 ? parseInt(_itFp[1]) : 0;
       html += '<tr id="'+_catUID+'" style="display:none;background:#faf9ff">';
-      html += '<td colspan="'+(NC+2)+'" style="padding:4px 14px 4px 48px;font-size:9px;color:#888">';
-      html += '<div style="display:flex;justify-content:space-between"><span>📦 '+(it.fecha||'')+' · '+(it.proveedor||'').substring(0,30)+' — '+(it.concepto||'').substring(0,50)+' ['+(it.comp||'')+']</span><span style="font-weight:700;color:#1D6F42">$'+Math.round(it.valor).toLocaleString('es-CO')+'</span></div>';
-      html += '</td></tr>';
+      html += '<td style="padding:4px 14px 4px 48px;font-size:9px;color:#888;white-space:nowrap">📦 '+(it.proveedor||'').substring(0,22)+' — '+(it.concepto||'').substring(0,32)+' ['+(it.comp||'')+']</td>';
+      // Mostrar el valor solo en la columna del mes de compra
+      datos.forEach(function(d, di){
+        var colMesN = di + 1;
+        if (colMesN === _itMes) {
+          html += '<td style="padding:4px 10px;text-align:right;font-size:9px;color:#1D6F42;font-weight:700">$'+Math.round(it.valor).toLocaleString('es-CO')+'</td>';
+        } else {
+          html += '<td style="padding:4px 10px;text-align:right;font-size:9px;color:#ccc">·</td>';
+        }
+      });
+      html += '<td style="padding:4px 10px;text-align:right;font-size:9px;color:#1D6F42;background:#F0FDF4">$'+Math.round(it.valor).toLocaleString('es-CO')+'</td>';
+      html += '</tr>';
     });
   });
 
@@ -23232,6 +23247,8 @@ function fcActualizar() {
   // ── Egresos ───────────────────────────────────────────
 
   var egr = new Array(12).fill(0);
+  var egrProgramado = new Array(12).fill(0);  // Estado = "Programado" (por pagar)
+  var egrEjecutado = new Array(12).fill(0);   // ya pagado
 
   if (typeof GASTOS_DATA !== 'undefined') {
 
@@ -23258,7 +23275,16 @@ function fcActualizar() {
 
       var m = parseInt(dp[1]) - 1;
 
-      if (m >= 0 && m < 12) egr[m] += parseFloat(r['Total_COP']||r['Total ($)']||0);
+      if (m >= 0 && m < 12) {
+        var monto = parseFloat(r['Total_COP']||r['Total ($)']||0);
+        var estado = (r['Estado']||'').toLowerCase();
+        if (estado.indexOf('programado') >= 0) {
+          egrProgramado[m] += monto;  // por pagar
+        } else {
+          egr[m] += monto;            // ya pagado (operativo)
+          egrEjecutado[m] += monto;
+        }
+      }
 
     });
 
@@ -23294,15 +23320,19 @@ function fcActualizar() {
 
   html += '<th style="padding:9px 8px;text-align:right">Total</th></tr></thead><tbody>';
 
+  // hoy = mes actual (0-based)
+  var _mesActualFC = (new Date().getFullYear() === anio) ? new Date().getMonth() : 11;
+
   var filas = [
 
     { lbl:'🟢 Facturado',           vals:ingReal,     bg:'#F0FFF4', col:'#0C6E3D', key:'fact' },
 
-    { lbl:'✅ Pagado',              vals:ingPag,      bg:'#EBF8FF', col:'#0C447C', key:'pag' },
+    { lbl:'✅ Cobro real (entró al banco)', vals:ingPag, bg:'#EBF8FF', col:'#0C447C', key:'pag',
+      nota:'Coincide con conciliación bancaria' },
 
     { lbl:'🔴 Vencido sin cobrar',  vals:ingVenc,     bg:'#FFF5F5', col:'#C53030', key:'venc' },
 
-    { lbl:'⏱ Proyección cobro',     vals:ingCobro,    bg:'#FFFBEB', col:'#B7791F', italic:true, key:'cobro' },
+    { lbl:'⏱ Proyección cobro (por entrar)', vals:ingCobro, bg:'#FFFBEB', col:'#B7791F', italic:true, key:'cobro' },
 
     { sep:true },
 
@@ -23312,7 +23342,9 @@ function fcActualizar() {
 
     { sep:true },
 
-    { lbl:'🔴 Egresos operativos <span style="font-weight:400;font-size:9px;color:#999">(solo obligaciones 2026 · sin préstamos, DIAN ni deudas 2025)</span>',  vals:egr.map(function(v){return -v;}), bg:'#FFF5F5', col:'#C53030' },
+    { lbl:'🔴 Egresos operativos <span style="font-weight:400;font-size:9px;color:#999">(ya ejecutados 2026)</span>',  vals:egr.map(function(v){return -v;}), bg:'#FFF5F5', col:'#C53030' },
+
+    { lbl:'🟠 Egresos proyectados <span style="font-weight:400;font-size:9px;color:#999">(Estado: Programado)</span>', vals:egrProgramado.map(function(v){return -v;}), bg:'#FFFAF0', col:'#DD6B20', italic:true },
 
   ];
 
@@ -23376,6 +23408,34 @@ function fcActualizar() {
 
   html += '<td style="padding:9px 8px;text-align:right;color:#68D391">$'+Math.round(totAcum).toLocaleString('es-CO')+'</td>';
 
+  html += '</tr>';
+
+  // ── Caja ingresada — liquidez que YA entró (cobro real) ──
+  html += '<tr style="background:#0C6E3D;color:#fff;font-weight:700">';
+  html += '<td style="padding:9px 12px">💰 Caja ingresada (ya entró)</td>';
+  var totIngresada = 0;
+  for (var m2=0; m2<12; m2++) {
+    var ing2 = ingPag[m2] || 0;
+    totIngresada += ing2;
+    html += '<td style="padding:9px 6px;text-align:right;'+(m2===hoy?'background:#0a5730':'')+'">'+(ing2?'$'+Math.round(ing2).toLocaleString('es-CO'):'—')+'</td>';
+  }
+  html += '<td style="padding:9px 8px;text-align:right">$'+Math.round(totIngresada).toLocaleString('es-CO')+'</td>';
+  html += '</tr>';
+
+  // ── Resultado neto mensual — (cobro real + por entrar) − (egresos ejecutados + proyectados) ──
+  html += '<tr style="background:#2C2C2C;color:#fff;font-weight:700;border-top:2px solid #FFD700">';
+  html += '<td style="padding:9px 12px">📊 Resultado neto (liquidez)</td>';
+  var totNeto = 0;
+  for (var m3=0; m3<12; m3++) {
+    var entradas = (ingPag[m3]||0) + (ingCobro[m3]||0) + (ingProgCobro[m3]||0);
+    var salidas = (egr[m3]||0) + (egrProgramado[m3]||0);
+    var neto = entradas - salidas;
+    totNeto += neto;
+    var colNeto = neto >= 0 ? '#68D391' : '#FC8181';
+    html += '<td style="padding:9px 6px;text-align:right;color:'+colNeto+';'+(m3===hoy?'background:#1a1a1a':'')+'">'+(neto!==0?(neto<0?'-':'')+'$'+Math.round(Math.abs(neto)).toLocaleString('es-CO'):'—')+'</td>';
+  }
+  var colTotNeto = totNeto >= 0 ? '#68D391' : '#FC8181';
+  html += '<td style="padding:9px 8px;text-align:right;color:'+colTotNeto+'">'+(totNeto<0?'-':'')+'$'+Math.round(Math.abs(totNeto)).toLocaleString('es-CO')+'</td>';
   html += '</tr>';
 
   // Panel ÚNICO de detalle contextual — se llena según (fila, mes) clickeados
@@ -30751,7 +30811,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v05ago-1500';
+var ALZAK_BUILD = 'v05ago-1620';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

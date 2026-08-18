@@ -23253,9 +23253,9 @@ function fcActualizar() {
       // Clasificación por fila para el detalle contextual (fila + mes)
       _FCD.fact[m].push(_det);                                     // emitidas en m
       if (f.pagada) _FCD.pag[m].push(_det);                        // pagadas, emitidas en m
-      if (!f.pagada && venceAnio === anio && venceMes >= 0 && venceMes < 12) {
-        _FCD.cobro[venceMes].push(_det);                           // cobro esperado en venceMes
-        if (vencida) _FCD.venc[venceMes].push(_det);               // vencidas en venceMes
+      if (venceAnio === anio && venceMes >= 0 && venceMes < 12) {
+        _FCD.cobro[venceMes].push(_det);                           // cobro esperado/real en venceMes
+        if (!f.pagada && vencida) _FCD.venc[venceMes].push(_det);  // vencidas en venceMes
       }
 
     });
@@ -23474,7 +23474,7 @@ function fcActualizar() {
         } else {
           celda = '<span style="color:#ddd">—</span>';
         }
-        html += '<td style="padding:6px;text-align:right;cursor:pointer;'+(mi===hoy?'background:#e8f0fe':'')+'" onclick="fcVerDetalle(\'pag\','+mi+')" title="Ver facturas ingresadas">'+celda+'</td>';
+        html += '<td style="padding:6px;text-align:right;cursor:pointer;'+(mi===hoy?'background:#e8f0fe':'')+'" onclick="fcVerDetalle(\'cobro\','+mi+')" title="Ver facturas que se espera cobrar">'+celda+'</td>';
       } else {
         html += '<td style="padding:8px 6px;text-align:right;cursor:pointer;'+(mi===hoy?'background:#e8f0fe':'')+'" onclick="fcVerDetalle(\''+(f.key||'fact')+'\','+mi+')" title="Ver detalle">'+fmS(v, f.col)+'</td>';
       }
@@ -30972,7 +30972,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v11ago-2015';
+var ALZAK_BUILD = 'v11ago-2030';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

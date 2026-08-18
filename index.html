@@ -17556,7 +17556,19 @@ function renderGastosDashboard() {
     return true;
   };
 
-  var totalAll=GASTOS_DATA.filter(esOpDash).reduce(function(a,r){return a+parseFloat(r['Total_COP']||0);},0);
+  var _hoyTA = new Date(); _hoyTA.setHours(23,59,59,999);
+  function _esEgrEjecutado(r) {
+    var est = (r['Estado']||'').toLowerCase();
+    if (est.indexOf('pendiente')>=0 || est.indexOf('programado')>=0) return false;
+    var dpTA = (r['Fecha']||'').split('/');
+    if (dpTA.length>=3) {
+      var fTA = new Date(parseInt(dpTA[2]), parseInt(dpTA[1])-1, parseInt(dpTA[0])||1);
+      if (fTA > _hoyTA) return false;
+    }
+    return true;
+  }
+  var totalAll=GASTOS_DATA.filter(esOpDash).filter(_esEgrEjecutado).reduce(function(a,r){return a+parseFloat(r['Total_COP']||0);},0);
+  var totalProyectado=GASTOS_DATA.filter(esOpDash).filter(function(r){return !_esEgrEjecutado(r);}).reduce(function(a,r){return a+parseFloat(r['Total_COP']||0);},0);
 
   var totalDIAN=GASTOS_DATA.filter(function(r){
 
@@ -17586,7 +17598,27 @@ function renderGastosDashboard() {
 
   var mesGr={};
 
-  for(var i=0;i<GASTOS_DATA.length;i++){if(!esOpDash(GASTOS_DATA[i]))continue;var mm=GASTOS_DATA[i]['Mes']||'';if(mm)mesGr[mm]=(mesGr[mm]||0)+parseFloat(GASTOS_DATA[i]['Total_COP']||0);}
+  var mesGrProy = {}; // egresos proyectados (fecha futura o pendiente/programado)
+  var _hoyGr = new Date(); _hoyGr.setHours(23,59,59,999);
+  for(var i=0;i<GASTOS_DATA.length;i++){
+    if(!esOpDash(GASTOS_DATA[i]))continue;
+    var mm=GASTOS_DATA[i]['Mes']||'';
+    if(!mm)continue;
+    var _rG = GASTOS_DATA[i];
+    var _vG = parseFloat(_rG['Total_COP']||0);
+    var _estG = (_rG['Estado']||'').toLowerCase();
+    // Determinar si es proyectado: estado pendiente/programado o fecha futura
+    var _esProyG = _estG.indexOf('pendiente')>=0 || _estG.indexOf('programado')>=0;
+    if (!_esProyG) {
+      var _dpG = (_rG['Fecha']||'').split('/');
+      if (_dpG.length>=3) {
+        var _fG = new Date(parseInt(_dpG[2]), parseInt(_dpG[1])-1, parseInt(_dpG[0])||1);
+        if (_fG > _hoyGr) _esProyG = true;
+      }
+    }
+    if (_esProyG) { mesGrProy[mm]=(mesGrProy[mm]||0)+_vG; }
+    else { mesGr[mm]=(mesGr[mm]||0)+_vG; }
+  }
 
   var _MORD=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
@@ -17608,7 +17640,7 @@ function renderGastosDashboard() {
 
     barEl.style.display='block';
 
-    var maxV=0;for(var i=0;i<meses.length;i++)if(mesGr[meses[i]]>maxV)maxV=mesGr[meses[i]];maxV=maxV*1.15||1;
+    var maxV=0;for(var i=0;i<meses.length;i++){var _tG=(mesGr[meses[i]]||0)+(mesGrProy[meses[i]]||0);if(_tG>maxV)maxV=_tG;}maxV=maxV*1.15||1;
 
     var W=500,H=130,PL=46,PR=10,PT=14,PB=26,CW=W-PL-PR,CH=H-PT-PB,bw=Math.max(14,Math.min(44,CW/meses.length*0.55));
 
@@ -17616,7 +17648,25 @@ function renderGastosDashboard() {
 
     for(var t=0;t<=2;t++){var yv=PT+CH-(t/2)*CH;svg+='<line x1="'+PL+'" y1="'+yv+'" x2="'+(W-PR)+'" y2="'+yv+'" stroke="#f0ede8" stroke-width="1"/><text x="'+(PL-4)+'" y="'+(yv+3)+'" text-anchor="end" font-size="9" fill="#bbb">$'+Math.round(maxV*t/2/1000000)+'M</text>';}
 
-    for(var i=0;i<meses.length;i++){var mes=meses[i],cx=PL+(i+0.5)*(CW/meses.length),bH=(mesGr[mes]/maxV)*CH,act=(filMes===''||filMes===mes);svg+='<rect x="'+(cx-bw/2)+'" y="'+(PT+CH-bH)+'" width="'+bw+'" height="'+bH+'" fill="'+(act?'#993C1D':'#d0cec8')+'" rx="4" style="cursor:pointer" onclick="filtrarGastosMes(this)" data-mes="'+mes+'" />';svg+='<text x="'+cx+'" y="'+(PT+CH-bH-5)+'" text-anchor="middle" font-size="10" font-weight="bold" fill="'+(act?'#993C1D':'#aaa')+'">$'+Math.round(mesGr[mes]/1000000*10)/10+'M</text>';var _mesAbr=mes.replace(' 2026','').replace(' 2025','').substring(0,3).toUpperCase();svg+='<text x="'+cx+'" y="'+(H-5)+'" text-anchor="middle" font-size="11" fill="'+(act?'#444':'#aaa')+'">'+_mesAbr+'</text>';}
+    for(var i=0;i<meses.length;i++){
+      var mes=meses[i],cx=PL+(i+0.5)*(CW/meses.length);
+      var ejec=mesGr[mes]||0, proy=mesGrProy[mes]||0, tot=ejec+proy;
+      var act=(filMes===''||filMes===mes);
+      var bHEjec=(ejec/maxV)*CH, bHProy=(proy/maxV)*CH;
+      // Barra ejecutada (marrón)
+      if (ejec>0) svg+='<rect x="'+(cx-bw/2)+'" y="'+(PT+CH-bHEjec)+'" width="'+bw+'" height="'+bHEjec+'" fill="'+(act?'#993C1D':'#d0cec8')+'" rx="3" style="cursor:pointer" onclick="filtrarGastosMes(this)" data-mes="'+mes+'" />';
+      // Barra proyectada (naranja, encima)
+      if (proy>0) svg+='<rect x="'+(cx-bw/2)+'" y="'+(PT+CH-bHEjec-bHProy)+'" width="'+bw+'" height="'+bHProy+'" fill="'+(act?'#F6AD55':'#e8e0d0')+'" rx="3" style="cursor:pointer" data-mes="'+mes+'" opacity="0.85" />';
+      // Etiqueta total
+      var lblTot = tot>0 ? '$'+Math.round(tot/1000000*10)/10+'M' : '';
+      svg+='<text x="'+cx+'" y="'+(PT+CH-bHEjec-bHProy-5)+'" text-anchor="middle" font-size="10" font-weight="bold" fill="'+(proy>0?'#B7791F':(act?'#993C1D':'#aaa'))+'">'+lblTot+'</text>';
+      var _mesAbr=mes.replace(' 2026','').replace(' 2025','').substring(0,3).toUpperCase();
+      svg+='<text x="'+cx+'" y="'+(H-5)+'" text-anchor="middle" font-size="11" fill="'+(act?'#444':'#aaa')+'">'+_mesAbr+'</text>';
+    }
+
+    // Leyenda
+    svg+='<rect x="'+PL+'" y="2" width="8" height="8" fill="#993C1D" rx="2"/><text x="'+(PL+11)+'" y="9" font-size="8" fill="#666">Ejecutado</text>';
+    svg+='<rect x="'+(PL+70)+'" y="2" width="8" height="8" fill="#F6AD55" rx="2"/><text x="'+(PL+81)+'" y="9" font-size="8" fill="#666">Proyectado</text>';
 
     svg+='</svg>';barEl.innerHTML=svg;
 
@@ -30901,7 +30951,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v11ago-1930';
+var ALZAK_BUILD = 'v11ago-1945';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

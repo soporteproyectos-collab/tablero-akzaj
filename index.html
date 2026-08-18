@@ -16333,7 +16333,22 @@ function filtrarGastosMes(el) {
 
   var mes=el.getAttribute('data-mes');
 
-  var actual=g('gd-fil-mes')?g('gd-fil-mes').value:'';
+  var s=document.getElementById('gd-fil-mes');
+
+  if(s){ s.value = (s.value===mes) ? '' : mes; }
+
+  // Abrir el detalle de gastos si está cerrado
+  var grupos=document.getElementById('gd-grupos');
+  if(grupos && grupos.style.display==='none'){
+    grupos.style.display='block';
+    var ico=document.getElementById('ico-detalle-gastos');
+    if(ico)ico.style.transform='rotate(180deg)';
+  }
+
+  if(typeof renderGastosDashboard==='function') renderGastosDashboard();
+
+  // Scroll suave al detalle
+  if(grupos){ setTimeout(function(){ grupos.scrollIntoView({behavior:'smooth',block:'nearest'}); }, 100); }
 
 }
 
@@ -17622,7 +17637,11 @@ function renderGastosDashboard() {
 
   var _MORD=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
-  var meses=Object.keys(mesGr).sort(function(a,b){
+  // Combinar meses de ejecutados (mesGr) y proyectados (mesGrProy)
+  var _todosMeses = {};
+  Object.keys(mesGr).forEach(function(m){ _todosMeses[m]=1; });
+  Object.keys(mesGrProy).forEach(function(m){ _todosMeses[m]=1; });
+  var meses=Object.keys(_todosMeses).sort(function(a,b){
 
     var pa=a.split(' '), pb=b.split(' ');
 
@@ -30953,7 +30972,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v11ago-2000';
+var ALZAK_BUILD = 'v11ago-2015';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

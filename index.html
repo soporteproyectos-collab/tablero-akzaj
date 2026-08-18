@@ -23565,7 +23565,7 @@ function fcActualizarFlujoPanelNeto() {
 
   }
 
-  // ── Total pagado (desde Sheet de Egresos) ──
+  // ── Total pagado (desde Sheet de Egresos) — SOLO pagos reales, no proyecciones ──
 
   var egOp = 0, egDIAN = 0;
 
@@ -23578,6 +23578,18 @@ function fcActualizarFlujoPanelNeto() {
       var c = (r['Categoria']||r['Categoría']||'').toLowerCase().trim();
 
       if (t === 'traslado' || c.indexOf('traslado') >= 0 || c.indexOf('inversion') >= 0) return;
+
+      // Excluir proyecciones futuras: pendiente/programado NO son pagos realizados
+      var est = (r['Estado']||'').toLowerCase();
+      if (est.indexOf('pendiente') >= 0 || est.indexOf('programado') >= 0) return;
+
+      // Excluir fechas futuras (posteriores a hoy)
+      var dpE = (r['Fecha']||'').split('/');
+      if (dpE.length >= 3) {
+        var fE = new Date(parseInt(dpE[2]), parseInt(dpE[1])-1, parseInt(dpE[0])||1);
+        var hoyE = new Date(); hoyE.setHours(23,59,59,999);
+        if (fE > hoyE) return;
+      }
 
       var v = alzakParseNum(r['Total_COP']||r['Total ($)']||0);
 
@@ -30889,7 +30901,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v11ago-1915';
+var ALZAK_BUILD = 'v11ago-1930';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

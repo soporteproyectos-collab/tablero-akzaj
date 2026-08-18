@@ -17656,10 +17656,12 @@ function renderGastosDashboard() {
       // Barra ejecutada (marrón)
       if (ejec>0) svg+='<rect x="'+(cx-bw/2)+'" y="'+(PT+CH-bHEjec)+'" width="'+bw+'" height="'+bHEjec+'" fill="'+(act?'#993C1D':'#d0cec8')+'" rx="3" style="cursor:pointer" onclick="filtrarGastosMes(this)" data-mes="'+mes+'" />';
       // Barra proyectada (naranja, encima)
-      if (proy>0) svg+='<rect x="'+(cx-bw/2)+'" y="'+(PT+CH-bHEjec-bHProy)+'" width="'+bw+'" height="'+bHProy+'" fill="'+(act?'#F6AD55':'#e8e0d0')+'" rx="3" style="cursor:pointer" data-mes="'+mes+'" opacity="0.85" />';
+      if (proy>0) svg+='<rect x="'+(cx-bw/2)+'" y="'+(PT+CH-bHEjec-bHProy)+'" width="'+bw+'" height="'+bHProy+'" fill="'+(act?'#F6AD55':'#e8e0d0')+'" rx="3" style="cursor:pointer" onclick="filtrarGastosMes(this)" data-mes="'+mes+'" opacity="0.9" />';
+      // Zona clickeable invisible sobre toda la columna (facilita el clic)
+      svg+='<rect x="'+(cx-bw/2)+'" y="'+PT+'" width="'+bw+'" height="'+CH+'" fill="transparent" style="cursor:pointer" onclick="filtrarGastosMes(this)" data-mes="'+mes+'" />';
       // Etiqueta total
       var lblTot = tot>0 ? '$'+Math.round(tot/1000000*10)/10+'M' : '';
-      svg+='<text x="'+cx+'" y="'+(PT+CH-bHEjec-bHProy-5)+'" text-anchor="middle" font-size="10" font-weight="bold" fill="'+(proy>0?'#B7791F':(act?'#993C1D':'#aaa'))+'">'+lblTot+'</text>';
+      svg+='<text x="'+cx+'" y="'+(PT+CH-bHEjec-bHProy-5)+'" text-anchor="middle" font-size="10" font-weight="bold" fill="'+(proy>0?'#B7791F':(act?'#993C1D':'#aaa'))+'" style="pointer-events:none">'+lblTot+'</text>';
       var _mesAbr=mes.replace(' 2026','').replace(' 2025','').substring(0,3).toUpperCase();
       svg+='<text x="'+cx+'" y="'+(H-5)+'" text-anchor="middle" font-size="11" fill="'+(act?'#444':'#aaa')+'">'+_mesAbr+'</text>';
     }
@@ -30951,7 +30953,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v11ago-1945';
+var ALZAK_BUILD = 'v11ago-2000';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

@@ -8165,6 +8165,16 @@ function fFechaPartes(fecha) {
 
 }
 
+// AÑO EN CURSO — helper central para reportes y sumatorias (regla #10)
+var ALZAK_ANIO_CURSO = 2026;
+function facturasAnioCurso() {
+  if (typeof FACTURAS === 'undefined') return [];
+  return FACTURAS.filter(function(f){
+    var dp = fFechaPartes(f.fecha_raw || f.fecha || '');
+    return dp[0] === ALZAK_ANIO_CURSO;
+  });
+}
+
 function cerrarDetalle() {
 
   var det = g('fact-detalle');
@@ -8547,8 +8557,18 @@ function renderFacturas() {
   function esDonacion(f) {
     return String(f.num||'').toUpperCase().indexOf('DONACI') >= 0;
   }
-  var factVenta  = FACTURAS.filter(function(f){ return !esDonacion(f); });
-  var donaciones = FACTURAS.filter(esDonacion);
+  // Filtrar por año en curso (2026) — las facturas de 2025 son cartera de apertura, no del ejercicio
+  var _anioActualFV = 2026;
+  var factVenta  = FACTURAS.filter(function(f){
+    if (esDonacion(f)) return false;
+    var dp = (typeof fFechaPartes==='function') ? fFechaPartes(f.fecha_raw||f.fecha||'') : [0,0,0];
+    return dp[0] === _anioActualFV;
+  });
+  var donaciones = FACTURAS.filter(function(f){
+    if (!esDonacion(f)) return false;
+    var dp = (typeof fFechaPartes==='function') ? fFechaPartes(f.fecha_raw||f.fecha||'') : [0,0,0];
+    return dp[0] === _anioActualFV;
+  });
 
   var totalBruto   = factVenta.reduce(function(a,f){return a+(f.bruto||0);},0);
   var totalDonado  = donaciones.reduce(function(a,f){return a+(f.bruto||f.total||0);},0);
@@ -9626,23 +9646,25 @@ function exportarPDFFacturas() {
 
   var fecha  = new Date().toLocaleDateString('es-CO',{year:'numeric',month:'long',day:'numeric'});
 
-  var totalBruto = FACTURAS.reduce(function(a,f){return a+(f.bruto||0);},0);
+  var _factRep = facturasAnioCurso();  // SOLO año en curso para reportes
 
-  var totalIva   = FACTURAS.reduce(function(a,f){return a+(parseFloat(f.iva)||0);},0);
+  var totalBruto = _factRep.reduce(function(a,f){return a+(f.bruto||0);},0);
 
-  var totalRete  = FACTURAS.reduce(function(a,f){return a+(f.retefuente||0);},0);
+  var totalIva   = _factRep.reduce(function(a,f){return a+(parseFloat(f.iva)||0);},0);
 
-  var totalEmitido = FACTURAS.reduce(function(a,f){return a+(f.total||0);},0);  // total bruto emitido
+  var totalRete  = _factRep.reduce(function(a,f){return a+(f.retefuente||0);},0);
 
-  var totalPag   = FACTURAS.filter(function(f){return f.pagada;}).reduce(function(a,f){return a+(f.total||0);},0);
+  var totalEmitido = _factRep.reduce(function(a,f){return a+(f.total||0);},0);  // total bruto emitido
+
+  var totalPag   = _factRep.filter(function(f){return f.pagada;}).reduce(function(a,f){return a+(f.total||0);},0);
 
   var totalPend  = totalEmitido - totalPag;  // lo que falta por cobrar
 
   var totalCobrar = totalPend;  // "Por cobrar" = pendiente
 
-  var nPag       = FACTURAS.filter(function(f){return f.pagada;}).length;
+  var nPag       = _factRep.filter(function(f){return f.pagada;}).length;
 
-  var nPend      = FACTURAS.filter(function(f){return !f.pagada;}).length;
+  var nPend      = _factRep.filter(function(f){return !f.pagada;}).length;
 
   var pctRecaudo = totalEmitido ? Math.round(totalPag/totalEmitido*100) : 0;
 
@@ -9650,9 +9672,9 @@ function exportarPDFFacturas() {
 
   var porCliente = {};
 
-  for (var i=0; i<FACTURAS.length; i++) {
+  for (var i=0; i<_factRep.length; i++) {
 
-    var f = FACTURAS[i];
+    var f = _factRep[i];
 
     var cli = f.cliente || 'Sin cliente';
 
@@ -11176,7 +11198,7 @@ function renderCarteraHome() {
 
   if(kp)kp.innerHTML=
 
-    '<div class="ind"><div class="ind-l">Base gravable</div><div class="ind-v tb">'+F(dBruto)+'</div><div class="ind-s">'+FACTURAS.length+' facturas emitidas</div></div>'+
+    '<div class="ind"><div class="ind-l">Base gravable</div><div class="ind-v tb">'+F(dBruto)+'</div><div class="ind-s">'+_factFil.length+' facturas emitidas</div></div>'+
 
     '<div class="ind"><div class="ind-l" style="color:#0F6E56">IVA facturado 19%</div><div class="ind-v" style="color:#0F6E56;font-weight:700">+'+F(dIVA)+'</div><div class="ind-s">IVA generado</div></div>'+
 
@@ -30972,7 +30994,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v11ago-2030';
+var ALZAK_BUILD = 'v01sep-0930';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

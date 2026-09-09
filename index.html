@@ -2166,7 +2166,9 @@ var USUARIOS = [
 
   {user:'admin',     pass:'AG2026$$',  rol:'admin',     nombre:'Administrador ALZAK'},
 
-  {user:'asistente', pass:'Paula26**', rol:'asistente', nombre:'Asistente ALZAK'}
+  {user:'asistente', pass:'Paula26**', rol:'asistente', nombre:'Asistente ALZAK'},
+
+  {user:'kevin',     pass:'Kevin2026**', rol:'contador', nombre:'Kevin Díaz — Contador'}
 
 ];
 
@@ -18023,9 +18025,9 @@ function cerrarLogin() {
 
   }
 
-  // Ocultar botones de edición para invitados
+  // Ocultar botones de edición para invitados y contador externo (solo lectura)
 
-  if (usuarioActual && usuarioActual.rol === 'viewer') {
+  if (usuarioActual && (usuarioActual.rol === 'viewer' || usuarioActual.rol === 'contador')) {
 
     var btns = document.querySelectorAll('.btn-admin');
 
@@ -25230,7 +25232,9 @@ function frRender() {
 
   filtered.forEach(function(r){ frFuentePago(r); });
 
-  var totalOblig = 0, totalPagado = 0, totalDeuda = 0, totalSinExtr = 0, nDIAN = 0;
+  var totalOblig = 0, totalCostoOp = 0, totalPagado = 0, totalDeuda = 0, totalSinExtr = 0, nDIAN = 0;
+
+  var nOblig = 0, nCostoOp = 0;
 
   // Contar proyectados desde FR_DATA completo (frGetFiltered ya los excluyó)
 
@@ -25252,7 +25256,13 @@ function frRender() {
 
     var fuente = frFuentePago(r);
 
+    // Total bruto (todo lo filtrado — para referencia)
     totalOblig += tot;
+    nOblig++;
+
+    // Costos operativos reales: excluye DIAN, préstamos, traslados, pago TC
+    var esOp = (typeof frEsGastoOpPL === 'function') ? frEsGastoOpPL(r) : true;
+    if (esOp) { totalCostoOp += tot; nCostoOp++; }
 
     if (est === 'PAGADO')       totalPagado  += (ab > 0 ? ab : tot);
 
@@ -25282,17 +25292,25 @@ function frRender() {
 
   }
 
+  // Etiqueta dinámica según filtro de año activo
+  var _filAnioKPI = (document.getElementById('fr-fil-anio')||{}).value || '';
+  var _lblAnio = _filAnioKPI ? 'Año '+_filAnioKPI : 'Todos los años';
+
   var selEst = (document.getElementById('fr-fil-estado')||{}).value||'';
 
   if (kpiEl) kpiEl.innerHTML =
 
-    kpiCard('Total obligaciones', totalOblig, filtered.length+' registros', '#EBF3FB', '#0C447C', "frFiltrarKPI('')")
+    kpiCard('💼 Costo de producción', totalCostoOp,
+      nCostoOp+' registros · honorarios, servicios, arrendamientos · '+_lblAnio,
+      '#F0FDF4', '#14532D', "frFiltrarKPI(\'\')") 
 
     + kpiCard('✅ Pagado confirmado', totalPagado, 'Verificado en extractos', '#DCFCE7', '#166534', "frFiltrarKPI('PAGADO')")
 
     + kpiCard('🔴 Lo que debes hoy', totalDeuda, 'Sin confirmación de pago (ni extracto ni egresos)', '#FEE2E2', '#991B1B', "frFiltrarKPI('PENDIENTE')")
 
-    + kpiCard('⏳ Pendientes sin extracto', totalSinExtr, 'Subconjunto de lo que debes · Cargar extracto del período', '#F8FAFC', '#64748B', "frFiltrarKPI('SIN-EXTRACTO')")
+    + kpiCard('📋 Total obligaciones', totalOblig,
+      nOblig+' registros · incluye DIAN, préstamos y traslados · '+_lblAnio,
+      '#EBF3FB', '#0C447C', "frFiltrarKPI(\'\')")
 
     + (nProyectados > 0 ? '<div style="grid-column:1/-1;text-align:center;padding:6px 12px;background:#F3F0FF;border-radius:8px;margin-top:4px;font-size:11px;color:#7C3AED;font-weight:600;">📈 '+nProyectados+' registros proyectados ('+frFmt(totalProyectado)+') no incluidos en totales — solo aparecen en Estado de Resultados</div>' : '');
 
@@ -30994,7 +31012,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v01sep-0930';
+var ALZAK_BUILD = 'v09sep-1100';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

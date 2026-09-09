@@ -3481,7 +3481,10 @@ function alzakCargarDatosPrincipal(url, callback) {
           function _esFactProgramada(f) {
             var est = (f.estado||'').toLowerCase().trim();
             var num = String(f.num||'').toUpperCase().trim();
-            return est.indexOf('program') >= 0 || num.indexOf('PROG') === 0;
+            // Detecta: estado contiene "program", N° empieza por PROG o PROY
+            return est.indexOf('program') >= 0
+                || num.indexOf('PROG') === 0
+                || num.indexOf('PROY') === 0;
           }
 
           var programadasDelSheet = FACTURAS.filter(_esFactProgramada);
@@ -31023,7 +31026,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v09sep-1130';
+var ALZAK_BUILD = 'v09sep-1145';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

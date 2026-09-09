@@ -25261,8 +25261,14 @@ function frRender() {
     nOblig++;
 
     // Costos operativos reales: excluye DIAN, préstamos, traslados, pago TC
+    // Usa Subtotal (COP) = base gravable sin IVA, igual que el P&L del home
     var esOp = (typeof frEsGastoOpPL === 'function') ? frEsGastoOpPL(r) : true;
-    if (esOp) { totalCostoOp += tot; nCostoOp++; }
+    if (esOp) {
+      var _sub = r['Subtotal (COP)'] || r['Subtotal_COP'] || 0;
+      if (typeof _sub === 'string') _sub = _sub.replace(/[^0-9.]/g,'');
+      totalCostoOp += (parseFloat(_sub)||0);
+      nCostoOp++;
+    }
 
     if (est === 'PAGADO')       totalPagado  += (ab > 0 ? ab : tot);
 
@@ -31012,7 +31018,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v09sep-1100';
+var ALZAK_BUILD = 'v09sep-1115';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

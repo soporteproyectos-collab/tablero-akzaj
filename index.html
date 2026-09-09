@@ -806,6 +806,11 @@ body[data-org="FOUNDATION"] .alzak-toast {
   border-left: 4px solid #00A65E !important;
 }
 
+/* ── Módulos exclusivos GROUP — ocultar en FOUNDATION ── */
+body[data-org="FOUNDATION"] #dash-fa-bloque {
+  display: none !important;
+}
+
 
 </style>
 
@@ -31018,7 +31023,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v09sep-1115';
+var ALZAK_BUILD = 'v09sep-1130';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

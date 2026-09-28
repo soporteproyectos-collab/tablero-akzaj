@@ -21000,7 +21000,9 @@ var CLASE_A_TIPO = {
 
   gmf:'impto', interes:'interes', rendimiento:'interes',
 
-  comision:'comision', egreso_externo:'egreso', retencion:'impto',
+  comision:'comision', egreso_externo:'egreso', retencion:'retencion',
+
+  prestamo:'prestamo',  // préstamo recibido (NJAZ/socios): financiación, no venta
 
   sin_clasificar:'transf'  // neutral: cuadra el saldo pero no contamina indicadores
 
@@ -21022,7 +21024,8 @@ function convMovGAS(mv, banco) {
   if (!mv.clase || t === 'egreso') {
     if (desc.indexOf('interes') >= 0 || desc.indexOf('abono de interes') >= 0) t = 'interes';
     else if (desc.indexOf('gmf') >= 0 || desc.indexOf('4x1000') >= 0) t = 'impto';
-    else if (desc.indexOf('retefuente') >= 0 || desc.indexOf('retencion') >= 0) t = 'impto';
+    else if (desc.indexOf('retefuente') >= 0 || desc.indexOf('retencion') >= 0) t = 'retencion';
+    else if (desc.indexOf('zakzuk') >= 0 && val > 0) t = 'prestamo';
     else if (val > 0) t = 'ingreso';
     else t = 'egreso';
   }
@@ -21723,6 +21726,8 @@ function renderGlobal(p){
 
   const int_=st(m,'interes'),intBl=bl.intereses,rend=fid.rendNetos;
 
+  const prestMes=st(m,'prestamo');
+
   const totalMes=ingTotal+int_+intBl+rend;
 
   const dAh=p.sF,dFid=fid.sF,dCj=cj.sF,dBl=bl.sF;
@@ -21743,7 +21748,7 @@ function renderGlobal(p){
 
     eg:  a.eg +Math.abs(st(per.movs,'egreso'))+Math.abs(st((per.caja&&per.caja.movs)||[],'egreso'))+Math.abs(st((per.bold&&per.bold.movs)||[],'egreso')),
 
-    // GMF: suma impto de TODAS las cuentas incluyendo fid.retencion
+    // GMF: solo 4x1000 real. La retefuente (Fiducuenta/Bold) es activo fiscal, NO gasto
 
     imp: a.imp
 
@@ -21751,11 +21756,11 @@ function renderGlobal(p){
 
       +Math.abs(st((per.caja&&per.caja.movs)||[],'impto'))
 
-      +Math.abs(st((per.bold&&per.bold.movs)||[],'impto'))
+      +Math.abs(st((per.bold&&per.bold.movs)||[],'impto')),
 
-      +((per.fid&&per.fid.retencion)||0),
+    prest: a.prest + st(per.movs,'prestamo'),
 
-  }),{ing:0,int:0,intAh:0,intBl:0,rend:0,eg:0,imp:0});
+  }),{ing:0,int:0,intAh:0,intBl:0,rend:0,eg:0,imp:0,prest:0});
 
   document.getElementById('g-title').textContent=(typeof ALZAK_ORG_ACTIVA!=='undefined'&&ALZAK_ORG_ACTIVA==='FOUNDATION'?'ALZAK Foundation — Todas las cuentas':'ALZAK GROUP SAS — Todas las cuentas');
 
@@ -21819,6 +21824,8 @@ function renderGlobal(p){
 
         <div class="grow-line"><span class="grow-label">Intereses Bold CF</span><span class="grow-val ${intBl>0?'pos':'dim'}">${intBl>0?'+'+fc(intBl):'$0,00'}</span></div>
 
+        ${prestMes>0?`<div class="grow-line" style="background:#FFF3CD;border-radius:6px;padding:4px 8px;"><span class="grow-label" style="color:#4A2800;">Préstamos recibidos (no es venta)</span><span class="grow-val" style="color:#4A2800;font-weight:700;">+${fc(prestMes)}</span></div>`:''}
+
         <div class="grow-total"><span class="grow-total-lbl">Total real del mes</span><span class="grow-total-val">+${fc(totalMes)}</span></div>
 
       </div>
@@ -21852,6 +21859,8 @@ function renderGlobal(p){
         <div class="grow-line"><span class="grow-label">Intereses Bold CF acum.</span><span class="grow-val pos">+${fc(acum.intBl)}</span></div>
 
         <div class="grow-line" style="background:#E8F5E9;border-radius:6px;padding:4px 8px;"><span class="grow-label" style="font-weight:700;color:#1B5E20;">Total rendimientos acum.</span><span class="grow-val pos" style="font-weight:700;color:#1B5E20;">+${fc(acum.rend+acum.int)}</span></div>
+
+        ${acum.prest>0?`<div class="grow-line" style="background:#FFF3CD;border-radius:6px;padding:4px 8px;"><span class="grow-label" style="color:#4A2800;">Préstamos recibidos acum.</span><span class="grow-val" style="color:#4A2800;font-weight:700;">+${fc(acum.prest)}</span></div>`:''}
 
         <div class="grow-line"><span class="grow-label">Egresos pagados acum.</span><span class="grow-val neg">-${fc(acum.eg)}</span></div>
 
@@ -31026,7 +31035,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v09sep-1145';
+var ALZAK_BUILD = 'v28sep-1630';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

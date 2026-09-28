@@ -21032,6 +21032,10 @@ function convMovGAS(mv, banco) {
 
   if ((banco === 'BCS' || banco === 'Bold') && t === 'interno') t = 'traslado';
 
+  // Sanidad: GMF > $600k o interés > $500k son imposibles → no contaminar indicadores
+  if (t === 'impto'   && Math.abs(val) > 600000) t = val < 0 ? 'egreso' : 'ingreso';
+  if (t === 'interes' && Math.abs(val) > 500000) t = val < 0 ? 'egreso' : 'ingreso';
+
   return { f: mv.f || '', d: mv.desc || '', t: t, v: val, doc: mv.doc||'' };
 
 }
@@ -31035,7 +31039,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v28sep-1630';
+var ALZAK_BUILD = 'v28sep-1645';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

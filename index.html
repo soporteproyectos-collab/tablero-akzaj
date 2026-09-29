@@ -25212,6 +25212,7 @@ function frRender() {
   frResetPool();
 
   _FR_FUENTE_CACHE = {}; if(window._FR_EGRESOS_USADOS) window._FR_EGRESOS_USADOS = {};
+  window._FR_TC_USADOS = {};
 
   window._FR_ABONO_CACHE = {}; window._FR_EGRESO_RESERVADO = {};
 
@@ -26814,12 +26815,23 @@ function frFuentePago(r) {
   var esUSD = frEsProveedorUSD(proveedor);
 
   var tolTC  = esUSD ? (FR_TOL_USD_PCT / 100 * total) : 100; // tolerancia en COP
+  // Pasarelas de pago: la TC muestra al intermediario, no al proveedor (Prosegur cobra por
+  // Mercado Pago). Se aceptan por monto exacto o con comisión (+$6.000), una sola vez cada cargo.
+  var _PASARELA = /MERCADO\s*PAGO|MERCADOPA|PAYU|\bPSE\b|WOMPI|PLACETOPAY|EPAYCO|NEQUI|DAVIPLATA/i;
+  if (!window._FR_TC_USADOS) window._FR_TC_USADOS = {};
+  var tcPasarela = null;
 
   for (var j = 0; j < tcGastos.length; j++) {
 
     var tc = tcGastos[j];
+    var _tcKey = (tc.f||'') + '|' + Math.round(tc.car||0) + '|' + (tc.desc||'');
+    if (window._FR_TC_USADOS[_tcKey]) continue;   // cada cargo TC paga una sola factura
 
     var diff = Math.abs(tc.car - total);
+    if (!tcPasarela && _PASARELA.test(tc.desc||'') && frMontoOk(tc.car, total)) {
+      var _tsP = _tsF(tc.f);
+      if (tsRad === null || _tsP === null || (_tsP >= tsRad - 7*864e5 && _tsP <= tsRad + 90*864e5)) tcPasarela = tc;
+    }
 
     if (diff > Math.max(100, tolTC)) continue;
 
@@ -26883,11 +26895,12 @@ function frFuentePago(r) {
 
   }
 
-  var tcMatch = tcExacto || tcAprox;
+  var tcMatch = tcExacto || tcAprox || tcPasarela;
 
   if (tcMatch) {
+    window._FR_TC_USADOS[(tcMatch.f||'') + '|' + Math.round(tcMatch.car||0) + '|' + (tcMatch.desc||'')] = true;
 
-    var _tcLabel = 'TC BCS' + (esUSD && Math.abs(tcMatch.car-total)>100 ? ' ~USD' : '');
+    var _tcLabel = 'TC BCS' + (esUSD && Math.abs(tcMatch.car-total)>100 ? ' ~USD' : '') + (tcMatch === tcPasarela ? ' ·pasarela' : '');
 
     var _r3={tipo:'tc',cuenta:'TC BCS VISA *6529',label:_tcLabel,color:'#DC2626',fecha:tcMatch.f||'',desc:tcMatch.desc};
 
@@ -31300,7 +31313,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v29sep-1630';
+var ALZAK_BUILD = 'v29sep-1715';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

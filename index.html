@@ -25147,6 +25147,9 @@ function frAuditar(numComp) {
 
 // ── Un egreso solo es evidencia de pago si YA OCURRIÓ: fecha ≤ hoy y estado no Pendiente/Programado.
 // Todo lo posterior a hoy es proyección (vive en Flujo de Caja), nunca prueba de pago.
+// Un pago puede preceder a la factura hasta 45 días (anticipo que se legaliza con la radicación)
+var FR_DIAS_ANTICIPO = 45;
+
 function frEgresoEjecutado(g) {
   if (!g) return false;
   var est = String(g['Estado']||'').toLowerCase();
@@ -25204,10 +25207,13 @@ function frRender() {
   window._FR_DESEMB = [];
   window._FR_MISMO_DESEMB = function(v, ts, src) {
     if (!window._FR_DESEMB || ts === null) return false;
+    // Un egreso del Sheet se refleja en UN movimiento bancario. Si el 30/04 hubo tres
+    // transferencias de $1.7M y dos egresos, solo dos movimientos son "el mismo desembolso";
+    // el tercero es un pago real de otra factura. Por eso cada desembolso se consume una vez.
     for (var d = 0; d < window._FR_DESEMB.length; d++) {
       var x = window._FR_DESEMB[d];
-      if (x.src !== src) continue;
-      if (Math.abs(x.v - v) <= 100 && x.ts !== null && Math.abs(x.ts - ts) <= 6*24*60*60*1000) return true;
+      if (x.src !== src || x._tapado) continue;
+      if (Math.abs(x.v - v) <= 100 && x.ts !== null && Math.abs(x.ts - ts) <= 6*24*60*60*1000) { x._tapado = true; return true; }
     }
     return false;
   };
@@ -25252,7 +25258,7 @@ function frRender() {
         try {
           // Match 1: exacto con límites de token (el de siempre)
           var esc = nc.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          var re1 = new RegExp('(^|[^a-z0-9])' + esc + '([\\s.,;:()\\/\\\\\\-]|$)');
+          var re1 = new RegExp('(^|[^a-z0-9])' + esc + '([\\s.,;:()\\/\\\\]|-(?![a-z0-9])|$)');
           if (re1.test(haystack)) {
             window._FR_EGRESO_RESERVADO[gi] = _frCompMap[nc]; return;
           }
@@ -26091,7 +26097,7 @@ function frCalcularAbonado(r) {
       // Un pago no puede abonar una factura que aún no existía.
       // Tolerancia -15 días: es común pagar la cuenta al recibirla y radicarla
       // días después (pensiones: pagas el 1°, radicas el 13). Mensualidades (~30 días) siguen protegidas por FIFO + reservas.
-      var fechaOk = (tsFactura !== null && tsEgreso !== null && tsEgreso >= tsFactura - 15*24*60*60*1000);
+      var fechaOk = (tsFactura !== null && tsEgreso !== null && tsEgreso >= tsFactura - FR_DIAS_ANTICIPO*24*60*60*1000);
 
       if (_tr && provMatch && !fechaOk) { _tr.push('   ⛔ descartado: fecha del egreso fuera de rango (anterior a radicación -15d o sin fecha)'); }
 
@@ -26519,7 +26525,7 @@ function frFuentePago(r) {
       function _compMatchFP(needle, hay) {
         try {
           var esc = needle.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-          return new RegExp('(^|[^a-z0-9])' + esc + '([\\s.,;:()\\[\\]/\\\\]|$)').test(hay);
+          return new RegExp('(^|[^a-z0-9])' + esc + '([\\s.,;:()\\[\\]/\\\\]|-(?![a-z0-9])|$)').test(hay);
         } catch(e) { return hay.indexOf(needle.toLowerCase()) >= 0; }
       }
 
@@ -26555,7 +26561,7 @@ function frFuentePago(r) {
       // Un pago efectuado ANTES de radicar la factura pertenece a otra obligación
       // (mensualidades de contratistas con montos idénticos).
       var _tsEgr = _tsF(gx['Fecha']);
-      var _fechaOkFP = (tsRad !== null && _tsEgr !== null && _tsEgr >= tsRad - 15*24*60*60*1000);
+      var _fechaOkFP = (tsRad !== null && _tsEgr !== null && _tsEgr >= tsRad - FR_DIAS_ANTICIPO*24*60*60*1000);
 
       // Cross-año: deuda de año anterior solo cruza por monto si el egreso
       // menciona ese año (misma regla anti-robo que frCalcularAbonado)
@@ -26626,7 +26632,7 @@ function frFuentePago(r) {
       // vienen dd/MM/yyyy). Un débito bancario de junio no puede pagar
       // una cuenta radicada en julio — es el desembolso de otra mensualidad.
       var _tsMv2 = _tsF(_mv2.f);
-      if (tsRad !== null && _tsMv2 !== null && _tsMv2 < tsRad - 15*24*60*60*1000) continue;
+      if (tsRad !== null && _tsMv2 !== null && _tsMv2 < tsRad - FR_DIAS_ANTICIPO*24*60*60*1000) continue;
 
       // Si un EGRESO con este mismo monto/fecha ya pagó una factura, este
       // movimiento bancario es el reflejo del MISMO desembolso — saltarlo
@@ -26673,6 +26679,31 @@ function frFuentePago(r) {
 
     }
 
+    // ── Pasada 2: el banco NO escribe el beneficiario (Bancolombia "TRANSFERENCIA CTA SUC
+    // VIRTUAL", Bold "Envío por Llaves", BCS "COMPRA INTERNET"). Regla del gerente: una salida
+    // real de dinero por el monto exacto de la factura, dentro de la ventana, ES el pago.
+    // Solo aplica a descripciones genéricas: si el banco nombra a OTRO tercero, no se toma.
+    if (!poolMatch) {
+      var _GEN = /TRANSFERENCIA CTA SUC VIRTUAL|TRANSFERENCIA VIRTUAL|ENV[IÍ]O POR LLAVES|COMPRA INTERNET|DEBITO AUTORIZADO|PAGO POR PSE|POR VERIFICAR|MOVIMIENTO BOLD|TRANSFERENCIA ACH A|PAGO PSE$/i;
+      var _cands = [];
+      for (var _mi3=0; _mi3<_FR_MOVS_POOL.length; _mi3++) {
+        var _mv3 = _FR_MOVS_POOL[_mi3];
+        if (_mv3.usado || Math.abs(_mv3.v - total) > 100) continue;
+        var _d3 = String(_mv3.d||'').replace(/\s*\[reclasificado[^\]]*\]/i,'').trim();
+        if (!_GEN.test(_d3)) continue;
+        var _ts3 = _tsF(_mv3.f);
+        if (tsRad !== null && _ts3 !== null && (_ts3 < tsRad - FR_DIAS_ANTICIPO*864e5 || _ts3 > tsRad + 90*864e5)) continue;
+        if (typeof window._FR_MISMO_DESEMB === 'function' && _ts3 !== null && window._FR_MISMO_DESEMB(_mv3.v, _ts3, 'egreso')) continue;
+        _cands.push({mv:_mv3, dist: (tsRad!==null&&_ts3!==null) ? Math.abs(_ts3-tsRad) : 9e15});
+      }
+      if (_cands.length) {
+        _cands.sort(function(a,b){ return a.dist-b.dist; }); // el más cercano a la radicación
+        poolMatch = _cands[0].mv; poolMatch.usado = true; poolMatch._porMonto = true;
+        var _tsPM = _tsF(poolMatch.f);
+        if (window._FR_DESEMB && _tsPM !== null) window._FR_DESEMB.push({v: poolMatch.v, ts: _tsPM, src: 'extracto'});
+      }
+    }
+
   }
 
   // Si no hubo match exacto (±100 COP), intentar cruce porcentual para USD
@@ -26687,7 +26718,7 @@ function frFuentePago(r) {
 
   if (poolMatch) {
 
-    var _usdNota = poolMatch._usdMatch ? ' ~USD' : '';
+    var _usdNota = (poolMatch._usdMatch ? ' ~USD' : '') + (poolMatch._porMonto ? ' ·monto' : '');
 
     var _r2 = {tipo:'extracto', cuenta: poolMatch.cuenta,
 
@@ -26721,7 +26752,7 @@ function frFuentePago(r) {
 
     // Fecha del cargo TC: debe ser >= radicación (mismo principio anti-mensualidades)
     var _tsTC = _tsF(tc.f);
-    if (tsRad !== null && _tsTC !== null && _tsTC < tsRad - 15*24*60*60*1000) continue;
+    if (tsRad !== null && _tsTC !== null && _tsTC < tsRad - FR_DIAS_ANTICIPO*24*60*60*1000) continue;
 
     var provMatch = false;
 
@@ -31196,7 +31227,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v29sep-1000';
+var ALZAK_BUILD = 'v29sep-1130';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

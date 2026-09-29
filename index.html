@@ -806,6 +806,11 @@ body[data-org="FOUNDATION"] .alzak-toast {
   border-left: 4px solid #00A65E !important;
 }
 
+/* ── Botón marcar préstamo en conciliación ── */
+.mc-btn{font-size:10px;padding:2px 7px;border-radius:6px;border:1px solid #D4A017;background:#FFF8E1;color:#854F0B;cursor:pointer;white-space:nowrap;font-family:inherit}
+.mc-btn:hover{background:#FDE68A}
+.mc-btn.mc-on{background:#854F0B;color:#fff;border-color:#854F0B}
+
 /* ── Módulos exclusivos GROUP — ocultar en FOUNDATION ── */
 body[data-org="FOUNDATION"] #dash-fa-bloque {
   display: none !important;
@@ -1186,6 +1191,9 @@ body[data-org="FOUNDATION"] #dash-fa-bloque {
 <!-- KPIs simples -->
 
 <div id="fr-kpis" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px;"></div>
+
+<!-- Gráfico mensual radicadas: real (verde) vs proyectado (morado) — clic filtra el mes -->
+<div id="fr-chart" style="display:none;background:#fff;border:1px solid #eee;border-radius:10px;padding:8px 10px 4px;margin-bottom:12px;"></div>
 
 <!-- Filtros -->
 
@@ -3665,6 +3673,8 @@ function alzakCargarDatosPrincipal(url, callback) {
       // ── Re-renderizar todo ───────────────────────────────
 
       // ── Cargar extractos de conciliación desde Sheets ────
+
+      if (data.marcas_conciliacion && Array.isArray(data.marcas_conciliacion)) { try{ mcCargarDesdeSheet(data.marcas_conciliacion); }catch(e){ console.error('marcas:',e); } }
 
       if (data.conciliacion && Array.isArray(data.conciliacion) && data.conciliacion.length) {
 
@@ -20623,6 +20633,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Aplicar tema de org al iniciar
   document.body.setAttribute('data-org', ALZAK_ORG_ACTIVA || 'GROUP');
+  try{ _mcCargarCache(); }catch(e){}
   if (typeof _balSetDefaultMes === 'function') _balSetDefaultMes();
 
   var nav = document.getElementById('tab-nav');
@@ -21025,7 +21036,7 @@ function convMovGAS(mv, banco) {
     if (desc.indexOf('interes') >= 0 || desc.indexOf('abono de interes') >= 0) t = 'interes';
     else if (desc.indexOf('gmf') >= 0 || desc.indexOf('4x1000') >= 0) t = 'impto';
     else if (desc.indexOf('retefuente') >= 0 || desc.indexOf('retencion') >= 0) t = 'retencion';
-    else if (desc.indexOf('zakzuk') >= 0 && val > 0) t = 'prestamo';
+    else if (val > 0 && (desc.indexOf('zakzuk') >= 0 || desc.indexOf('alvis guzm') >= 0 || desc.indexOf('nelson alvis') >= 0)) t = 'prestamo';
     else if (val > 0) t = 'ingreso';
     else t = 'egreso';
   }
@@ -21620,11 +21631,11 @@ const TC_DATA = [
 
 /* ══════════════ TIPOS ══════════════ */
 
-const TM={ingreso:{l:'Ingreso externo',c:'pg'},interno:{l:'Traslado interno',c:'pc'},fondo:{l:'↔ Fiducuenta',c:'pp'},transf:{l:'Transferencia',c:'pc'},egreso:{l:'Egreso/Pago',c:'pa'},interes:{l:'Intereses',c:'pg'},impto:{l:'4x1000/GMF',c:'pr'},comision:{l:'Comisión',c:'pr'},devol:{l:'Devolución ACH',c:'pz'},traslado:{l:'Traslado banco',c:'pot'}};
+const TM={ingreso:{l:'Ingreso externo',c:'pg'},interno:{l:'Traslado interno',c:'pc'},fondo:{l:'↔ Fiducuenta',c:'pp'},transf:{l:'Transferencia',c:'pc'},egreso:{l:'Egreso/Pago',c:'pa'},interes:{l:'Intereses',c:'pg'},impto:{l:'4x1000/GMF',c:'pr'},comision:{l:'Comisión',c:'pr'},devol:{l:'Devolución ACH',c:'pz'},traslado:{l:'Traslado banco',c:'pot'},prestamo:{l:'💰 Préstamo recibido',c:'pot'}};
 
 const TMF={adicion:{l:'Adición',c:'pp'},retiro:{l:'Retiro→Ahorros',c:'pc'},rend:{l:'Rendimientos',c:'pg'},reten:{l:'Retención',c:'pr'}};
 
-const TMB={traslado:{l:'Traslado desde Bancolombia',c:'pn'},egreso:{l:'Egreso/Pago',c:'pa'},impto:{l:'GMF',c:'pr'},interes:{l:'Intereses',c:'pg'}};
+const TMB={prestamo:{l:'💰 Préstamo recibido',c:'pot'},traslado:{l:'Traslado desde Bancolombia',c:'pn'},egreso:{l:'Egreso/Pago',c:'pa'},impto:{l:'GMF',c:'pr'},interes:{l:'Intereses',c:'pg'}};
 
 /* ══════════════ HELPERS ══════════════ */
 
@@ -21719,6 +21730,8 @@ function toggleBoldMovsConc(){_boldOpen=!_boldOpen;var p=document.getElementById
 /* ══════════════ RENDER GLOBAL ══════════════ */
 
 function renderGlobal(p){
+
+  try{ aplicarMarcasConc(); }catch(e){ console.error('marcas:',e); }
 
   const idx=pi(),m=p.movs,fid=p.fid,cj=p.caja,bl=p.bold;
 
@@ -21926,6 +21939,68 @@ function getMovsAcum(tipo) {
 
 }
 
+
+/* ══════════════ MARCAS MANUALES DE CONCILIACIÓN (persisten en Sheet _marcas_conciliacion) ══════════════ */
+var MARCAS_CONC = {};   // key banco|fecha|valor → {tipo, acreedor, nota, fecha_marca}
+function _mcKey(banco, f, v){ return banco+'|'+(f||'')+'|'+Math.round(Math.abs(parseFloat(v)||0)); }
+function _mcCargarCache(){ try{ var s=localStorage.getItem(_orgKey('alzak_marcas_conc')); if(s) MARCAS_CONC=JSON.parse(s)||{}; }catch(e){} }
+function _mcGuardarCache(){ try{ localStorage.setItem(_orgKey('alzak_marcas_conc'), JSON.stringify(MARCAS_CONC)); }catch(e){} }
+function mcCargarDesdeSheet(rows){
+  if(!Array.isArray(rows)) return;
+  MARCAS_CONC={};
+  rows.forEach(function(r){ if(r&&r.key) MARCAS_CONC[r.key]={tipo:r.tipo||'prestamo',acreedor:r.acreedor||'',nota:r.nota||'',fecha_marca:r.fecha_marca||''}; });
+  _mcGuardarCache();
+}
+// Aplica las marcas a P[] (idempotente). Tipo original se conserva en _tOrig para poder revertir.
+function aplicarMarcasConc(){
+  if(typeof P==='undefined'||!P.length) return;
+  P.forEach(function(per){
+    [['Bancolombia',per.movs],['BCS',per.caja&&per.caja.movs],['Bold',per.bold&&per.bold.movs]].forEach(function(par){
+      var banco=par[0], movs=par[1]; if(!movs) return;
+      movs.forEach(function(mv){
+        if(mv._tOrig===undefined) mv._tOrig=mv.t;
+        var mk=MARCAS_CONC[_mcKey(banco,mv.f,mv.v)];
+        mv.t = mk ? mk.tipo : mv._tOrig;
+        mv._acreedor = mk ? mk.acreedor : '';
+      });
+    });
+  });
+}
+function mcBoton(banco, mv){
+  if(!(mv.v>0)) return '';
+  var k=_mcKey(banco,mv.f,mv.v), es=MARCAS_CONC[k];
+  if(es) return '<button class="mc-btn mc-on" data-k="'+k+'" data-b="'+banco+'" onclick="mcToggle(this)" title="'+(es.acreedor||'')+'">✕ quitar</button>';
+  if(mv.t!=='ingreso'&&mv.t!=='transf'&&mv.t!=='traslado'&&mv.t!=='interno') return '';
+  return '<button class="mc-btn" data-k="'+k+'" data-b="'+banco+'" onclick="mcToggle(this)">💰 Préstamo</button>';
+}
+function mcToggle(btn){
+  var k=btn.getAttribute('data-k');
+  if(MARCAS_CONC[k]){
+    if(!confirm('¿Quitar la marca de préstamo de este movimiento?')) return;
+    delete MARCAS_CONC[k];
+  } else {
+    var acr=prompt('¿Quién prestó? (acreedor)\n\nEj.: Nelson José Alvis Zakzuk', '');
+    if(acr===null) return;
+    var nota=prompt('Nota (opcional): condiciones, plazo, etc.', '')||'';
+    MARCAS_CONC[k]={tipo:'prestamo',acreedor:(acr||'').trim(),nota:nota.trim(),fecha_marca:new Date().toISOString().substring(0,10)};
+  }
+  _mcGuardarCache();
+  aplicarMarcasConc();
+  mcGuardarSheets();
+  try{ renderConc(); }catch(e){ console.error(e); }
+  try{ if(typeof renderAll==='function') renderAll(); }catch(e){}
+}
+function mcGuardarSheets(){
+  if(typeof ALZAK_GS_URL==='undefined'||!ALZAK_GS_URL){ mostrarToast('⚠️ URL de GAS no configurada — marca guardada solo en este navegador','#993C1D'); return; }
+  var rows=[['key','banco','fecha','valor','tipo','acreedor','nota','fecha_marca']];
+  Object.keys(MARCAS_CONC).forEach(function(k){ var m=MARCAS_CONC[k], pt=k.split('|'); rows.push([k,pt[0],pt[1],parseFloat(pt[2])||0,m.tipo,m.acreedor||'',m.nota||'',m.fecha_marca||'']); });
+  if(rows.length===1) rows.push(['','','','','','','','']);
+  fetch(ALZAK_GS_URL,{method:'POST',redirect:'follow',body:JSON.stringify({tab:'_marcas_conciliacion',sheetId:alzakGetOrgActiva().facturacion,rows:rows})})
+    .then(function(r){ return r.text().catch(function(){return '{}';}); })
+    .then(function(t){ var res={}; try{res=JSON.parse(t);}catch(e){res={ok:true};} mostrarToast(res.ok?'✅ Marca guardada en Sheets (_marcas_conciliacion)':'⚠️ GAS: '+(res.error||'sin detalle'), res.ok?'#1D6F42':'#993C1D'); })
+    .catch(function(e){ mostrarToast('⚠️ No se pudo guardar en Sheets: '+e.message,'#993C1D'); });
+}
+
 function renderMovsPanel(panelId, movs, fBusq, fTipo) {
 
   var panel = document.getElementById(panelId);
@@ -21942,19 +22017,23 @@ function renderMovsPanel(panelId, movs, fBusq, fTipo) {
 
   });
 
+  var _bancoP = panelId==='caja-panel'?'BCS':(panelId==='bold-panel'?'Bold':'Bancolombia');
+
   var tbody = rows.map(function(mv) {
 
-    var meta = TM[mv.t]||{l:mv.t,c:'pz'};
+    var meta = TM[mv.t]||TMB[mv.t]||{l:mv.t,c:'pz'};
 
     var sg = mv.v>=0?'+':'-';
 
     return '<tr><td style="color:#888;white-space:nowrap">'+mv.f+'</td>'
 
-      +'<td>'+mv.d+'</td>'
+      +'<td>'+mv.d+(mv._acreedor?' <span style="color:#854F0B;font-size:10px">('+mv._acreedor+')</span>':'')+'</td>'
 
       +'<td><span class="pill '+meta.c+'">'+meta.l+'</span></td>'
 
-      +'<td style="text-align:right"><span class="'+(mv.v>=0?'ap':'an')+'">'+sg+fc(mv.v)+'</span></td></tr>';
+      +'<td style="text-align:right"><span class="'+(mv.v>=0?'ap':'an')+'">'+sg+fc(mv.v)+'</span></td>'
+
+      +'<td style="text-align:center">'+mcBoton(_bancoP,mv)+'</td></tr>';
 
   }).join('') || '<tr><td colspan="4" style="text-align:center;padding:16px;color:#aaa">Sin resultados</td></tr>';
 
@@ -22038,7 +22117,7 @@ function renderAhorros(p){
 
   const rows=m.filter(mv=>{const q=fB.toLowerCase(),ft=fT;if(q&&!mv.d.toLowerCase().includes(q)&&!mv.f.includes(q))return false;if(ft&&mv.t!==ft)return false;return true;});
 
-  const tbody=rows.map(mv=>{const meta=TM[mv.t]||{l:mv.t,c:'pz'};return`<tr><td style="color:var(--gray-mid);font-weight:500;white-space:nowrap">${mv.f}</td><td>${mv.d}</td><td><span class="pill ${meta.c}">${meta.l}</span></td><td style="text-align:right"><span class="${mv.v>=0?'ap':'an'}">${mv.v>=0?'+':'-'}${fc(mv.v)}</span></td></tr>`;}).join('')||`<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--gray-mid)">Sin resultados</td></tr>`;
+  const tbody=rows.map(mv=>{const meta=TM[mv.t]||{l:mv.t,c:'pz'};return`<tr><td style="color:var(--gray-mid);font-weight:500;white-space:nowrap">${mv.f}</td><td>${mv.d}${mv._acreedor?` <span style="color:#854F0B;font-size:10px">(${mv._acreedor})</span>`:''}</td><td><span class="pill ${meta.c}">${meta.l}</span></td><td style="text-align:right"><span class="${mv.v>=0?'ap':'an'}">${mv.v>=0?'+':'-'}${fc(mv.v)}</span></td><td style="text-align:center">${mcBoton('Bancolombia',mv)}</td></tr>`;}).join('')||`<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--gray-mid)">Sin resultados</td></tr>`;
 
   document.getElementById('body-ahorros').innerHTML=`
 
@@ -22144,7 +22223,7 @@ function renderAhorros(p){
 
       </div>
 
-      <div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Descripción</th><th>Tipo</th><th style="text-align:right">Valor (COP)</th></tr></thead><tbody>${tbody}</tbody></table></div>
+      <div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Descripción</th><th>Tipo</th><th style="text-align:right">Valor (COP)</th><th style="text-align:center;width:90px">Marcar</th></tr></thead><tbody>${tbody}</tbody></table></div>
 
     </div>`;
 
@@ -22242,7 +22321,7 @@ function renderCaja(p){
 
   const rows=cj.movs.filter(mv=>{const q=fBc.toLowerCase(),ft=fTc;if(q&&!mv.d.toLowerCase().includes(q)&&!mv.f.includes(q))return false;if(ft&&mv.t!==ft)return false;return true;});
 
-  const tbody=rows.map(mv=>{const meta=TM[mv.t]||{l:mv.t,c:'pz'};return`<tr><td style="color:var(--gray-mid);font-weight:500;white-space:nowrap">${mv.f}</td><td>${mv.d}</td><td><span class="pill ${meta.c}">${meta.l}</span></td><td style="text-align:right"><span class="${mv.v>=0?'ap':'an'}">${mv.v>=0?'+':'-'}${fc(mv.v)}</span></td></tr>`;}).join('')||`<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--gray-mid)">Sin resultados</td></tr>`;
+  const tbody=rows.map(mv=>{const meta=TM[mv.t]||{l:mv.t,c:'pz'};return`<tr><td style="color:var(--gray-mid);font-weight:500;white-space:nowrap">${mv.f}</td><td>${mv.d}${mv._acreedor?` <span style="color:#854F0B;font-size:10px">(${mv._acreedor})</span>`:''}</td><td><span class="pill ${meta.c}">${meta.l}</span></td><td style="text-align:right"><span class="${mv.v>=0?'ap':'an'}">${mv.v>=0?'+':'-'}${fc(mv.v)}</span></td><td style="text-align:center">${mcBoton('BCS',mv)}</td></tr>`;}).join('')||`<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--gray-mid)">Sin resultados</td></tr>`;
 
   document.getElementById('body-caja').innerHTML=`
 
@@ -22338,7 +22417,7 @@ function renderCaja(p){
 
       </div>
 
-      <div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Descripción</th><th>Tipo</th><th style="text-align:right">Valor (COP)</th></tr></thead><tbody>${tbody}</tbody></table></div>
+      <div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Descripción</th><th>Tipo</th><th style="text-align:right">Valor (COP)</th><th style="text-align:center;width:90px">Marcar</th></tr></thead><tbody>${tbody}</tbody></table></div>
 
       <div class="nota nota-o" style="margin-top:11px"><strong>Traslados a Bancolombia:</strong> Movimientos propios de ALZAK durante migración de banco. No son egresos operativos.</div>
 
@@ -22364,7 +22443,7 @@ function renderBold(p){
 
   const rows=bl.movs.filter(mv=>{const q=fBb.toLowerCase(),ft=fTb;if(q&&!mv.d.toLowerCase().includes(q)&&!mv.f.includes(q))return false;if(ft&&mv.t!==ft)return false;return true;});
 
-  const tbody=rows.length?rows.map(mv=>{const meta=TMB[mv.t]||TM[mv.t]||{l:mv.t,c:'pz'};return`<tr><td style="color:var(--gray-mid);font-weight:500;white-space:nowrap">${mv.f}</td><td>${mv.d}</td><td><span class="pill ${meta.c}">${meta.l}</span></td><td style="text-align:right"><span class="${mv.v>=0?'ap':'an'}">${mv.v>=0?'+':'-'}${fc(mv.v)}</span></td></tr>`;}).join(''):
+  const tbody=rows.length?rows.map(mv=>{const meta=TMB[mv.t]||TM[mv.t]||{l:mv.t,c:'pz'};return`<tr><td style="color:var(--gray-mid);font-weight:500;white-space:nowrap">${mv.f}</td><td>${mv.d}${mv._acreedor?` <span style="color:#854F0B;font-size:10px">(${mv._acreedor})</span>`:''}</td><td><span class="pill ${meta.c}">${meta.l}</span></td><td style="text-align:right"><span class="${mv.v>=0?'ap':'an'}">${mv.v>=0?'+':'-'}${fc(mv.v)}</span></td><td style="text-align:center">${mcBoton('Bold',mv)}</td></tr>`;}).join(''):
 
   `<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--gray-mid)">Sin movimientos en este período</td></tr>`;
 
@@ -22456,7 +22535,7 @@ function renderBold(p){
 
       </div>
 
-      <div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Descripción</th><th>Tipo</th><th style="text-align:right">Valor (COP)</th></tr></thead><tbody>${tbody}</tbody></table></div>
+      <div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Descripción</th><th>Tipo</th><th style="text-align:right">Valor (COP)</th><th style="text-align:center;width:90px">Marcar</th></tr></thead><tbody>${tbody}</tbody></table></div>
 
       <div class="nota nota-n" style="margin-top:11px">
 
@@ -25239,6 +25318,8 @@ function frRender() {
 
   var kpiEl    = document.getElementById('fr-kpis');
 
+  try { frRenderChart(); } catch(e) { console.error('frRenderChart:', e); }
+
   var tablaEl  = document.getElementById('fr-tabla');
 
   var countEl  = document.getElementById('fr-count');
@@ -25519,6 +25600,62 @@ function frFiltrarKPI(tipo) {
 
 }
 
+
+// ── Gráfico mensual de radicadas (costo de producción, base gravable) ──
+// Verde = ya radicado (mes ≤ actual) · Morado = proyectado (mes futuro). Clic en barra filtra el mes.
+function frSubtotalVal(r){ var v=r['Subtotal (COP)']||r['Subtotal_COP']||0; if(typeof v==='string') v=v.replace(/[^0-9.]/g,''); return parseFloat(v)||0; }
+function frFiltrarMes(el){
+  var mes=el.getAttribute('data-mes'), sel=document.getElementById('fr-fil-mes');
+  if(!sel) return;
+  if(sel.value===mes){ sel.value=''; }
+  else {
+    if(!Array.prototype.some.call(sel.options,function(o){return o.value===mes;})){ var o=document.createElement('option'); o.value=mes; o.textContent=mes; sel.appendChild(o); }
+    sel.value=mes;
+  }
+  frRender();
+}
+function frRenderChart(){
+  var el=document.getElementById('fr-chart'); if(!el) return;
+  if(typeof FR_DATA==='undefined'||!FR_DATA.length){ el.style.display='none'; return; }
+  var anio=(document.getElementById('fr-fil-anio')||{}).value||'';
+  var filMes=(document.getElementById('fr-fil-mes')||{}).value||'';
+  var real={}, proy={}, nReal={}, nProy={}, meses=[];
+  FR_DATA.forEach(function(r){
+    var p=(r['Fecha']||'').split('/'); if(p.length<3) return;
+    var fA=(p[2]||'').substring(0,4), k=p[1]+'/'+fA;
+    if(anio && fA!==anio) return;
+    if(typeof frEsGastoOpPL==='function' && !frEsGastoOpPL(r)) return;
+    var v=frSubtotalVal(r);
+    if(frEsProyectado(r)){ proy[k]=(proy[k]||0)+v; nProy[k]=(nProy[k]||0)+1; }
+    else { real[k]=(real[k]||0)+v; nReal[k]=(nReal[k]||0)+1; }
+    if(meses.indexOf(k)<0) meses.push(k);
+  });
+  // Con año fijo: los 12 meses para que se vea el horizonte completo
+  if(anio){ meses=[]; for(var i=1;i<=12;i++) meses.push(('0'+i).slice(-2)+'/'+anio); }
+  else meses.sort(function(a,b){ var pa=a.split('/'),pb=b.split('/'); return (pa[1]+pa[0])<(pb[1]+pb[0])?-1:1; });
+  if(!meses.length){ el.style.display='none'; return; }
+  var maxV=0; meses.forEach(function(m){ var t=(real[m]||0)+(proy[m]||0); if(t>maxV) maxV=t; }); maxV=maxV*1.15||1;
+  var W=700,H=150,PL=48,PR=10,PT=16,PB=26,CW=W-PL-PR,CH=H-PT-PB,bw=Math.max(14,Math.min(46,CW/meses.length*0.55));
+  var MA=['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
+  var totR=0,totP=0;
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:'+H+'px">';
+  for(var t=0;t<=2;t++){ var yv=PT+CH-(t/2)*CH; svg+='<line x1="'+PL+'" y1="'+yv+'" x2="'+(W-PR)+'" y2="'+yv+'" stroke="#f0ede8"/><text x="'+(PL-4)+'" y="'+(yv+3)+'" text-anchor="end" font-size="9" fill="#bbb">$'+Math.round(maxV*t/2/1e6)+'M</text>'; }
+  meses.forEach(function(m,i){
+    var cx=PL+(i+0.5)*(CW/meses.length), re=real[m]||0, pr=proy[m]||0, tot=re+pr; totR+=re; totP+=pr;
+    var act=(filMes===''||filMes===m), hR=(re/maxV)*CH, hP=(pr/maxV)*CH;
+    if(re>0) svg+='<rect x="'+(cx-bw/2)+'" y="'+(PT+CH-hR)+'" width="'+bw+'" height="'+hR+'" fill="'+(act?'#166534':'#d0cec8')+'" rx="3" style="cursor:pointer" onclick="frFiltrarMes(this)" data-mes="'+m+'"><title>Radicado '+m+': $'+Math.round(re).toLocaleString('es-CO')+' ('+(nReal[m]||0)+' reg.)</title></rect>';
+    if(pr>0) svg+='<rect x="'+(cx-bw/2)+'" y="'+(PT+CH-hR-hP)+'" width="'+bw+'" height="'+hP+'" fill="'+(act?'#7C3AED':'#e6dff5')+'" rx="3" opacity="0.9" style="cursor:pointer" onclick="frFiltrarMes(this)" data-mes="'+m+'"><title>Proyectado '+m+': $'+Math.round(pr).toLocaleString('es-CO')+' ('+(nProy[m]||0)+' reg.)</title></rect>';
+    svg+='<rect x="'+(cx-bw/2)+'" y="'+PT+'" width="'+bw+'" height="'+CH+'" fill="transparent" style="cursor:pointer" onclick="frFiltrarMes(this)" data-mes="'+m+'"/>';
+    if(tot>0) svg+='<text x="'+cx+'" y="'+(PT+CH-hR-hP-4)+'" text-anchor="middle" font-size="10" font-weight="bold" fill="'+(pr>0?'#7C3AED':(act?'#166534':'#aaa'))+'" style="pointer-events:none">$'+(Math.round(tot/1e5)/10)+'M</text>';
+    svg+='<text x="'+cx+'" y="'+(H-6)+'" text-anchor="middle" font-size="11" fill="'+(filMes===m?'#166534':(act?'#444':'#aaa'))+'" font-weight="'+(filMes===m?'700':'400')+'">'+(MA[parseInt(m.substring(0,2),10)-1]||m)+'</text>';
+  });
+  svg+='<rect x="'+PL+'" y="2" width="8" height="8" fill="#166534" rx="2"/><text x="'+(PL+11)+'" y="9" font-size="8" fill="#666">Radicado</text>';
+  svg+='<rect x="'+(PL+62)+'" y="2" width="8" height="8" fill="#7C3AED" rx="2"/><text x="'+(PL+73)+'" y="9" font-size="8" fill="#666">Proyectado (meses futuros)</text>';
+  svg+='<text x="'+(W-PR)+'" y="9" text-anchor="end" font-size="8" fill="#888">Costo de producción · base gravable · Real $'+(Math.round(totR/1e5)/10)+'M · Proy. $'+(Math.round(totP/1e5)/10)+'M'+(filMes?' · clic de nuevo para quitar filtro':'')+'</text>';
+  svg+='</svg>';
+  el.innerHTML=svg; el.style.display='block';
+}
+
 function frGetFiltered() {
 
   var anio  = (document.getElementById('fr-fil-anio')||{}).value || '';
@@ -25531,9 +25668,10 @@ function frGetFiltered() {
 
   var result = FR_DATA.filter(function(r) {
 
-    // Excluir radicadas de meses futuros (proyectadas)
+    // Excluir radicadas de meses futuros (proyectadas) — salvo que el usuario
+    // haya elegido explícitamente un mes: entonces muestra lo esperado para ese mes.
 
-    if (frEsProyectado(r)) return false;
+    if (frEsProyectado(r) && !mes) return false;
 
     var fecha = r['Fecha'] || '';
 
@@ -31039,7 +31177,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v28sep-1645';
+var ALZAK_BUILD = 'v29sep-0900';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

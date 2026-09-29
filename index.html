@@ -25144,6 +25144,22 @@ function frAuditar(numComp) {
   document.body.appendChild(m);
 }
 
+
+// ── Un egreso solo es evidencia de pago si YA OCURRIÓ: fecha ≤ hoy y estado no Pendiente/Programado.
+// Todo lo posterior a hoy es proyección (vive en Flujo de Caja), nunca prueba de pago.
+function frEgresoEjecutado(g) {
+  if (!g) return false;
+  var est = String(g['Estado']||'').toLowerCase();
+  if (est.indexOf('pendiente') >= 0 || est.indexOf('programado') >= 0) return false;
+  var p = String(g['Fecha']||'').trim().split('/');
+  if (p.length >= 3) {
+    var f = new Date(parseInt(p[2].substring(0,4)), parseInt(p[1])-1, parseInt(p[0])||1);
+    var hoy = new Date(); hoy.setHours(23,59,59,999);
+    if (!isNaN(f.getTime()) && f > hoy) return false;
+  }
+  return true;
+}
+
 function frEstadoReal(r) {
 
   var total = frTotalVal(r);
@@ -25226,6 +25242,7 @@ function frRender() {
     // 2. texto con guiones/espacios colapsados (para FEF2112 ↔ FEF 2112)
     GASTOS_DATA.forEach(function(g, gi) {
       if ((g['Tipo_Movimiento']||'').trim() === 'Traslado') return;
+      if (!frEgresoEjecutado(g)) return; // programado/futuro: no reserva pagos
       var raw = String(g['Concepto']||'') + ' ' + String(g['Observaciones']||'');
       var haystack    = _snt(raw).toLowerCase();
       var haystackNrm = _normComp(raw); // sin espacios ni guiones
@@ -25978,6 +25995,7 @@ function frCalcularAbonado(r) {
 
       // Traslados internos no son pagos — excluirlos del cruce
       if ((GASTOS_DATA[i]['Tipo_Movimiento']||'').trim() === 'Traslado') continue;
+      if (!frEgresoEjecutado(GASTOS_DATA[i])) continue; // fecha > hoy o Pendiente/Programado → proyección, no pago
 
       // Un egreso solo puede abonar UNA factura — si otra fila ya lo reservó, saltarlo
       if (window._FR_EGRESO_RESERVADO[i] !== undefined && window._FR_EGRESO_RESERVADO[i] !== _rowKey) {
@@ -26464,6 +26482,7 @@ function frFuentePago(r) {
 
       // Traslados internos no son pagos — excluirlos del cruce
       if ((GASTOS_DATA[i]['Tipo_Movimiento']||'').trim() === 'Traslado') continue;
+      if (!frEgresoEjecutado(GASTOS_DATA[i])) continue; // fecha > hoy o Pendiente/Programado → proyección, no pago
 
       // Si este egreso ya fue consumido por otra radicada, saltar
 
@@ -31177,7 +31196,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v29sep-0900';
+var ALZAK_BUILD = 'v29sep-1000';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

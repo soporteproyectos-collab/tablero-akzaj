@@ -25162,6 +25162,9 @@ function frAuditar(numComp) {
 // Todo lo posterior a hoy es proyección (vive en Flujo de Caja), nunca prueba de pago.
 // Un pago puede preceder a la factura hasta 45 días (anticipo que se legaliza con la radicación)
 var FR_DIAS_ANTICIPO = 45;
+// Un egreso puede EXCEDER la factura hasta este valor (comisión PSE/ACH ≈ $5.900 pagada por ALZAK)
+var FR_TOL_COMISION = 6000;
+function frMontoOk(gTot, total) { var d = gTot - total; return d >= -100 && d <= FR_TOL_COMISION; }
 
 function frEgresoEjecutado(g) {
   if (!g) return false;
@@ -25305,6 +25308,58 @@ function frRender() {
         } catch(e) {}
       });
     });
+
+    // ── PRE-RESERVA MODO P: por PERÍODO. Los egresos de proveedores recurrentes dicen
+    // "Honorarios junio 2026", "período feb 2026", "cuota — julio". Ese mes+año identifica
+    // la cuenta de cobro aunque no traiga su N°. Prioridad 2: después del comprobante (A),
+    // antes del FIFO. Evita que el pago de "junio" se lo lleve la cuenta de mayo sin pagar.
+    try {
+      var _MP = {enero:1,febrero:2,marzo:3,abril:4,mayo:5,junio:6,julio:7,agosto:8,septiembre:9,setiembre:9,octubre:10,noviembre:11,diciembre:12,
+                 ene:1,feb:2,mar:3,abr:4,may:5,jun:6,jul:7,ago:8,sep:9,sept:9,oct:10,nov:11,dic:12};
+      function _mpMes(s) {
+        s = _snt(String(s||'')).toLowerCase();
+        var m = s.match(/\b(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre)\b(?:\s+(?:de\s+)?(20\d{2}))?/);
+        if (m) return { mes: _MP[m[1]], anio: m[2] ? parseInt(m[2]) : null };
+        m = s.match(/per[i]?odo\s+(ene|feb|mar|abr|may|jun|jul|ago|sep|sept|oct|nov|dic)\b\.?\s*(20\d{2}|\d{2})?/);
+        if (m) return { mes: _MP[m[1]], anio: m[2] ? (m[2].length===2 ? 2000+parseInt(m[2]) : parseInt(m[2])) : null };
+        return null;
+      }
+      function _mpWords(s) { return _snt(String(s||'')).toUpperCase().split(/[^A-Z]+/).filter(function(w){ return w.length > 3; }); }
+      function _mpFecha(f) { var q = String(f||'').split('/'); return q.length>=3 ? { mes: parseInt(q[1],10), anio: parseInt(q[2].substring(0,4),10) } : null; }
+      var _mpReservadas = {};
+      Object.keys(window._FR_EGRESO_RESERVADO).forEach(function(k){ _mpReservadas[window._FR_EGRESO_RESERVADO[k]] = true; });
+      var _mpRad = [];
+      FR_DATA.forEach(function(r) {
+        if (typeof frEsProyectado === 'function' && frEsProyectado(r)) return;
+        var pf = _mpFecha(r['Fecha']); if (!pf) return;
+        var pc = _mpMes(r['Concepto']);
+        var mes = pc ? pc.mes : pf.mes, anio = (pc && pc.anio) ? pc.anio : pf.anio;
+        var rk = _snt(String(r['N Comprobante']||r['N_Comprobante']||'').trim()).toLowerCase() + '|' + _snt((r['Proveedor / Beneficiario']||'').toUpperCase()) + '|' + Math.round(frTotalVal(r)) + '|' + (r['Fecha']||'');
+        _mpRad.push({ rk: rk, mes: mes, anio: anio, tot: frTotalVal(r), w: _mpWords(r['Proveedor / Beneficiario']), ts: pf.anio*100+pf.mes });
+      });
+      GASTOS_DATA.forEach(function(g, gi) {
+        if (window._FR_EGRESO_RESERVADO[gi] !== undefined) return;
+        if ((g['Tipo_Movimiento']||'').trim() === 'Traslado') return;
+        if (!frEgresoEjecutado(g)) return;
+        var per = _mpMes(String(g['Concepto']||'') + ' ' + String(g['Observaciones']||''));
+        if (!per) return;
+        var gf = _mpFecha(g['Fecha']); if (!gf) return;
+        var anio = per.anio || gf.anio;
+        if (!per.anio && per.mes > gf.mes + 1) anio = gf.anio - 1;   // pago en enero de "noviembre" → año anterior
+        var gTot = parseFloat(g['Total_COP']||0); if (!(gTot > 0)) return;
+        var gw = _mpWords(g['Beneficiario']);
+        var cands = _mpRad.filter(function(x) {
+          if (_mpReservadas[x.rk]) return false;
+          if (x.mes !== per.mes || x.anio !== anio) return false;
+          if (!frMontoOk(gTot, x.tot)) return false;
+          return gw.some(function(w){ return x.w.indexOf(w) >= 0; });
+        });
+        if (!cands.length) return;
+        cands.sort(function(a,b){ return a.ts - b.ts; });
+        window._FR_EGRESO_RESERVADO[gi] = cands[0].rk;
+        _mpReservadas[cands[0].rk] = true;
+      });
+    } catch(e) { console.error('pre-reserva por período:', e); }
   }
 
   // FILTRAR PRIMERO — luego calcular fuentes solo para los filtrados
@@ -26124,7 +26179,7 @@ function frCalcularAbonado(r) {
       var _crossOkB = (_anioRadB === _anioEgrB) ||
                       (_anioRadB > 0 && gComp2.indexOf(String(_anioRadB)) >= 0);
       if (_tr && provMatch && fechaOk && !_crossOkB && Math.abs(gTot2 - total) <= 100) _tr.push('   ⛔ descartado Modo B: deuda de otro año sin señal del año en el concepto');
-      if (fechaOk && _crossOkB && Math.abs(gTot2 - total) <= 100) {
+      if (fechaOk && _crossOkB && frMontoOk(gTot2, total)) {
         abonado += gTot2;
         window._FR_EGRESO_RESERVADO[i] = _rowKey;
         if (window._FR_DESEMB && tsEgreso !== null) window._FR_DESEMB.push({v: gTot2, ts: tsEgreso, src: 'egreso'});
@@ -26603,7 +26658,7 @@ function frFuentePago(r) {
 
       // MODO B: monto exacto (±100) + proveedor + fecha válida
 
-      if (_fechaOkFP && Math.abs(gTot - total) <= 100 && gProv.length > 3) {
+      if (_fechaOkFP && frMontoOk(gTot, total) && gProv.length > 3) {
 
         if (provWords.some(function(w){ return gProv.indexOf(w) >= 0; })) {
 
@@ -31245,7 +31300,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v29sep-1215';
+var ALZAK_BUILD = 'v29sep-1630';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

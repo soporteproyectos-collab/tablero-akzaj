@@ -11792,8 +11792,20 @@ function renderResumenTablero() {
 
   }
 
-  // Fuente 2: DATA (movimientos GAS) — todos los meses cargados
-  if (typeof DATA !== 'undefined') {
+  // Fuente 0 (autoritativa): la CONCILIACIÓN BANCARIA. Misma fórmula que el panel
+  // "GMF 4x1000 acum." de Conciliación: tipo 'impto' en Ahorros + Caja Social + Bold (P[]),
+  // ya con reglas de sanidad aplicadas. Un solo número en todo el tablero.
+  var _gmfDesdeConc = 0, _gmfConcOK = false;
+  if (typeof P !== 'undefined' && P.length && typeof st === 'function') {
+    P.forEach(function(per){
+      _gmfDesdeConc += Math.abs(st(per.movs||[], 'impto'))
+                    + Math.abs(st((per.caja&&per.caja.movs)||[], 'impto'))
+                    + Math.abs(st((per.bold&&per.bold.movs)||[], 'impto'));
+    });
+    _gmfConcOK = _gmfDesdeConc > 0;
+  }
+  // Fuente 2 (solo si la conciliación no está cargada): DATA crudo
+  if (!_gmfConcOK && typeof DATA !== 'undefined') {
     var _GMF_KEYS = ['4x1000','impto gobierno','gmf','gravamen'];
     Object.keys(DATA).forEach(function(key) {
       var entry = DATA[key];
@@ -11810,6 +11822,7 @@ function renderResumenTablero() {
     });
     if (gmf4x1000_conc > 0) gmf4x1000 = gmf4x1000_conc;
   }
+  if (_gmfConcOK) { gmf4x1000_conc = _gmfDesdeConc; gmf4x1000 = _gmfDesdeConc; }
 
   // Fuente 3 (fallback): P[] hardcodeado — solo si DATA no tiene movimientos
   if (gmf4x1000 === 0 && typeof P !== 'undefined') {
@@ -31227,7 +31240,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v29sep-1130';
+var ALZAK_BUILD = 'v29sep-1145';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');

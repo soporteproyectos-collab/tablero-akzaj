@@ -26295,7 +26295,9 @@ function frBuildPool() {
 
         _dper.movs.forEach(function(mv){
 
-          if (mv.ab > 0 || mv.car <= 0) return; // solo egresos
+          // Solo formato Excel legado (mv.car numérico). Los extractos del GAS ya están en P[]
+          // vía convMovGAS; sin esta guarda entran con v=undefined y cruzan con CUALQUIER monto.
+          if (typeof mv.car !== 'number' || !(mv.car > 0) || mv.ab > 0) return;
 
           // Evitar duplicar si ya está en P[] (misma cuenta y período)
 
@@ -26701,11 +26703,14 @@ function frFuentePago(r) {
       var _cands = [];
       for (var _mi3=0; _mi3<_FR_MOVS_POOL.length; _mi3++) {
         var _mv3 = _FR_MOVS_POOL[_mi3];
-        if (_mv3.usado || Math.abs(_mv3.v - total) > 100) continue;
-        var _d3 = String(_mv3.d||'').replace(/\s*\[reclasificado[^\]]*\]/i,'').trim();
+        if (_mv3.usado) continue;
+        if (typeof _mv3.v !== 'number' || !(_mv3.v > 0) || Math.abs(_mv3.v - total) > 100) continue;
+        var _d3 = String(_mv3.d||'').trim();
+        if (/reclasificado|entrada/i.test(_d3)) continue;   // nunca una entrada ni un mov dudoso
         if (!_GEN.test(_d3)) continue;
         var _ts3 = _tsF(_mv3.f);
-        if (tsRad !== null && _ts3 !== null && (_ts3 < tsRad - FR_DIAS_ANTICIPO*864e5 || _ts3 > tsRad + 90*864e5)) continue;
+        // Sin nombre de beneficiario, el anticipo tolerado es corto: 7 días antes, 90 después
+        if (tsRad !== null && _ts3 !== null && (_ts3 < tsRad - 7*864e5 || _ts3 > tsRad + 90*864e5)) continue;
         if (typeof window._FR_MISMO_DESEMB === 'function' && _ts3 !== null && window._FR_MISMO_DESEMB(_mv3.v, _ts3, 'egreso')) continue;
         _cands.push({mv:_mv3, dist: (tsRad!==null&&_ts3!==null) ? Math.abs(_ts3-tsRad) : 9e15});
       }
@@ -31240,7 +31245,7 @@ function cerrarDIAN() {
 
 <script>
 // ── Indicador de última sincronización ──────────────────────────
-var ALZAK_BUILD = 'v29sep-1145';
+var ALZAK_BUILD = 'v29sep-1215';
 
 function alzakActualizarIndicadorSync() {
   var el = document.getElementById('sync-indicator');
